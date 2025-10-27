@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.dist/
+.build/
+
+# venv
+.venv/
+env/
+venv/
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Data/Cache
+data/
+cache/
+logs/
+*.wav
+*.mp3
+
+# HF/Transformers cache
+huggingface/
+.transformers/
+
+#  AI Model files (large)
+
+# Local model directories
+models/
+*/models/
+
+# Hugging Face pretrained model weights
+*.bin
+*.pt
+*.ckpt
+*.onnx
+
+# Transformers cache
+.huggingface/
+.transformers/
+
+record_audio.py
+save_model_local.py
