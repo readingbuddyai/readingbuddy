@@ -8,6 +8,4 @@ public class Words {
 
     @Id
     private String id;
-
-
 }

@@ -11,7 +11,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class GameResultRequest {
+public class TrainResultRequest {
 
     private Long userId;
     private List<ProblemResultRequest> problems;
