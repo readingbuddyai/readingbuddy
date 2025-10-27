@@ -1,6 +1,6 @@
 package com.readingbuddy.backend.train.controller;
 
-import com.readingbuddy.backend.train.dto.request.GameResultRequest;
+import com.readingbuddy.backend.train.dto.request.TrainResultRequest;
 import com.readingbuddy.backend.util.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -36,7 +36,7 @@ public class TrainController {
     }
 
     @PostMapping(value = "/result", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<Void>> saveResult(@RequestBody GameResultRequest request) {
+    public ResponseEntity<ApiResponse<Void>> saveResult(@RequestBody TrainResultRequest request) {
 
         try {
             // 필수 필드 검증
