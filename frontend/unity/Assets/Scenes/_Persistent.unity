@@ -133,6 +133,7 @@ GameObject:
   - component: {fileID: 209133282}
   - component: {fileID: 209133281}
   - component: {fileID: 209133280}
+  - component: {fileID: 209133283}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -190,6 +191,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &209133283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 209133279}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: edeb3027d30664647a2445cfd872ce7c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &286558600
 GameObject:
   m_ObjectHideFlags: 0
@@ -278,6 +291,112 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!1 &1010385921
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1010385923}
+  - component: {fileID: 1010385922}
+  - component: {fileID: 1010385924}
+  m_Layer: 0
+  m_Name: SceneManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1010385922
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010385921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b7e2a27f31ebf446bcfbf8d57d45b01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &1010385923
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010385921}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 11753.736, y: 39756.77, z: 353.5647}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1010385924
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1010385921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b6684499572f261488680092485c43b5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  entries:
+  - sceneName: Home
+    skybox: {fileID: 2100000, guid: 04212ac5d23554d42922e20163125608, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
+  - sceneName: Lobby
+    skybox: {fileID: 2100000, guid: 6f797813cbc968c4ab39c9eb474b8059, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
+  - sceneName: Test
+    skybox: {fileID: 2100000, guid: b715f02934262c54794783c910b4d409, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
+  - sceneName: Room
+    skybox: {fileID: 2100000, guid: a942c7b7a86bac44080259a85cca10ca, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
+  - sceneName: Level1
+    skybox: {fileID: 2100000, guid: f8df77958f2f6544d83dcc1768899569, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
+  - sceneName: Level2
+    skybox: {fileID: 2100000, guid: 7b5bde885f1634d40b6cef580a55cab2, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
+  - sceneName: Level3
+    skybox: {fileID: 2100000, guid: 7b2c3c49a2994b747a6a585e6ef39cb1, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
+  - sceneName: Level4
+    skybox: {fileID: 2100000, guid: 08c01db4352423043a5158f08d6ea8d7, type: 2}
+    applyExposure: 1
+    exposure: 0.7
+    applyRotation: 0
+    rotation: 0
 --- !u!1 &1087252795
 GameObject:
   m_ObjectHideFlags: 0
@@ -288,6 +407,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1087252797}
   - component: {fileID: 1087252796}
+  - component: {fileID: 1087252798}
   m_Layer: 0
   m_Name: SceneFlowManager
   m_TagString: Untagged
@@ -324,6 +444,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1087252798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1087252795}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cf3a464851a6f204884147f767adede6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  firstScene: Home
+  loadOnPlay: 1
 --- !u!1 &1282236515
 GameObject:
   m_ObjectHideFlags: 0
@@ -621,3 +755,4 @@ SceneRoots:
   - {fileID: 1282236516}
   - {fileID: 209133282}
   - {fileID: 1087252797}
+  - {fileID: 1010385923}
