@@ -66,34 +66,46 @@ public class VowelTrainService {
         Phonemes targetPhoneme = phonemesRepository.findOneRandomVowelForQuestion();
         char targetVowel = targetPhoneme.getValue().charAt(0);
 
-        // 랜덤 단어 5개 조회
-        List<Words> randomWords = wordsRepository.findRandomWords(5);
+        // 더 많은 단어 pool에서 조회 (20개)
+        List<Words> wordPool = wordsRepository.findRandomWordsPool();
 
-        // 각 단어의 음소 분해 및 정답 여부 판단
-        List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
+        List<Words> correctWords = new ArrayList<>();
+        List<Words> wrongWords = new ArrayList<>();
 
-        // 단어의 각 글자를 음소 분해
-        for (Words word : randomWords) {
-            boolean containsTargetPhoneme = false;
-
-            for (int i=0; i<word.getWord().length(); i++) {
-                int codePoint = word.getWord().codePointAt(i);
-
-                // 음소 분해
-                List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(codePoint);
-
-                // phonemes 리스트에 목표 모음이 포함되어 있는지 확인
-                if (phonemes.contains(targetVowel)) {
-                    containsTargetPhoneme = true;
-                    break;
-                }
+        // 단어를 정답/오답으로 분류
+        for (Words word : wordPool) {
+            if (checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                correctWords.add(word);
+            } else {
+                wrongWords.add(word);
             }
+        }
 
+        List<Words> selectedWords = new ArrayList<>();
+
+        // 정답 최소 1개 보장
+        if (!correctWords.isEmpty()) {
+            selectedWords.add(correctWords.get(0));
+        }
+
+        // 나머지는 랜덤으로 채우기 (정답/오답 섞여서)
+        Collections.shuffle(wordPool);
+        for (Words word : wordPool) {
+            if (selectedWords.size() >= 5) break;
+            if (!selectedWords.contains(word)) {
+                selectedWords.add(word);
+            }
+        }
+
+        // 각 단어마다 isAnswer 플래그 설정
+        List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
+        for (Words word : selectedWords) {
+            boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetVowel);
             options.add(new Stage1_2Problem.OptionDto(
                     word.getId(),
                     word.getWord(),
                     word.getVoiceUrl(),
-                    containsTargetPhoneme  // 해당 모음이 포함되어 있으면 정답 후보
+                    isAnswer
             ));
         }
 
@@ -106,5 +118,21 @@ public class VowelTrainService {
                 targetPhoneme.getVoiceUrl(),
                 options
         );
+    }
+
+    /**
+     * 단어가 특정 모음을 포함하는지 확인
+     */
+    private boolean checkWordContainsPhoneme(String word, char targetVowel) {
+        for (int i = 0; i < word.length(); i++) {
+            int codePoint = word.codePointAt(i);
+
+            List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(codePoint);
+
+            if (phonemes.contains(targetVowel)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

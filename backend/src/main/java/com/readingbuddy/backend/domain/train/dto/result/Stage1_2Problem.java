@@ -4,6 +4,7 @@ import lombok.Getter;
 
 import java.util.List;
 
+@Getter
 public class Stage1_2Problem extends ProblemResult {
 
     private final Long questionId;
