@@ -1,7 +1,7 @@
-package com.readingbuddy.backend.train.controller;
+package com.readingbuddy.backend.domain.train.controller;
 
-import com.readingbuddy.backend.train.dto.request.TrainResultRequest;
-import com.readingbuddy.backend.util.ApiResponse;
+import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
+import com.readingbuddy.backend.common.util.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +11,22 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/train")
 public class TrainController {
+
+    @GetMapping(value = "/set", params = {"stage, count"})
+    public ResponseEntity<ApiResponse<?>> generateTrainSet(
+            @RequestParam String stage,
+            @RequestParam Integer count) {
+
+        try {
+            // TODO stage 별로 문제 생성
+
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Success", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("문제 생성 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
 
     @PostMapping(value = "/check/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Void>> checkVoice(
