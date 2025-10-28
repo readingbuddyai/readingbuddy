@@ -37,6 +37,7 @@ public class TrainController {
             @RequestParam(defaultValue = "5") Integer count) {
 
         try {
+            ProblemSetResponse problemSetResponse;
             // TODO stage 별로 문제 생성
             switch (stage) {
                 case "1.1":
@@ -48,9 +49,9 @@ public class TrainController {
                     }
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("모음 기초 단계 문제가 생성되었습니다.", problems));
-                case "3":
-                    ProblemSetResponse problemSetResponse = ProblemSetResponse.builder()
-                        .problems(problemGenerateService.extractLetters(count))
+                case "3", "4":
+                    problemSetResponse = ProblemSetResponse.builder()
+                        .problems(problemGenerateService.extractLetters(stage, count))
                         .build();
 
                     return ResponseEntity.status(HttpStatus.CREATED)
