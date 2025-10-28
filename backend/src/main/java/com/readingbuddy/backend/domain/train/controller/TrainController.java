@@ -1,27 +1,56 @@
 package com.readingbuddy.backend.domain.train.controller;
 
 import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
+import com.readingbuddy.backend.domain.train.dto.response.BasicLevelResponse;
+import com.readingbuddy.backend.domain.train.service.VowelTrainService;
 import com.readingbuddy.backend.common.util.ApiResponse;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/train")
+@RequiredArgsConstructor
 public class TrainController {
 
-    @GetMapping(value = "/set", params = {"stage, count"})
+    private final VowelTrainService vowelTrainService;
+
+    /**
+     * 훈련 문제 세트 생성 API
+     *
+     * @param stage 문제 단계 ( 1.1, 1.2, 2.1, 2.2, 3, 4 ... )
+     * @param count 문제 개수 ( 기본값: 5 )
+     * @return 생성된 문제 세트
+     */
+    @GetMapping(value = "/set")
     public ResponseEntity<ApiResponse<?>> generateTrainSet(
             @RequestParam String stage,
-            @RequestParam Integer count) {
+            @RequestParam(defaultValue = "5") Integer count) {
 
         try {
             // TODO stage 별로 문제 생성
+            switch (stage) {
+                case "1.1":
+                    List<BasicLevelResponse> problems = new ArrayList<>();
 
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("Success", null));
+                    // 모음 기초 단계 문제 생성
+                    for (int i = 0; i < count; i++) {
+                        problems.add(vowelTrainService.getBasicProblem());
+                    }
+                    return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(ApiResponse.success("모음 기초 단계 문제가 생성되었습니다.", problems));
+
+                default:
+                    return ResponseEntity.badRequest()
+                            .body(ApiResponse.error("유효하지 않은 단계입니다. " + stage));
+            }
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("문제 생성 중 오류가 발생했습니다: " + e.getMessage()));
@@ -71,5 +100,6 @@ public class TrainController {
                     .body(ApiResponse.error("결과 저장 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
+
 
 }
