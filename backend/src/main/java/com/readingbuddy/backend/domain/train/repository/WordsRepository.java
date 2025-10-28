@@ -10,8 +10,8 @@ import java.util.List;
 public interface WordsRepository extends JpaRepository<Words, Long> {
 
     /**
-     * 랜덤으로 N개의 단어 조회
+     * 랜덤으로 더 많은 단어 pool 조회 (20개)
      */
-    @Query(value = "SELECT * FROM words ORDER BY RANDOM() LIMIT :count", nativeQuery = true)
-    List<Words> findRandomWords(int count);
+    @Query(value = "SELECT * FROM words ORDER BY RANDOM() LIMIT 20", nativeQuery = true)
+    List<Words> findRandomWordsPool();
 }
