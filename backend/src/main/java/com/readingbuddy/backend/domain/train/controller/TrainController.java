@@ -1,6 +1,8 @@
 package com.readingbuddy.backend.domain.train.controller;
 
 import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
+import com.readingbuddy.backend.domain.train.dto.response.ProblemSetResponse;
+import com.readingbuddy.backend.domain.train.service.ProblemGenerateService;
 import com.readingbuddy.backend.domain.train.dto.response.BasicLevelResponse;
 import com.readingbuddy.backend.domain.train.service.VowelTrainService;
 import com.readingbuddy.backend.common.util.ApiResponse;
@@ -19,6 +21,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TrainController {
 
+    private final ProblemGenerateService problemGenerateService;
     private final VowelTrainService vowelTrainService;
 
     /**
@@ -45,12 +48,17 @@ public class TrainController {
                     }
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("모음 기초 단계 문제가 생성되었습니다.", problems));
+                case "3":
+                    ProblemSetResponse problemSetResponse = ProblemSetResponse.builder()
+                        .problems(problemGenerateService.extractLetters(count))
+                        .build();
 
+                    return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(ApiResponse.success("음소 개수 세기 문제가 생성되었습니다.", problemSetResponse));
                 default:
                     return ResponseEntity.badRequest()
                             .body(ApiResponse.error("유효하지 않은 단계입니다. " + stage));
             }
-
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("문제 생성 중 오류가 발생했습니다: " + e.getMessage()));

@@ -1,4 +1,4 @@
-package com.readingbuddy.backend.common.util;
+package com.readingbuddy.backend.common.util.format;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
