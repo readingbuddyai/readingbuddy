@@ -66,32 +66,31 @@ public class VowelTrainService {
         Phonemes targetPhoneme = phonemesRepository.findOneRandomVowelForQuestion();
         char targetVowel = targetPhoneme.getValue().charAt(0);
 
-        // 더 많은 단어 pool에서 조회 (20개)
-        List<Words> wordPool = wordsRepository.findRandomWordsPool();
+        // 모든 단어 조회
+        List<Words> allWords = wordsRepository.findAll();
+        Collections.shuffle(allWords);
 
-        List<Words> correctWords = new ArrayList<>();
-        List<Words> wrongWords = new ArrayList<>();
-
-        // 단어를 정답/오답으로 분류
-        for (Words word : wordPool) {
+        // 정답 1개 찾기 (찾으면 즉시 중단)
+        Words correctWord = null;
+        for (Words word : allWords) {
             if (checkWordContainsPhoneme(word.getWord(), targetVowel)) {
-                correctWords.add(word);
-            } else {
-                wrongWords.add(word);
+                correctWord = word;
+                break;
             }
         }
 
         List<Words> selectedWords = new ArrayList<>();
 
-        // 정답 최소 1개 보장
-        if (!correctWords.isEmpty()) {
-            selectedWords.add(correctWords.get(0));
+        if (correctWord != null) {
+            selectedWords.add(correctWord);
         }
 
-        // 나머지는 랜덤으로 채우기 (정답/오답 섞여서)
-        Collections.shuffle(wordPool);
-        for (Words word : wordPool) {
-            if (selectedWords.size() >= 5) break;
+        // 랜덤 20개에서 4개 뽑기 (정답과 중복되지 않게)
+        List<Words> randomPool = wordsRepository.findRandomWordsPool();
+        for (Words word : randomPool) {
+            if (selectedWords.size() >= 5) {
+                break;
+            }
             if (!selectedWords.contains(word)) {
                 selectedWords.add(word);
             }
