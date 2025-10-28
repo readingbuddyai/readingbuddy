@@ -1,7 +1,7 @@
-package com.readingbuddy.backend.train.controller;
+package com.readingbuddy.backend.domain.train.controller;
 
-import com.readingbuddy.backend.train.dto.request.TrainResultRequest;
-import com.readingbuddy.backend.util.ApiResponse;
+import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
+import com.readingbuddy.backend.common.util.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

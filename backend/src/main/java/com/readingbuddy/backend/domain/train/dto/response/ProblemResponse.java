@@ -1,4 +1,4 @@
-package com.readingbuddy.backend.train.dto.response;
+package com.readingbuddy.backend.domain.train.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

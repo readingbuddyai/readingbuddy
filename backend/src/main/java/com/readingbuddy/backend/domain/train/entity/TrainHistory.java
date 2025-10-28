@@ -1,4 +1,4 @@
-package com.readingbuddy.backend.train.entity;
+package com.readingbuddy.backend.domain.train.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
