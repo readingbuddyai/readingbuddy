@@ -8,7 +8,7 @@ import jakarta.persistence.Id;
 public class Words {
 
     @Id
-    private String id;
+    private Integer id;
 
     @Column(unique = true)
     private String word;
