@@ -65,7 +65,13 @@ public class TrainController {
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("모음 심화 단계 문제가 생성되었습니다.", problemSetResponse));
+                case "2":
+                    problemSetResponse = ProblemSetResponse.builder()
+                            .problems(problemGenerateService.extractWords(count))
+                            .build();
 
+                    return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(ApiResponse.success("음절 개수 세기 문제가 생성되었습니다.", problemSetResponse));
                 case "3", "4":
                     problemSetResponse = ProblemSetResponse.builder()
                         .problems(problemGenerateService.extractLetters(stage, count))
