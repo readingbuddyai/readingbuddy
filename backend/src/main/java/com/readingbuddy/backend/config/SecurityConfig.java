@@ -20,8 +20,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
     private final JWTUtil jwtUtil;
     private static final String[] AUTH_WHITELIST = {
-            "/api/v1/auth/login",
-            "/api/v1/auth/reissue-token",
+            "/api/v1/user/login",
+            "/api/v1/user/reissue-token",
             "/api/v1/user/signup",
             "/api/v1/term/*",
             "/",

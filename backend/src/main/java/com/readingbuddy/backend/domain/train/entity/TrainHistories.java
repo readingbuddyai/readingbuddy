@@ -12,7 +12,7 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class TrainHistory {
+public class TrainHistories {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

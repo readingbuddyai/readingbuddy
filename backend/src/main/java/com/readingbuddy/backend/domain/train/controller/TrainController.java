@@ -1,27 +1,36 @@
 package com.readingbuddy.backend.domain.train.controller;
 
 import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
-import com.readingbuddy.backend.common.util.ApiResponse;
+import com.readingbuddy.backend.common.util.format.ApiResponse;
+import com.readingbuddy.backend.domain.train.dto.response.ProblemSetResponse;
+import com.readingbuddy.backend.domain.train.service.ProblemGenerateService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/train")
 public class TrainController {
 
-    @GetMapping(value = "/set", params = {"stage, count"})
+    private final ProblemGenerateService problemGenerateService;
+
+    @GetMapping(value = "/set")
     public ResponseEntity<ApiResponse<?>> generateTrainSet(
             @RequestParam String stage,
             @RequestParam Integer count) {
 
         try {
-            // TODO stage 별로 문제 생성
+
+            ProblemSetResponse problemSetResponse = ProblemSetResponse.builder()
+                    .problems(problemGenerateService.extractLetters(count))
+                    .build();
 
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("Success", null));
+                    .body(ApiResponse.success("Success", problemSetResponse));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("문제 생성 중 오류가 발생했습니다: " + e.getMessage()));
