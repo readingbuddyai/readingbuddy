@@ -1,8 +1,9 @@
 import torch
 import numpy as np
+import onnxruntime as ort
 from fastapi import UploadFile, HTTPException
-from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
-from app.services.utils_audio import load_audio_to_mono_16k
+from transformers import Wav2Vec2Processor
+from app.services.utils_audio import load_audio_to_mono_16k, denoise_audio, chunk_audio
 from app.core.config import settings
 import logging
 
@@ -10,27 +11,32 @@ logger = logging.getLogger(__name__)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
+MODEL_PATH = str(settings.get_model_path())
+ONNX_PATH = f"{MODEL_PATH}/model.onnx"
+
 # 모델 로드
 try:
-    model_path = str(settings.get_model_path())
-    processor = Wav2Vec2Processor.from_pretrained(model_path)
-    model = Wav2Vec2ForCTC.from_pretrained(model_path).to(DEVICE)
-    model.eval()
-    logger.info(f"모델 로드 성공: {model_path} (device: {DEVICE})")
-except FileNotFoundError:
-    raise RuntimeError(f"모델을 찾을 수 없습니다: {settings.get_model_path()}")
+    processor = Wav2Vec2Processor.from_pretrained(MODEL_PATH)
+    available = ort.get_available_providers()
+    providers = ["CUDAExecutionProvider"] if "CUDAExecutionProvider" in available else ["CPUExecutionProvider"]
+    session = ort.InferenceSession(ONNX_PATH, providers=providers)
+    logger.info(f"ONNX 모델 로드 성공: {ONNX_PATH} (providers={providers})")
 except Exception as e:
     raise RuntimeError(f"모델 로드 실패: {e}")
 
 @torch.no_grad()
-def infer_logits(wave_16k: np.ndarray):
+def infer_chunk_onnx(waveform: np.ndarray, sr: int = 16000):
+    """단일 청크 추론 (ONNX GPU)"""
     try:
-        inputs = processor(wave_16k, sampling_rate=16000, return_tensors="pt", padding="longest")
-        logits = model(inputs.input_values.to(DEVICE)).logits
-        return logits.squeeze(0)
+        inputs = processor(waveform, sampling_rate=sr, return_tensors="np")
+        logits = session.run(None, {"input_values": inputs.input_values})[0]
+        pred_ids = np.argmax(logits, axis=-1)
+        text = processor.decode(pred_ids[0])
+        return text
     except Exception as e:
-        logger.error(f"모델 추론 중 오류: {e}")
-        raise HTTPException(status_code=500, detail=f"음성 인식 중 오류가 발생했습니다: {str(e)}")
+        logger.error(f"ONNX 추론 중 오류: {e}")
+        raise HTTPException(status_code=500, detail="ONNX 추론 중 오류가 발생했습니다.")
+
 
 def ctc_decode(logits: torch.Tensor) -> str:
     try:
@@ -40,17 +46,22 @@ def ctc_decode(logits: torch.Tensor) -> str:
         logger.error(f"CTC 디코딩 중 오류: {e}")
         raise HTTPException(status_code=500, detail=f"음성 디코딩 중 오류가 발생했습니다: {str(e)}")
 
-def transcribe_audio(file: UploadFile):
+def transcribe_stream(file: UploadFile):
+    """노이즈 제거 + 청크 기반 ONNX 추론"""
     try:
+        # load_audio_to_mono_16k는 이미 16kHz로 리샘플링된 numpy array 반환
         wave = load_audio_to_mono_16k(file.file)
-        logits = infer_logits(wave)
-        decoded = ctc_decode(logits)
+        sr = 16000  # 항상 16kHz
+        wave = denoise_audio(wave, sr)
+        chunks = chunk_audio(wave, sr, chunk_size=1.0, overlap=0.2)
+        results = [infer_chunk_onnx(chunk, sr) for chunk in chunks]
+        decoded = "".join(results).replace("|", "").replace(" ", "")
+
         return {"decoded_sequence": decoded}
-    except HTTPException:
-        raise
     except Exception as e:
-        logger.error(f"음성 변환 중 예상치 못한 오류: {e}")
-        raise HTTPException(status_code=500, detail="음성 처리 중 오류가 발생했습니다.")
+        logger.error(f"스트리밍 추론 중 오류: {e}")
+        raise HTTPException(status_code=500, detail="청크 기반 음성 인식 중 오류가 발생했습니다.")
+
 
 def clean_tokens(seq: str):
     SPECIAL_TOKENS = {"<s>", "</s>", "|", "[PAD]", "[UNK]"}
