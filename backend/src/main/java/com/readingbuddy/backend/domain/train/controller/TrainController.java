@@ -2,6 +2,7 @@ package com.readingbuddy.backend.domain.train.controller;
 
 import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
 import com.readingbuddy.backend.domain.train.dto.response.ProblemSetResponse;
+import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.service.ProblemGenerateService;
 import com.readingbuddy.backend.domain.train.dto.response.BasicLevelResponse;
 import com.readingbuddy.backend.domain.train.service.VowelTrainService;
@@ -38,17 +39,33 @@ public class TrainController {
 
         try {
             ProblemSetResponse problemSetResponse;
+            List<ProblemResult> problems = new ArrayList<>();
             // TODO stage 별로 문제 생성
             switch (stage) {
                 case "1.1":
-                    List<BasicLevelResponse> problems = new ArrayList<>();
-
-                    // 모음 기초 단계 문제 생성
                     for (int i = 0; i < count; i++) {
                         problems.add(vowelTrainService.getBasicProblem());
                     }
+
+                    problemSetResponse = ProblemSetResponse.builder()
+                            .problems(problems)
+                            .build();
+
                     return ResponseEntity.status(HttpStatus.CREATED)
-                            .body(ApiResponse.success("모음 기초 단계 문제가 생성되었습니다.", problems));
+                            .body(ApiResponse.success("모음 기초 단계 문제가 생성되었습니다.", problemSetResponse));
+
+                case "1.2":
+                    for (int i=0; i<count; i++) {
+                        problems.add(vowelTrainService.getAdvancedProblem());
+                    }
+
+                    problemSetResponse = ProblemSetResponse.builder()
+                            .problems(problems)
+                            .build();
+
+                    return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(ApiResponse.success("모음 심화 단계 문제가 생성되었습니다.", problemSetResponse));
+
                 case "3", "4":
                     problemSetResponse = ProblemSetResponse.builder()
                         .problems(problemGenerateService.extractLetters(stage, count))
