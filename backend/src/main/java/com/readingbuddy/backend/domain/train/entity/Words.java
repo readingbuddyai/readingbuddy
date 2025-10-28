@@ -2,6 +2,10 @@ package com.readingbuddy.backend.domain.train.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+
 
 @Entity
 @Getter
@@ -20,4 +24,5 @@ public class Words {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phoneme_id")
     private Phonemes phoneme;
+
 }
