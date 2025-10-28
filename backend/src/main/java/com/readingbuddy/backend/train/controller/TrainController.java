@@ -14,10 +14,12 @@ public class TrainController {
 
     @GetMapping(value = "/set", params = {"stage, count"})
     public ResponseEntity<ApiResponse<?>> generateTrainSet(
-            @RequestParam Integer stage, @RequestParam Integer count) {
+            @RequestParam String stage,
+            @RequestParam Integer count) {
 
         try {
             // TODO stage 별로 문제 생성
+
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("Success", null));
         } catch (Exception e) {
