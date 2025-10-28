@@ -12,6 +12,20 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/train")
 public class TrainController {
 
+    @GetMapping(value = "/set", params = {"stage, count"})
+    public ResponseEntity<ApiResponse<?>> generateTrainSet(
+            @RequestParam Integer stage, @RequestParam Integer count) {
+
+        try {
+            // TODO stage 별로 문제 생성
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("Success", null));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("문제 생성 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
     @PostMapping(value = "/check/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Void>> checkVoice(
             @RequestParam("audio") MultipartFile audioFile,
