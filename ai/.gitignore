@@ -3,46 +3,114 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.pye
+*.egg
 *.egg-info/
-.dist/
-.build/
+dist/
+build/
+*.so
+*.dll
+*.dylib
 
-# venv
+# Virtual environments
 .venv/
 env/
 venv/
+ENV/
+env.bak/
+venv.bak/
 
-# IDE/OS
+# Environment variables (중요!)
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE/Editor
 .vscode/
 .idea/
 .DS_Store
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+*.ipynb
 
 # Data/Cache
 data/
 cache/
 logs/
+tmp/
+temp/
+*.log
+
+# Audio files (테스트용은 tests/ 폴더에 별도 관리)
 *.wav
 *.mp3
+*.ogg
+*.flac
+*.m4a
+!tests/**/*.wav
+!tests/**/*.mp3
 
-# HF/Transformers cache
-huggingface/
-.transformers/
-
-#  AI Model files (large)
-
-# Local model directories
+# AI Model files (large)
 models/
 */models/
-
-# Hugging Face pretrained model weights
 *.bin
 *.pt
+*.pth
 *.ckpt
 *.onnx
+*.safetensors
+*.msgpack
+*.h5
+*.pb
 
-# Transformers cache
+# Hugging Face cache
 .huggingface/
 .transformers/
+huggingface/
+transformers_cache/
 
+# FastAPI/Uvicorn
+*.pid
+uvicorn.log
+gunicorn.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Custom scripts
 record_audio.py
 save_model_local.py
+
+# Claude Code
+.claude
