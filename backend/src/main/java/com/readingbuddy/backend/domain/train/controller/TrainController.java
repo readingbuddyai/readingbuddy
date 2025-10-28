@@ -5,7 +5,7 @@ import com.readingbuddy.backend.domain.train.dto.response.ProblemSetResponse;
 import com.readingbuddy.backend.domain.train.service.ProblemGenerateService;
 import com.readingbuddy.backend.domain.train.dto.response.BasicLevelResponse;
 import com.readingbuddy.backend.domain.train.service.VowelTrainService;
-import com.readingbuddy.backend.common.util.ApiResponse;
+import com.readingbuddy.backend.common.util.format.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
