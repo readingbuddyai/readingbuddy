@@ -38,7 +38,6 @@ public class LetterSeederConfig {
                     for (int cp = 0xAC00; cp <= 0xD7A3; cp++) {
                         String ucode = String.format("U+%04X", cp);
                         String id = ucode; // 필요 시 다른 규칙 사용
-                        Integer unicodePoint = cp;
                         int cnt = PhonemeCounter.countForCodePoint(cp);
                         String voice = String.format(VOICE_FMT, cp);
                         String slow  = String.format(VOICE_SLOW_FMT, cp);
