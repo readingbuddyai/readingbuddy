@@ -3,6 +3,7 @@ package com.readingbuddy.backend.domain.train.controller;
 import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
 import com.readingbuddy.backend.domain.train.dto.response.ProblemSetResponse;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
+import com.readingbuddy.backend.domain.train.service.ConsonantTrainService;
 import com.readingbuddy.backend.domain.train.service.ProblemGenerateService;
 import com.readingbuddy.backend.domain.train.dto.response.BasicLevelResponse;
 import com.readingbuddy.backend.domain.train.service.VowelTrainService;
@@ -24,6 +25,7 @@ public class TrainController {
 
     private final ProblemGenerateService problemGenerateService;
     private final VowelTrainService vowelTrainService;
+    private final ConsonantTrainService consonantTrainService;
 
     /**
      * 훈련 문제 세트 생성 API
@@ -65,6 +67,19 @@ public class TrainController {
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("모음 심화 단계 문제가 생성되었습니다.", problemSetResponse));
+                case "1.2.1":
+                    for (int i = 0; i < count; i++) {
+                        problems.add(consonantTrainService.getBasicProblem());
+                    }
+
+                    problemSetResponse = ProblemSetResponse.builder()
+                            .problems(problems)
+                            .build();
+
+                    return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(ApiResponse.success("자음 기초 단계 문제가 생성되었습니다.", problemSetResponse));
+
+
                 case "2":
                     problemSetResponse = ProblemSetResponse.builder()
                             .problems(problemGenerateService.extractWords(count))
