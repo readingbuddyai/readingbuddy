@@ -574,6 +574,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Teleporters
       objectReference: {fileID: 0}
+    - target: {fileID: 2881105527928839275, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
+      propertyPath: m_IsTrigger
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 5661465194025752794, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
