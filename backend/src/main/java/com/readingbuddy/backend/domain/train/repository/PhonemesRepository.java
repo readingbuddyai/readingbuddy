@@ -25,4 +25,16 @@ public interface PhonemesRepository extends JpaRepository<Phonemes, Long> {
      */
     @Query(value = "SELECT * FROM phonemes WHERE category = 'vowel' AND id != :excludeId ORDER BY RANDOM() LIMIT 1", nativeQuery = true)
     Phonemes findRandomVowel(Long excludeId);
+
+    /**
+     * 랜덤하게 하나의 자음 조회 (질문-정답용)
+     */
+    @Query(value = "SELECT * FROM phonemes WHERE category = 'consonant' ORDER BY RANDOM() LIMIT 1", nativeQuery = true)
+    Phonemes findOneRandomConsonantForQuestion();
+
+    /**
+     * 랜덤하게 N개의 자음 조회 (선택지용) - 1개
+     */
+    @Query(value = "SELECT * FROM phonemes WHERE category = 'consonant' AND id != :excludeId ORDER BY RANDOM() LIMIT 1", nativeQuery = true)
+    Phonemes findRandomConsonant(Long excludeId);
 }

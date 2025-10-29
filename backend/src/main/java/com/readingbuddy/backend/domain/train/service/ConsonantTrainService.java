@@ -19,54 +19,53 @@ import java.util.List;
 @Service
 @Transactional
 @RequiredArgsConstructor
-public class VowelTrainService {
+public class ConsonantTrainService {
 
     private final PhonemesRepository phonemesRepository;
     private final WordsRepository wordsRepository;
 
     /**
-     * 모음 기초 단계 문제 생성 (Stage 1.1)
+     * 자음 기초 단계 문제 생성 (Stage 1.2.1)
      */
     public ProblemResult getBasicProblem() {
-        // 정답 모음 1개 조회
-        Phonemes answerVowel = phonemesRepository.findOneRandomVowelForQuestion();
+        // 정답 자음 1개 조회
+        Phonemes answerConsonant = phonemesRepository.findOneRandomConsonantForQuestion();
 
-        // 정답을 제외한 오답 모음 1개 조회
-        Phonemes wrongVowel = phonemesRepository.findRandomVowel(answerVowel.getId());
+        // 정답을 제외한 오답 자음 1개 조회
+        Phonemes wrongConsonant = phonemesRepository.findRandomConsonant(answerConsonant.getId());
 
         // 선택지 리스트 생성
         List<Phonemes> options = new ArrayList<>();
-        options.add(answerVowel);
-        options.add(wrongVowel);
+        options.add(answerConsonant);
+        options.add(wrongConsonant);
 
-        // 선택시 섞기
+        // 선택지 섞기
         Collections.shuffle(options);
 
         // DTO로 변환
         List<Stage1_1Problem.OptionDto> optionDtos = options.stream()
-                .map(vowel -> Stage1_1Problem.OptionDto.builder()
-                        .id(vowel.getId())
-                        .unicode(vowel.getUnicode())
-                        .value(vowel.getValue())
-                        .build())
-                .toList();
+                .map(consonant -> Stage1_1Problem.OptionDto.builder()
+                        .id(consonant.getId())
+                        .value(consonant.getValue())
+                        .unicode(consonant.getUnicode())
+                        .build()
+                ).toList();
 
         return Stage1_1Problem.builder()
-                .imageUrl(answerVowel.getImageUrl())
-                .questionId(answerVowel.getId())
-                .voiceUrl(answerVowel.getVoiceUrl())
+                .imageUrl(answerConsonant.getImageUrl())
+                .questionId(answerConsonant.getId())
+                .voiceUrl(answerConsonant.getVoiceUrl())
                 .options(optionDtos)
                 .build();
     }
 
     /**
-     * 모음 심화 단계 문제 생성 (Stage 1.2)
+     * 자음 심화 단계 문제 생성 (Stage 1.2.2)
      */
     public ProblemResult getAdvancedProblem() {
-        Phonemes targetPhoneme = phonemesRepository.findOneRandomVowelForQuestion();
-        char targetVowel = targetPhoneme.getValue().charAt(0);
+        Phonemes targetPhoneme = phonemesRepository.findOneRandomConsonantForQuestion();
+        char targetConsonant = targetPhoneme.getValue().charAt(0);
 
-        // 모든 단어 조회
         List<Words> allWords = wordsRepository.findAll();
         Collections.shuffle(allWords);
 
@@ -84,7 +83,7 @@ public class VowelTrainService {
             }
 
             // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
-            else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+            else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
                 foundCorrect = true;
                 selectedWords.add(word);
             }
@@ -93,11 +92,14 @@ public class VowelTrainService {
         // 각 단어마다 isAnswer 플래그 설정
         List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
         for (Words word : selectedWords) {
-            boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetVowel);
+            boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetConsonant);
             options.add(Stage1_2Problem.OptionDto.builder()
-                    .word(word.getWord())
                     .wordId(word.getId())
-                    .isAnswer(isAnswer).build());
+                    .word(word.getWord())
+                    .voiceUrl(word.getVoiceUrl())
+                    .isAnswer(isAnswer)
+                    .build()
+            );
         }
 
         Collections.shuffle(options);
@@ -111,15 +113,15 @@ public class VowelTrainService {
     }
 
     /**
-     * 단어가 특정 모음을 포함하는지 확인
+     * 단어가 특정 자음을 포함하는지 확인
      */
-    private boolean checkWordContainsPhoneme(String word, char targetVowel) {
+    private boolean checkWordContainsPhoneme(String word, char targetConsonant) {
         for (int i = 0; i < word.length(); i++) {
             int codePoint = word.codePointAt(i);
 
             List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(codePoint);
 
-            if (phonemes.contains(targetVowel)) {
+            if (phonemes.contains(targetConsonant)) {
                 return true;
             }
         }
