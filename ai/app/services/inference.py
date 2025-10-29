@@ -7,6 +7,7 @@ from transformers import Wav2Vec2Processor
 from app.services.utils_audio import load_audio_to_mono_16k, chunk_audio
 from app.core.config import settings
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -53,8 +54,39 @@ try:
     processor = Wav2Vec2Processor.from_pretrained(MODEL_PATH)
     available = ort.get_available_providers()
     providers = ["CUDAExecutionProvider"] if "CUDAExecutionProvider" in available else ["CPUExecutionProvider"]
-    session = ort.InferenceSession(ONNX_PATH, providers=providers)
+
+    # SessionOptions 최적화
+    sess_options = ort.SessionOptions()
+    sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+    sess_options.enable_mem_pattern = True
+    sess_options.enable_cpu_mem_arena = True
+
+    session = ort.InferenceSession(ONNX_PATH, sess_options, providers=providers)
     logger.info(f"ONNX 모델 로드 성공: {ONNX_PATH} (providers={providers})")
+
+    # 웜업 추론 (콜드 런 오버헤드 제거)
+    logger.info("웜업 추론 시작...")
+    warmup_audio = np.random.randn(1, 16000).astype(np.float32)  # 1초 더미 오디오
+    for i in range(5):
+        _ = session.run(None, {"audio": warmup_audio})
+    logger.info("웜업 추론 완료 - 모델 준비됨")
+
+    # GPU Keep-Alive: 백그라운드에서 주기적으로 더미 추론 실행 (GPU 절전 방지)
+    def gpu_keepalive():
+        """GPU가 절전 모드로 들어가지 않도록 주기적으로 더미 추론 실행"""
+        dummy = np.random.randn(1, 8000).astype(np.float32)  # 0.5초 짧은 오디오
+        while True:
+            try:
+                time.sleep(3)  # 3초마다 실행
+                _ = session.run(None, {"audio": dummy})
+            except Exception:
+                break
+
+    # 백그라운드 스레드로 GPU keep-alive 시작
+    keepalive_thread = threading.Thread(target=gpu_keepalive, daemon=True)
+    keepalive_thread.start()
+    logger.info("GPU keep-alive 스레드 시작 (3초 간격)")
+
 except Exception as e:
     raise RuntimeError(f"모델 로드 실패: {e}")
 
