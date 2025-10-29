@@ -36,6 +36,9 @@ public class LetterSeederConfig {
                 try (PreparedStatement ps = con.prepareStatement(sql)) {
                     int batch = 0;
                     for (int cp = 0xAC00; cp <= 0xD7A3; cp++) {
+                        if (!isJongOrthPronSame(cp)) continue;
+                        if (!isJungOrthPronSame(cp)) continue;
+
                         String ucode = String.format("U+%04X", cp);
                         String id = ucode; // 필요 시 다른 규칙 사용
                         int cnt = PhonemeCounter.countForCodePoint(cp);
@@ -60,5 +63,52 @@ public class LetterSeederConfig {
                 }
             }
         };
+    }
+
+    static boolean isJungOrthPronSame(int cp) {
+        if (cp < 0xAC00 || cp > 0xD7A3) return false;
+        int sIndex = cp - 0xAC00;
+
+        int jung = (sIndex % (21 * 28)) / 28;
+
+        switch (jung) {
+            // 단모음 동일: ㅏ,ㅑ,ㅓ,ㅕ,ㅗ,ㅛ,ㅜ,ㅠ,ㅡ,ㅣ
+            case 0:   // ㅏ
+            case 2:   // ㅑ
+            case 4:   // ㅓ
+            case 6:   // ㅕ
+            case 8:   // ㅗ
+            case 12:  // ㅛ
+            case 13:  // ㅜ
+            case 17:  // ㅠ
+            case 18:  // ㅡ
+            case 20:  // ㅣ
+            case 9:   // ㅘ
+            case 14:  // ㅝ
+            case 16:  // ㅟ
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    static boolean isJongOrthPronSame(int cp) {
+        if (cp < 0xAC00 || cp > 0xD7A3) return false;
+        int sIndex = cp - 0xAC00;
+        int jong = sIndex % 28;  // 종성 인덱스(0~27)
+        switch (jong) {
+            case 0:  // (없음)
+            case 1:  // ㄱ
+            case 4:  // ㄴ
+            case 7:  // ㄷ
+            case 8:  // ㄹ
+            case 16: // ㅁ
+            case 17: // ㅂ
+            case 21: // ㅇ
+                return true;
+            default:
+                return false;
+        }
     }
 }
