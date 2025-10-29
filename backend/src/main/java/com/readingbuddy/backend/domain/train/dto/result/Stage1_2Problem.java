@@ -1,11 +1,14 @@
 package com.readingbuddy.backend.domain.train.dto.result;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.util.List;
 
 @Getter
+@AllArgsConstructor
+@Builder
 public class Stage1_2Problem extends ProblemResult {
 
     private final Long questionId;

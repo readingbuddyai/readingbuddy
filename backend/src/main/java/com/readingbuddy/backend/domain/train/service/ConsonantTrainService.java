@@ -51,14 +51,14 @@ public class ConsonantTrainService {
                         .build()
                 ).toList();
 
-        return new Stage1_1Problem(
-                answerConsonant.getValue(),
-                answerConsonant.getId(),
-                answerConsonant.getVoiceUrl(),
-                answerConsonant.getImageUrl(),
-                optionDtos
-        );
+        return Stage1_1Problem.builder()
+                .imageUrl(answerConsonant.getImageUrl())
+                .questionId(answerConsonant.getId())
+                .voiceUrl(answerConsonant.getVoiceUrl())
+                .options(optionDtos)
+                .build();
     }
+
     /**
      * 자음 심화 단계 문제 생성 (Stage 1.2.2)
      */
@@ -104,13 +104,12 @@ public class ConsonantTrainService {
 
         Collections.shuffle(options);
 
-        return new Stage1_2Problem(
-                targetPhoneme.getValue(),
-                targetPhoneme.getId(),
-                targetPhoneme.getValue(),
-                targetPhoneme.getVoiceUrl(),
-                options
-        );
+        return Stage1_2Problem.builder()
+                .questionId(targetPhoneme.getId())
+                .targetPhoneme(targetPhoneme.getValue())
+                .voiceUrl(targetPhoneme.getVoiceUrl())
+                .options(options)
+                .build();
     }
 
     /**

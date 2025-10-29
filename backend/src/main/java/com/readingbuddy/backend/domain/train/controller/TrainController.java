@@ -3,10 +3,10 @@ package com.readingbuddy.backend.domain.train.controller;
 import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
 import com.readingbuddy.backend.domain.train.dto.response.ProblemSetResponse;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
-import com.readingbuddy.backend.domain.train.service.ConsonantTrainService;
 import com.readingbuddy.backend.domain.train.service.ProblemGenerateService;
 import com.readingbuddy.backend.domain.train.dto.response.BasicLevelResponse;
 import com.readingbuddy.backend.domain.train.service.VowelTrainService;
+import com.readingbuddy.backend.domain.train.service.ConsonantTrainService;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,7 +30,7 @@ public class TrainController {
     /**
      * 훈련 문제 세트 생성 API
      *
-     * @param stage 문제 단계 ( 1.1, 1.2, 2.1, 2.2, 3, 4 ... )
+     * @param stage 문제 단계 ( 1.1.1: 모음 기초, 1.1.2: 모음 심화, 1.2.1: 자음 기초, 1.2.2: 자음 심화, 2: 음절 개수, 3, 4: 음소 개수 )
      * @param count 문제 개수 ( 기본값: 5 )
      * @return 생성된 문제 세트
      */
@@ -42,31 +42,28 @@ public class TrainController {
         try {
             ProblemSetResponse problemSetResponse;
             List<ProblemResult> problems = new ArrayList<>();
+            String message = "";
             // TODO stage 별로 문제 생성
             switch (stage) {
-                case "1.1.1":
+                case "1.1.1","1.1.2":
                     for (int i = 0; i < count; i++) {
-                        problems.add(vowelTrainService.getBasicProblem());
+                        problems.add(
+                                stage.equals("1.1.1")
+                                        ? vowelTrainService.getBasicProblem()
+                                        : vowelTrainService.getAdvancedProblem()
+                        );
                     }
 
                     problemSetResponse = ProblemSetResponse.builder()
                             .problems(problems)
                             .build();
 
-                    return ResponseEntity.status(HttpStatus.CREATED)
-                            .body(ApiResponse.success("모음 기초 단계 문제가 생성되었습니다.", problemSetResponse));
-
-                case "1.1.2":
-                    for (int i=0; i<count; i++) {
-                        problems.add(vowelTrainService.getAdvancedProblem());
-                    }
-
-                    problemSetResponse = ProblemSetResponse.builder()
-                            .problems(problems)
-                            .build();
+                    message = stage.equals("1.1.1")
+                            ? "모음 기초 단계 문제가 생성되었습니다."
+                            : "모음 심화 단계 문제가 생성되었습니다.";
 
                     return ResponseEntity.status(HttpStatus.CREATED)
-                            .body(ApiResponse.success("모음 심화 단계 문제가 생성되었습니다.", problemSetResponse));
+                            .body(ApiResponse.success(message, problemSetResponse));
 
                 case "1.2.1", "1.2.2":
                     for (int i = 0; i < count; i++) {
@@ -81,12 +78,13 @@ public class TrainController {
                             .problems(problems)
                             .build();
 
-                    String message = stage.equals("1.2.1")
+                    message = stage.equals("1.2.1")
                             ? "자음 기초 단계 문제가 생성되었습니다."
                             : "자음 심화 단계 문제가 생성되었습니다.";
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success(message, problemSetResponse));
+
                 case "2":
                     problemSetResponse = ProblemSetResponse.builder()
                             .problems(problemGenerateService.extractWords(count))
@@ -96,8 +94,8 @@ public class TrainController {
                             .body(ApiResponse.success("음절 개수 세기 문제가 생성되었습니다.", problemSetResponse));
                 case "3", "4":
                     problemSetResponse = ProblemSetResponse.builder()
-                        .problems(problemGenerateService.extractLetters(stage, count))
-                        .build();
+                            .problems(problemGenerateService.extractLetters(stage, count))
+                            .build();
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("음소 개수 세기 문제가 생성되었습니다.", problemSetResponse));

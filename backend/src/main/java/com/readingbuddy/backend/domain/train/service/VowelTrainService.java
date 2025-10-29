@@ -44,19 +44,19 @@ public class VowelTrainService {
 
         // DTO로 변환
         List<Stage1_1Problem.OptionDto> optionDtos = options.stream()
-                .map(vowel -> new Stage1_1Problem.OptionDto(
-                        vowel.getId(),
-                        vowel.getValue(),
-                        vowel.getUnicode()
-                )).toList();
+                .map(vowel -> Stage1_1Problem.OptionDto.builder()
+                        .id(vowel.getId())
+                        .unicode(vowel.getUnicode())
+                        .value(vowel.getValue())
+                        .build())
+                .toList();
 
-        return new Stage1_1Problem(
-                answerVowel.getValue(),
-                answerVowel.getId(),
-                answerVowel.getVoiceUrl(),
-                answerVowel.getImageUrl(),
-                optionDtos
-        );
+        return Stage1_1Problem.builder()
+                .imageUrl(answerVowel.getImageUrl())
+                .questionId(answerVowel.getId())
+                .voiceUrl(answerVowel.getVoiceUrl())
+                .options(optionDtos)
+                .build();
     }
 
     /**
@@ -81,22 +81,12 @@ public class VowelTrainService {
 
             if (selectedWords.size() < 4) {
                 selectedWords.add(word);
-                // 처음에 정답이 있을 수 있으니 있으면 5번째는 아무거나 들어와도 됨
-                if (checkWordContainsPhoneme(word.getWord(), targetVowel)) {
-                    foundCorrect = true;
-                }
             }
 
-            else {
-                if (foundCorrect) {
-                    selectedWords.add(word);
-                    break;
-                }
-                // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
-                else if(checkWordContainsPhoneme(word.getWord(), targetVowel)) {
-                    selectedWords.add(word);
-                    break;
-                }
+            // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
+            else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                foundCorrect = true;
+                selectedWords.add(word);
             }
         }
 
@@ -104,23 +94,20 @@ public class VowelTrainService {
         List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
         for (Words word : selectedWords) {
             boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetVowel);
-            options.add(new Stage1_2Problem.OptionDto(
-                    word.getId(),
-                    word.getWord(),
-                    word.getVoiceUrl(),
-                    isAnswer
-            ));
+            options.add(Stage1_2Problem.OptionDto.builder()
+                    .word(word.getWord())
+                    .wordId(word.getId())
+                    .isAnswer(isAnswer).build());
         }
 
         Collections.shuffle(options);
 
-        return new Stage1_2Problem(
-                targetPhoneme.getValue(),
-                targetPhoneme.getId(),
-                targetPhoneme.getValue(),
-                targetPhoneme.getVoiceUrl(),
-                options
-        );
+        return Stage1_2Problem.builder()
+                .questionId(targetPhoneme.getId())
+                .targetPhoneme(targetPhoneme.getValue())
+                .voiceUrl(targetPhoneme.getVoiceUrl())
+                .options(options)
+                .build();
     }
 
     /**
