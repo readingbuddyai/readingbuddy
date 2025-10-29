@@ -58,4 +58,72 @@ public class ConsonantTrainService {
                 optionDtos
         );
     }
+    /**
+     * 자음 심화 단계 문제 생성 (Stage 1.2.2)
+     */
+    public ProblemResult getAdvancedProblem() {
+        Phonemes targetPhoneme = phonemesRepository.findOneRandomConsonantForQuestion();
+        char targetConsonant = targetPhoneme.getValue().charAt(0);
+
+        List<Words> allWords = wordsRepository.findAll();
+        Collections.shuffle(allWords);
+
+        List<Words> selectedWords = new ArrayList<>();
+        boolean foundCorrect = false;
+
+        // 전체를 돌면서 처음 4개를 바로 선택, 정답은 따로 찾기
+        for (Words word : allWords) {
+            if (foundCorrect && selectedWords.size() == 5) {
+                break;
+            }
+
+            if (selectedWords.size() < 4) {
+                selectedWords.add(word);
+            }
+
+            // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
+            else if (!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
+                foundCorrect = true;
+                selectedWords.add(word);
+            }
+        }
+
+        // 각 단어마다 isAnswer 플래그 설정
+        List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
+        for (Words word : selectedWords) {
+            boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetConsonant);
+            options.add(new Stage1_2Problem.OptionDto(
+                    word.getId(),
+                    word.getWord(),
+                    word.getVoiceUrl(),
+                    isAnswer
+            ));
+        }
+
+        Collections.shuffle(options);
+
+        return new Stage1_2Problem(
+                targetPhoneme.getValue(),
+                targetPhoneme.getId(),
+                targetPhoneme.getValue(),
+                targetPhoneme.getVoiceUrl(),
+                options
+        );
+    }
+
+    /**
+     * 단어가 특정 자음을 포함하는지 확인
+     */
+    private boolean checkWordContainsPhoneme(String word, char targetConsonant) {
+        for (int i = 0; i < word.length(); i++) {
+            int codePoint = word.codePointAt(i);
+
+            List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(codePoint);
+
+            if (phonemes.contains(targetConsonant)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

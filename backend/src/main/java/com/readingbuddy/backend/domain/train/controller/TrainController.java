@@ -78,7 +78,17 @@ public class TrainController {
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("자음 기초 단계 문제가 생성되었습니다.", problemSetResponse));
+                case "1.2.2":
+                    for (int i = 0; i < count; i++) {
+                        problems.add(consonantTrainService.getAdvancedProblem());
+                    }
 
+                    problemSetResponse = ProblemSetResponse.builder()
+                            .problems(problems)
+                            .build();
+
+                    return ResponseEntity.status(HttpStatus.CREATED)
+                            .body(ApiResponse.success("자음 심화 단계 문제가 생성되었습니다.", problemSetResponse));
 
                 case "2":
                     problemSetResponse = ProblemSetResponse.builder()
