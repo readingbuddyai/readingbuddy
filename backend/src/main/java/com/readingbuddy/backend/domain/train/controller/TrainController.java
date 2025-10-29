@@ -67,29 +67,26 @@ public class TrainController {
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("모음 심화 단계 문제가 생성되었습니다.", problemSetResponse));
-                case "1.2.1":
+
+                case "1.2.1", "1.2.2":
                     for (int i = 0; i < count; i++) {
-                        problems.add(consonantTrainService.getBasicProblem());
+                        problems.add(
+                                stage.equals("1.2.1")
+                                        ? consonantTrainService.getBasicProblem()
+                                        : consonantTrainService.getAdvancedProblem()
+                        );
                     }
 
                     problemSetResponse = ProblemSetResponse.builder()
                             .problems(problems)
                             .build();
 
-                    return ResponseEntity.status(HttpStatus.CREATED)
-                            .body(ApiResponse.success("자음 기초 단계 문제가 생성되었습니다.", problemSetResponse));
-                case "1.2.2":
-                    for (int i = 0; i < count; i++) {
-                        problems.add(consonantTrainService.getAdvancedProblem());
-                    }
-
-                    problemSetResponse = ProblemSetResponse.builder()
-                            .problems(problems)
-                            .build();
+                    String message = stage.equals("1.2.1")
+                            ? "자음 기초 단계 문제가 생성되었습니다."
+                            : "자음 심화 단계 문제가 생성되었습니다.";
 
                     return ResponseEntity.status(HttpStatus.CREATED)
-                            .body(ApiResponse.success("자음 심화 단계 문제가 생성되었습니다.", problemSetResponse));
-
+                            .body(ApiResponse.success(message, problemSetResponse));
                 case "2":
                     problemSetResponse = ProblemSetResponse.builder()
                             .problems(problemGenerateService.extractWords(count))

@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.dto.result;
 
+import lombok.Builder;
 import lombok.Getter;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class Stage1_2Problem extends ProblemResult {
     }
 
     @Getter
+    @Builder
     public static class OptionDto {
         private final Long wordId;
         private final String word;

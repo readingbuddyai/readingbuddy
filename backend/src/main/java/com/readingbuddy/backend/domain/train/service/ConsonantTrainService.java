@@ -44,11 +44,12 @@ public class ConsonantTrainService {
 
         // DTO로 변환
         List<Stage1_1Problem.OptionDto> optionDtos = options.stream()
-                .map(consonant -> new Stage1_1Problem.OptionDto(
-                        consonant.getId(),
-                        consonant.getValue(),
-                        consonant.getUnicode()
-                )).toList();
+                .map(consonant -> Stage1_1Problem.OptionDto.builder()
+                        .id(consonant.getId())
+                        .value(consonant.getValue())
+                        .unicode(consonant.getUnicode())
+                        .build()
+                ).toList();
 
         return new Stage1_1Problem(
                 answerConsonant.getValue(),
@@ -82,7 +83,7 @@ public class ConsonantTrainService {
             }
 
             // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
-            else if (!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
+            else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
                 foundCorrect = true;
                 selectedWords.add(word);
             }
@@ -92,12 +93,13 @@ public class ConsonantTrainService {
         List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
         for (Words word : selectedWords) {
             boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetConsonant);
-            options.add(new Stage1_2Problem.OptionDto(
-                    word.getId(),
-                    word.getWord(),
-                    word.getVoiceUrl(),
-                    isAnswer
-            ));
+            options.add(Stage1_2Problem.OptionDto.builder()
+                    .wordId(word.getId())
+                    .word(word.getWord())
+                    .voiceUrl(word.getVoiceUrl())
+                    .isAnswer(isAnswer)
+                    .build()
+            );
         }
 
         Collections.shuffle(options);
