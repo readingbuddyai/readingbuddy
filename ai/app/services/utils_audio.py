@@ -2,22 +2,12 @@ import io
 import numpy as np
 import soundfile as sf
 import noisereduce as nr
+import librosa
+from pydub import AudioSegment
 from fastapi import HTTPException, UploadFile
 from app.core.config import settings
 import tempfile
 import os
-
-try:
-    import librosa
-    LIBROSA_AVAILABLE = True
-except ImportError:
-    LIBROSA_AVAILABLE = False
-
-try:
-    from pydub import AudioSegment
-    PYDUB_AVAILABLE = True
-except ImportError:
-    PYDUB_AVAILABLE = False
 
 def detect_audio_format(file_content: bytes) -> str:
     """파일 내용의 매직 바이트로 오디오 포맷 감지"""
@@ -87,7 +77,7 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
 
     try:
         # WebM/OGG 포맷인 경우 pydub으로 변환
-        if is_webm and PYDUB_AVAILABLE:
+        if is_webm:
             print(f"[WebM 감지] pydub으로 변환 중...")
 
             # 임시 파일로 저장
@@ -122,23 +112,20 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
                 except Exception as sf_error:
                     print(f"[soundfile 실패] {sf_error}, pydub으로 재시도...")
                     # soundfile이 실패하면 pydub으로 시도 (MP3, M4A 등)
-                    if PYDUB_AVAILABLE:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{detected_format}') as tmp_input:
-                            tmp_input.write(file_content)
-                            tmp_input_path = tmp_input.name
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{detected_format}') as tmp_input:
+                        tmp_input.write(file_content)
+                        tmp_input_path = tmp_input.name
 
-                        try:
-                            audio = AudioSegment.from_file(tmp_input_path)
-                            wav_io = io.BytesIO()
-                            audio.export(wav_io, format='wav')
-                            wav_io.seek(0)
-                            data, sr = sf.read(wav_io)
-                            print(f"[pydub fallback 성공] SR: {sr}, Shape: {data.shape}")
-                        finally:
-                            if os.path.exists(tmp_input_path):
-                                os.unlink(tmp_input_path)
-                    else:
-                        raise sf_error
+                    try:
+                        audio = AudioSegment.from_file(tmp_input_path)
+                        wav_io = io.BytesIO()
+                        audio.export(wav_io, format='wav')
+                        wav_io.seek(0)
+                        data, sr = sf.read(wav_io)
+                        print(f"[pydub fallback 성공] SR: {sr}, Shape: {data.shape}")
+                    finally:
+                        if os.path.exists(tmp_input_path):
+                            os.unlink(tmp_input_path)
             else:
                 raise HTTPException(
                     status_code=400,
@@ -172,11 +159,6 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
 
     # 리샘플링
     if sr != 16000:
-        if not LIBROSA_AVAILABLE:
-            raise HTTPException(
-                status_code=500,
-                detail="리샘플링을 위한 librosa 라이브러리가 설치되지 않았습니다."
-            )
         try:
             data = librosa.resample(data, orig_sr=sr, target_sr=16000)
         except Exception as e:
@@ -187,15 +169,15 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
 
     return data.astype(np.float32)
 
-# 노이즈 제거
-def denoise_audio(waveform: np.ndarray, sr: int = 16000) -> np.ndarray:
-    """노이즈 제거"""
-    try:
-        reduced = nr.reduce_noise(y=waveform, sr=sr)
-        return reduced.astype(np.float32)
-    except Exception as e:
-        print(f"[Noise Reduction 실패] {e}")
-        return waveform
+# # 노이즈 제거
+# def denoise_audio(waveform: np.ndarray, sr: int = 16000) -> np.ndarray:
+#     """노이즈 제거"""
+#     try:
+#         reduced = nr.reduce_noise(y=waveform, sr=sr)
+#         return reduced.astype(np.float32)
+#     except Exception as e:
+#         print(f"[Noise Reduction 실패] {e}")
+#         return waveform
     
 
 # 청크 분할
