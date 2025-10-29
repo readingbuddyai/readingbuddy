@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, Form, HTTPException
-from app.services.inference import transcribe_audio, clean_tokens, decompose_to_jamo
+from app.services.inference import transcribe_stream, clean_tokens, decompose_to_jamo
 from app.core.config import settings
 from app.schemas import JamoCheckResponse, SyllableCheckResponse, WordCheckResponse, ErrorResponse
 
@@ -23,23 +23,26 @@ def validate_audio_file(file: UploadFile):
     if file.content_type and not file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="오디오 파일만 업로드 가능합니다.")
 
-# ==========================
+from fastapi import APIRouter, UploadFile, Form, HTTPException
+# ✅ ONNX 추론 함수로 변경
+from app.services.inference import transcribe_stream, clean_tokens, decompose_to_jamo
+from app.core.config import settings
+from app.schemas import JamoCheckResponse, SyllableCheckResponse, WordCheckResponse, ErrorResponse
+
+router = APIRouter(prefix="/check", tags=["Pronunciation"])
+
+# =================================
 # 자모 단위
-# ==========================
+# =================================
 @router.post("/jamo", response_model=JamoCheckResponse, responses={400: {"model": ErrorResponse}})
 async def check_jamo(file: UploadFile, target: str = Form(...)):
-    """
-    자모 단위 발음 검사
-
-    - **file**: 발음이 녹음된 오디오 파일
-    - **target**: 검사할 자모 (예: 'ㄱ', 'ㅏ')
-    """
+    """자모 단위 발음 검사"""
     validate_audio_file(file)
 
     if len(target) != 1:
         raise HTTPException(status_code=400, detail="자모 하나만 입력해야 합니다 (예: 'ㄱ', 'ㅏ').")
 
-    result = transcribe_audio(file)
+    result = transcribe_stream(file)
     decoded_tokens = clean_tokens(result["decoded_sequence"])
     is_correct = target in decoded_tokens
 
@@ -52,24 +55,21 @@ async def check_jamo(file: UploadFile, target: str = Form(...)):
         feedback=feedback,
     )
 
-# ==========================
+# =================================
 # 음절 단위
-# ==========================
+# =================================
 @router.post("/syllable", response_model=SyllableCheckResponse, responses={400: {"model": ErrorResponse}})
 async def check_syllable(file: UploadFile, target: str = Form(...)):
-    """
-    음절 단위 발음 검사
-
-    - **file**: 발음이 녹음된 오디오 파일
-    - **target**: 검사할 음절 (예: '가', '나')
-    """
+    """음절 단위 발음 검사"""
     validate_audio_file(file)
 
     if len(target) != 1:
         raise HTTPException(status_code=400, detail="한 글자만 입력해야 합니다 (예: '가').")
 
     jamos = decompose_to_jamo(target)
-    result = transcribe_audio(file)
+
+    # ✅ 교체
+    result = transcribe_stream(file)
     decoded_tokens = clean_tokens(result["decoded_sequence"])
 
     matched = [j for j in jamos if j in decoded_tokens]
@@ -85,24 +85,21 @@ async def check_syllable(file: UploadFile, target: str = Form(...)):
         feedback=feedback,
     )
 
-# ==========================
+# =================================
 # 단어 단위
-# ==========================
+# =================================
 @router.post("/word", response_model=WordCheckResponse, responses={400: {"model": ErrorResponse}})
 async def check_word(file: UploadFile, target: str = Form(...)):
-    """
-    단어 단위 발음 검사
-
-    - **file**: 발음이 녹음된 오디오 파일
-    - **target**: 검사할 단어 (예: '감자', '사과')
-    """
+    """단어 단위 발음 검사"""
     validate_audio_file(file)
 
     if not target or not all("가" <= ch <= "힣" for ch in target):
         raise HTTPException(status_code=400, detail="한글 단어만 입력해야 합니다 (예: '감자').")
 
     syllables = [decompose_to_jamo(ch) for ch in target]
-    result = transcribe_audio(file)
+
+    # ✅ 교체
+    result = transcribe_stream(file)
     decoded_tokens = clean_tokens(result["decoded_sequence"])
 
     flat_target = sum(syllables, [])
