@@ -23,10 +23,10 @@ public class TrainedProblemHistories {
     @Column(nullable = false)
     private Integer problemId;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String phonemes;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String word;
 
     @Column(nullable = false)
