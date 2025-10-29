@@ -1,0 +1,12 @@
+services:
+  voice-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: voice-generator
+    env_file:
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    network_mode: host
+    restart: on-failure
