@@ -71,28 +71,23 @@ public class VowelTrainService {
         Collections.shuffle(allWords);
 
         List<Words> selectedWords = new ArrayList<>();
-        Words correctWord = null;
+        boolean foundCorrect = false;
 
         // 전체를 돌면서 처음 4개를 바로 선택, 정답은 따로 찾기
         for (Words word : allWords) {
+            if (foundCorrect && selectedWords.size() == 5) {
+                break;
+            }
+
             if (selectedWords.size() < 4) {
                 selectedWords.add(word);
             }
 
-            // 정답을 아직 못 찾았으면 계속 찾기
-            if (correctWord == null && checkWordContainsPhoneme(word.getWord(), targetVowel)) {
-                correctWord = word;
+            // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
+            else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                foundCorrect = true;
+                selectedWords.add(word);
             }
-
-            // 4개 찼고 정답도 찾았으면 종료
-            if (selectedWords.size() == 4 && correctWord != null) {
-                break;
-            }
-        }
-
-        // 5번째 자리에 정답 추가 (중복되지 않게)
-        if (correctWord != null && !selectedWords.contains(correctWord)) {
-            selectedWords.add(correctWord);
         }
 
         // 각 단어마다 isAnswer 플래그 설정
