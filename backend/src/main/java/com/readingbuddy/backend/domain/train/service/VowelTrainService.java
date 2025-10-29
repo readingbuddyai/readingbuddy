@@ -81,12 +81,22 @@ public class VowelTrainService {
 
             if (selectedWords.size() < 4) {
                 selectedWords.add(word);
+                // 처음에 정답이 있을 수 있으니 있으면 5번째는 아무거나 들어와도 됨
+                if (checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                    foundCorrect = true;
+                }
             }
 
-            // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
-            else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetVowel)) {
-                foundCorrect = true;
-                selectedWords.add(word);
+            else {
+                if (foundCorrect) {
+                    selectedWords.add(word);
+                    break;
+                }
+                // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
+                else if(checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                    selectedWords.add(word);
+                    break;
+                }
             }
         }
 
