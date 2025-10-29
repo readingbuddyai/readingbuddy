@@ -42,6 +42,6 @@ public class TrainedProblemHistories {
     private LocalDateTime solvedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id")  // FK 실제 위치
+    @JoinColumn(name = "user_id")  // FK 실제 위치
     private TrainedProblemHistories trainedProblemHistories;
 }

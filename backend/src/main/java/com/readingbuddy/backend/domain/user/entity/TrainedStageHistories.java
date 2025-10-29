@@ -34,6 +34,6 @@ public class TrainedStageHistories {
     private Integer turnedCount;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id")  // FK 실제 위치
+    @JoinColumn(name = "user_id")  // FK 컬럼명
     private User user;
 }
