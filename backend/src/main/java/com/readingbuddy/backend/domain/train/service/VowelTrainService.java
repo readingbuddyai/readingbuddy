@@ -70,30 +70,29 @@ public class VowelTrainService {
         List<Words> allWords = wordsRepository.findAll();
         Collections.shuffle(allWords);
 
-        // 정답 1개 찾기 (찾으면 즉시 중단)
-        Words correctWord = null;
-        for (Words word : allWords) {
-            if (checkWordContainsPhoneme(word.getWord(), targetVowel)) {
-                correctWord = word;
-                break;
-            }
-        }
-
         List<Words> selectedWords = new ArrayList<>();
+        Words correctWord = null;
 
-        if (correctWord != null) {
-            selectedWords.add(correctWord);
-        }
-
-        // 랜덤 20개에서 4개 뽑기 (정답과 중복되지 않게)
-        List<Words> randomPool = wordsRepository.findRandomWordsPool();
-        for (Words word : randomPool) {
-            if (selectedWords.size() >= 5) {
-                break;
-            }
-            if (!selectedWords.contains(word)) {
+        // 전체를 돌면서 처음 4개를 바로 선택, 정답은 따로 찾기
+        for (Words word : allWords) {
+            if (selectedWords.size() < 4) {
                 selectedWords.add(word);
             }
+
+            // 정답을 아직 못 찾았으면 계속 찾기
+            if (correctWord == null && checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                correctWord = word;
+            }
+
+            // 4개 찼고 정답도 찾았으면 종료
+            if (selectedWords.size() == 4 && correctWord != null) {
+                break;
+            }
+        }
+
+        // 5번째 자리에 정답 추가 (중복되지 않게)
+        if (correctWord != null && !selectedWords.contains(correctWord)) {
+            selectedWords.add(correctWord);
         }
 
         // 각 단어마다 isAnswer 플래그 설정
