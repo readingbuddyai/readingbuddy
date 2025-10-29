@@ -1,6 +1,7 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.SceneManagement;
+using System.Collections;
 
 [RequireComponent(typeof(XRSimpleInteractable))]
 public class LoadSceneOnSelect : MonoBehaviour
@@ -9,6 +10,7 @@ public class LoadSceneOnSelect : MonoBehaviour
     public string targetSceneName;
 
     private XRSimpleInteractable interactable;
+    private bool _isLoading; // 중복 로드 가드
 
     private void Awake()
     {
@@ -17,33 +19,48 @@ public class LoadSceneOnSelect : MonoBehaviour
 
     private void OnEnable()
     {
-        // 트리거(Select) 눌렀을 때
         interactable.selectEntered.AddListener(OnSelectEntered);
-        // 혹시 'Activate'(보조 버튼)로 바꾸고 싶다면 아래 주석 해제하고 위는 주석
-        // interactable.activated.AddListener(OnActivated);
     }
 
     private void OnDisable()
     {
         interactable.selectEntered.RemoveListener(OnSelectEntered);
-        // interactable.activated.RemoveListener(OnActivated);
     }
 
     private void OnSelectEntered(SelectEnterEventArgs _)
     {
-        if (!string.IsNullOrEmpty(targetSceneName))
-        {
-            SceneManager.LoadScene(targetSceneName, LoadSceneMode.Single);
-        }
-        else
-        {
-            Debug.LogWarning("[LoadSceneOnSelect] targetSceneName이 비었습니다.");
-        }
+        TryLoad();
     }
 
-    // 보조 버튼(Activate)로 쓰고 싶을 때
-    // private void OnActivated(ActivateEventArgs _)
-    // {
-    //     OnSelectEntered(null);
-    // }
+    private void TryLoad()
+    {
+        if (_isLoading) return;
+
+        if (string.IsNullOrWhiteSpace(targetSceneName))
+        {
+            Debug.LogWarning("[LoadSceneOnSelect] targetSceneName이 비었습니다.");
+            return;
+        }
+
+        if (!Application.CanStreamedLevelBeLoaded(targetSceneName))
+        {
+            Debug.LogError($"[LoadSceneOnSelect] '{targetSceneName}' 로드 불가. " +
+                           $"Build Settings(Scenes In Build) 등록/이름 확인");
+            return;
+        }
+
+        _isLoading = true;
+        interactable.enabled = false;
+        Debug.Log($"[LoadSceneOnSelect] Loading → {targetSceneName}");
+        StartCoroutine(LoadRoutine());
+    }
+
+    private IEnumerator LoadRoutine()
+    {
+        // 1️⃣ SceneRouter.cs 사용 (ActiveScene 전환 포함)
+        yield return SceneRouter.LoadContent(targetSceneName);
+
+        _isLoading = false;
+        interactable.enabled = true;
+    }
 }
