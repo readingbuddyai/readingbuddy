@@ -5,6 +5,9 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "trained_words")
@@ -19,7 +22,7 @@ public class TrainedStageHistories {
     private Long id;
 
     @Column(nullable = false)
-    private Integer stage;
+    private String stage;
 
     @Column(nullable = false)
     private Integer problemCount;
@@ -32,6 +35,13 @@ public class TrainedStageHistories {
 
     @Column(nullable = false)
     private Integer turnedCount;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime startedAt;  // 시작 시간
+
+    @Column
+    private LocalDateTime completedAt;  // 완료 시간
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")  // FK 컬럼명
