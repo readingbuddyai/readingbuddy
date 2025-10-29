@@ -1,11 +1,12 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.SceneManagement;
 using System.Collections;
 
 [RequireComponent(typeof(XRSimpleInteractable))]
 public class LoadSceneOnSelect : MonoBehaviour
 {
-    [Header("Build Settings에 등록된 씬 이름(대소문자 정확히)")]
+    [Header("Build Settings에 등록된 씬 이름")]
     public string targetSceneName;
 
     private XRSimpleInteractable interactable;
@@ -19,22 +20,17 @@ public class LoadSceneOnSelect : MonoBehaviour
     private void OnEnable()
     {
         interactable.selectEntered.AddListener(OnSelectEntered);
-        // 필요 시: interactable.activated.AddListener(OnActivated);
     }
 
     private void OnDisable()
     {
         interactable.selectEntered.RemoveListener(OnSelectEntered);
-        // 필요 시: interactable.activated.RemoveListener(OnActivated);
     }
 
     private void OnSelectEntered(SelectEnterEventArgs _)
     {
         TryLoad();
     }
-
-    // 보조 버튼으로 쓰고 싶다면
-    // private void OnActivated(ActivateEventArgs _) => TryLoad();
 
     private void TryLoad()
     {
@@ -54,14 +50,17 @@ public class LoadSceneOnSelect : MonoBehaviour
         }
 
         _isLoading = true;
+        interactable.enabled = false;
         Debug.Log($"[LoadSceneOnSelect] Loading → {targetSceneName}");
-        StartCoroutine(LoadAdditiveRoutine());
+        StartCoroutine(LoadRoutine());
     }
 
-    private IEnumerator LoadAdditiveRoutine()
+    private IEnumerator LoadRoutine()
     {
-        // ★ _Persistent를 보존한 채 콘텐츠 씬만 교체
+        // 1️⃣ SceneRouter.cs 사용 (ActiveScene 전환 포함)
         yield return SceneRouter.LoadContent(targetSceneName);
+
         _isLoading = false;
+        interactable.enabled = true;
     }
 }
