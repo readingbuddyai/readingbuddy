@@ -6,6 +6,8 @@ services:
     image: spring-app:latest
     container_name: spring-app-container
     restart: always
+    env_file:
+      - .env
     environment:
       - SPRING_PROFILES_ACTIVE=${DEPLOYMENT_ENV:-production}
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/prod
