@@ -22,16 +22,16 @@ public class TrainedStageHistories {
     private Integer stage;
 
     @Column(nullable = false)
-    private Integer problem_cnt;
+    private Integer problemCount;
 
     @Column(nullable = false)
-    private Integer correct_cnt;
+    private Integer correctCount;
 
     @Column(nullable = false)
-    private Integer wrong_cnt;
+    private Integer wrongCount;
 
     @Column(nullable = false)
-    private Integer turned_cnt;
+    private Integer turnedCount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id")  // FK 실제 위치

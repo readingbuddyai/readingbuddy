@@ -40,4 +40,8 @@ public class TrainedProblemHistories {
 
     @Column(nullable = false)
     private LocalDateTime solvedAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id")  // FK 실제 위치
+    private TrainedProblemHistories trainedProblemHistories;
 }
