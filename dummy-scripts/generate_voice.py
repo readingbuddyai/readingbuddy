@@ -275,8 +275,7 @@ class VoiceGenerator:
 
             logger.info(f"총 {total}개의 단어 처리를 시작합니다...")
             logger.info(f"출력 포맷: MP3, 느린 속도: {self.slow_speed}x")
-            
-            print(words)
+
             for idx, record in enumerate(words, 1):
                 record_id = record[id_column]
                 text = chr(record[text_column])
@@ -297,30 +296,30 @@ class VoiceGenerator:
                     normal_url = self.upload_to_s3(normal_audio, file_name, 'audio/mpeg')
 
                 # 2. 느린 속도 음성 파일 생성
-                # logger.info(f"  → 느린 속도 파일 생성 중...")
-                # slow_audio = self.generate_voice_file(text, slow=False)  # 일단 정상 속도로 생성
+                logger.info(f"  → 느린 속도 파일 생성 중...")
+                slow_audio = self.generate_voice_file(text, slow=False)  # 일단 정상 속도로 생성
 
-                # if slow_audio:
-                #     # 속도 조절
-                #     slow_audio = self.change_speed(slow_audio, self.slow_speed)
+                if slow_audio:
+                    # 속도 조절
+                    slow_audio = self.change_speed(slow_audio, self.slow_speed)
 
-                #     if slow_audio:
-                #         # S3에 업로드
-                #         file_name = f"{record_id}_{text.replace(' ', '_')}_slow.mp3"
-                #         slow_url = self.upload_to_s3(slow_audio, file_name, 'audio/mpeg')
+                    if slow_audio:
+                        # S3에 업로드
+                        file_name = f"{record_id}_slow.mp3"
+                        slow_url = self.upload_to_s3(slow_audio, file_name, 'audio/mpeg')
 
                 # 3. DB 업데이트
                 if normal_url or slow_url:
                     self.update_db_record(
                         table_name, id_column, record_id,
-                        normal_url, 
+                        normal_url,
                         normal_url_column
                     )
                     success_count += 1
                 else:
                     fail_count += 1
 
-                # API 속도 제한을 위한 지연
+                # 처리 속도 조절을 위한 지연
                 if idx < total:
                     time.sleep(delay_seconds)
 
@@ -347,6 +346,7 @@ def main():
     normal_url_column = os.getenv('NORMAL_URL_COLUMN', 'voice_url')
     slow_url_column = os.getenv('SLOW_URL_COLUMN', 'voice_url_slow')
     where_clause = os.getenv('WHERE_CLAUSE', None)
+    delay_seconds = float(os.getenv('DELAY_SECONDS', '0.5'))
 
     # VoiceGenerator 인스턴스 생성 및 실행
     generator = VoiceGenerator()
@@ -356,7 +356,8 @@ def main():
         id_column=id_column,
         normal_url_column=normal_url_column,
         slow_url_column=slow_url_column,
-        where_clause=where_clause
+        where_clause=where_clause,
+        delay_seconds=delay_seconds
     )
 
 

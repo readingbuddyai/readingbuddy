@@ -17,8 +17,8 @@ public class LetterSeederConfig {
     private final DataSource dataSource;
 
     // 필요 시 application.yml로 뺄 수 있음
-    private static final String VOICE_FMT      = "";
-    private static final String VOICE_SLOW_FMT = "";
+    private static final String VOICE_FMT      = "https://final-a206.s3.ap-northeast-2.amazonaws.com/voices/letters/%s_normal.mp3";
+    private static final String VOICE_SLOW_FMT = "https://final-a206.s3.ap-northeast-2.amazonaws.com/voices/letters/%s_slow.mp3";
 
     @Bean
     ApplicationRunner seedLettersRunner() {
@@ -39,8 +39,8 @@ public class LetterSeederConfig {
                         String ucode = String.format("U+%04X", cp);
                         String id = ucode; // 필요 시 다른 규칙 사용
                         int cnt = PhonemeCounter.countForCodePoint(cp);
-                        String voice = String.format(VOICE_FMT, cp);
-                        String slow  = String.format(VOICE_SLOW_FMT, cp);
+                        String voice = String.format(VOICE_FMT, ucode);
+                        String slow  = String.format(VOICE_SLOW_FMT, ucode);
 
                         ps.setString(1, id);
                         ps.setString(2, ucode);
