@@ -66,34 +66,37 @@ public class VowelTrainService {
         Phonemes targetPhoneme = phonemesRepository.findOneRandomVowelForQuestion();
         char targetVowel = targetPhoneme.getValue().charAt(0);
 
-        // 더 많은 단어 pool에서 조회 (20개)
-        List<Words> wordPool = wordsRepository.findRandomWordsPool();
-
-        List<Words> correctWords = new ArrayList<>();
-        List<Words> wrongWords = new ArrayList<>();
-
-        // 단어를 정답/오답으로 분류
-        for (Words word : wordPool) {
-            if (checkWordContainsPhoneme(word.getWord(), targetVowel)) {
-                correctWords.add(word);
-            } else {
-                wrongWords.add(word);
-            }
-        }
+        // 모든 단어 조회
+        List<Words> allWords = wordsRepository.findAll();
+        Collections.shuffle(allWords);
 
         List<Words> selectedWords = new ArrayList<>();
+        boolean foundCorrect = false;
 
-        // 정답 최소 1개 보장
-        if (!correctWords.isEmpty()) {
-            selectedWords.add(correctWords.get(0));
-        }
+        // 전체를 돌면서 처음 4개를 바로 선택, 정답은 따로 찾기
+        for (Words word : allWords) {
+            if (foundCorrect && selectedWords.size() == 5) {
+                break;
+            }
 
-        // 나머지는 랜덤으로 채우기 (정답/오답 섞여서)
-        Collections.shuffle(wordPool);
-        for (Words word : wordPool) {
-            if (selectedWords.size() >= 5) break;
-            if (!selectedWords.contains(word)) {
+            if (selectedWords.size() < 4) {
                 selectedWords.add(word);
+                // 처음에 정답이 있을 수 있으니 있으면 5번째는 아무거나 들어와도 됨
+                if (checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                    foundCorrect = true;
+                }
+            }
+
+            else {
+                if (foundCorrect) {
+                    selectedWords.add(word);
+                    break;
+                }
+                // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
+                else if(checkWordContainsPhoneme(word.getWord(), targetVowel)) {
+                    selectedWords.add(word);
+                    break;
+                }
             }
         }
 
