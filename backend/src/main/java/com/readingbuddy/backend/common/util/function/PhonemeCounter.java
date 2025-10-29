@@ -53,9 +53,8 @@ public class PhonemeCounter {
         int jung = (si % 588) / 28;   // 0..20
         int jong = si % 28;           // 0..27
 
-        int cnt = 1;                  // 초성 1
-        cnt += jungsungCount(jung);   // 중성
-        if (jong != 0) cnt += isComplexJong(jong) ? 2 : 1; // 종성
+        int cnt = 2;                  // 초성 중성 2
+        if (jong != 0) cnt += 1; // 종성
         return cnt;
     }
 
