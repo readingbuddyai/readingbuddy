@@ -42,9 +42,6 @@ public class TrainedProblemHistories {
     private String selectedAnswer;
 
     @Column(nullable = false)
-    private String reply;
-
-    @Column(nullable = false)
     private LocalDateTime solvedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

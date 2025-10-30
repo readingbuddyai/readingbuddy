@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AttemptRequest {
 
-    private Long sessionId;  // 훈련 세션 ID
+    private String sessionId;  // 훈련 세션 ID
     private Integer problemId;
     private String stage;
     private Integer tryCount;

@@ -9,5 +9,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class StageCompleteRequest {
 
-    private Long sessionId;
+    private String sessionId;
 }

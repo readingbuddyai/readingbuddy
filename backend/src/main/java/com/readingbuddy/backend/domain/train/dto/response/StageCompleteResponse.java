@@ -14,7 +14,7 @@ import java.util.List;
 @Builder
 public class StageCompleteResponse {
 
-    private Long sessionId;
+    private String sessionId;
     private String stage;
     private Integer totalProblems;
     private Integer correctCount;

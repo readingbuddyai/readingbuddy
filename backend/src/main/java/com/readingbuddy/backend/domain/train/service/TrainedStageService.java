@@ -27,18 +27,24 @@ public class TrainedStageService {
     private final UserRepository userRepository;
     private final TrainedStageHistoriesRepository trainedStageHistoriesRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
+    private final TrainManager trainManager;
 
     /**
      * Stage 시작 - 새로운 훈련 세션 생성
+     * TrainManager의 generateQuestionSession()을 사용하여 sessionKey 생성
      */
     public StageStartResponse startStage(StageStartRequest request) {
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다: " + request.getUserId()));
 
+        // TrainManager에서 sessionKey 생성 (메모리에 세션도 자동 생성됨)
+        String sessionKey = trainManager.generateQuestionSession();
+
         // 새 세션 생성
         TrainedStageHistories session = TrainedStageHistories.builder()
                 .user(user)
+                .sessionKey(sessionKey)
                 .stage(request.getStage())
                 .problemCount(request.getTotalProblems())
                 .correctCount(0)
@@ -49,7 +55,7 @@ public class TrainedStageService {
         session = trainedStageHistoriesRepository.save(session);
 
         return StageStartResponse.builder()
-                .sessionId(session.getId())
+                .sessionId(session.getSessionKey())
                 .stage(session.getStage())
                 .totalProblems(session.getProblemCount())
                 .startAt(session.getStartedAt())
@@ -61,7 +67,7 @@ public class TrainedStageService {
      */
     public AttemptResponse submitAttempt(AttemptRequest request) {
         // 세션 조회
-        TrainedStageHistories session = trainedStageHistoriesRepository.findById(request.getSessionId())
+        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
 
         // 시도 기록 생성
@@ -81,12 +87,11 @@ public class TrainedStageService {
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
-                .sessionId(session.getId())
+                .sessionId(session.getSessionKey())
                 .problemId(attempt.getProblemId())
                 .phonemes(attempt.getPhonemes())
                 .word(attempt.getWord())
                 .selectedAnswer(attempt.getSelectedAnswer())
-                .reply(attempt.getReply())
                 .isCorrect(attempt.getIsCorrect())
                 .isReplyCorrect(attempt.getIsReplyCorrect())
                 .tryCount(attempt.getTryCount())
@@ -98,7 +103,7 @@ public class TrainedStageService {
      */
     public StageCompleteResponse completeStage(StageCompleteRequest request) {
         // 세션 조회
-        TrainedStageHistories session = trainedStageHistoriesRepository.findById(request.getSessionId())
+        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
 
         // 이 세션의 모든 시도 기록 조회
@@ -118,12 +123,11 @@ public class TrainedStageService {
         List<AttemptResponse> attemptResponses = attempts.stream()
                 .map(a -> AttemptResponse.builder()
                         .attemptId(a.getId())
-                        .sessionId(session.getId())
+                        .sessionId(session.getSessionKey())
                         .problemId(a.getProblemId())
                         .phonemes(a.getPhonemes())
                         .word(a.getWord())
                         .selectedAnswer(a.getSelectedAnswer())
-                        .reply(a.getReply())
                         .isCorrect(a.getIsCorrect())
                         .isReplyCorrect(a.getIsReplyCorrect())
                         .tryCount(a.getTryCount())
@@ -132,8 +136,11 @@ public class TrainedStageService {
 
         session.updateCompleteInfo((int) correctCount, wrongCount, 0);  // turnedCount - 임ㅅ
 
+        // TrainManager 세션 제거 (메모리 정리)
+        trainManager.removeProblemSession(request.getSessionId());
+
         return StageCompleteResponse.builder()
-                .sessionId(session.getId())
+                .sessionId(session.getSessionKey())
                 .stage(session.getStage())
                 .totalProblems(totalProblems)
                 .correctCount((int) correctCount)

@@ -113,8 +113,7 @@ public class TrainController {
     @PostMapping(value = "/check/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<String>> checkVoice(
             @RequestParam("audio") MultipartFile audioFile,
-            @RequestParam("problemId") String problemId,
-            @RequestParam("sessionId") Long sessionId,
+            @RequestParam("sessionId") String sessionId,
             @RequestParam("stage") String stage) {
 
         try {
@@ -125,7 +124,7 @@ public class TrainController {
             }
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse response = trainManager.sendVoiceToAI(problemId, audioFile, stage);
+            VoiceCheckResponse response = trainManager.sendVoiceToAI(sessionId, audioFile, stage);
 
             // TODO: 음성 파일 처리 로직 (STT, 정답 판단 등)
 
