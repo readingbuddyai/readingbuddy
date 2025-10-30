@@ -6,6 +6,7 @@ import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
+import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -42,112 +44,83 @@ public class TrainedStageService {
         String sessionKey = trainManager.generateQuestionSession();
 
         // 새 세션 생성
-        TrainedStageHistories session = TrainedStageHistories.builder()
+        TrainedStageHistories stage = TrainedStageHistories.builder()
                 .user(user)
                 .sessionKey(sessionKey)
                 .stage(request.getStage())
                 .problemCount(request.getTotalProblems())
                 .correctCount(0)
                 .wrongCount(0)
-                .turnedCount(0)
+                .tryCount(0)
                 .build();
 
-        session = trainedStageHistoriesRepository.save(session);
+        stage = trainedStageHistoriesRepository.save(stage);
 
         return StageStartResponse.builder()
-                .sessionId(session.getSessionKey())
-                .stage(session.getStage())
-                .totalProblems(session.getProblemCount())
-                .startAt(session.getStartedAt())
+                .sessionId(stage.getSessionKey())
+                .stage(stage.getStage())
+                .totalProblems(stage.getProblemCount())
+                .startAt(stage.getStartedAt())
                 .build();
     }
 
     /**
      * 문제 시도 제출 - 개별 문제 시도 기록 저장
+     * 개별 시도 map 에도 저장
      */
     public AttemptResponse submitAttempt(AttemptRequest request) {
         // 세션 조회
-        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
 
         // 시도 기록 생성
         TrainedProblemHistories attempt = TrainedProblemHistories.builder()
-                .trainedStageHistories(session)
+                .trainedStageHistories(stage)
                 .problemId(request.getProblemId())
                 .phonemes(request.getPhonemes())
                 .word(request.getWord())
                 .selectedAnswer(request.getSelectedAnswer())
-                .tryCount(request.getTryCount())
+                .attemptNumber(request.getAttemptNumber())
                 .isCorrect(request.getIsCorrect())
                 .isReplyCorrect(request.getIsReplyCorrect())
                 .solvedAt(LocalDateTime.now())
                 .build();
 
+        // 문제 하나씩 저장
         attempt = trainedProblemHistoriesRepository.save(attempt);
+
+        // 저장한 session 업데이트
+        // 시도 횟수가 커진다면, 전체 try count를 올립니다.
+        if (request.getAttemptNumber() > 1) stage.updateTryCount();
+        if (request.getIsCorrect()) stage.updateCorrectCount();
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
-                .sessionId(session.getSessionKey())
+                .sessionId(stage.getSessionKey())
                 .problemId(attempt.getProblemId())
                 .phonemes(attempt.getPhonemes())
                 .word(attempt.getWord())
                 .selectedAnswer(attempt.getSelectedAnswer())
                 .isCorrect(attempt.getIsCorrect())
                 .isReplyCorrect(attempt.getIsReplyCorrect())
-                .tryCount(attempt.getTryCount())
+                .attemptNumber(attempt.getAttemptNumber())
                 .build();
     }
 
     /**
-     * Stage 완료 - 통계 집계 및 세션 종료
+     * Stage 완료 - 부족한 음성 리스트 전달
      */
     public StageCompleteResponse completeStage(StageCompleteRequest request) {
-        // 세션 조회
-        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
 
-        // 이 세션의 모든 시도 기록 조회
-        List<TrainedProblemHistories> attempts = trainedProblemHistoriesRepository.findByTrainedStageHistories(session);
+        SessionInfo sessionInfo = trainManager.getProblemSession(request.getSessionId());
+        stage.updateWrongCount();
 
-        // 통계 집계
-        long correctCount = attempts.stream()
-                .filter(TrainedProblemHistories::getIsCorrect)
-                .map(TrainedProblemHistories::getProblemId)
-                .distinct()  // 같은 문제 여러 시도 중 한 번이라도 맞으면 정답
-                .count();
-
-        int totalProblems = session.getProblemCount();
-        int wrongCount = totalProblems - (int) correctCount;
-
-        // 시도한 모든 기록
-        List<AttemptResponse> attemptResponses = attempts.stream()
-                .map(a -> AttemptResponse.builder()
-                        .attemptId(a.getId())
-                        .sessionId(session.getSessionKey())
-                        .problemId(a.getProblemId())
-                        .phonemes(a.getPhonemes())
-                        .word(a.getWord())
-                        .selectedAnswer(a.getSelectedAnswer())
-                        .isCorrect(a.getIsCorrect())
-                        .isReplyCorrect(a.getIsReplyCorrect())
-                        .tryCount(a.getTryCount())
-                        .build())
-                .toList();
-
-        session.updateCompleteInfo((int) correctCount, wrongCount, 0);  // turnedCount - 임ㅅ
-
-        // TrainManager 세션 제거 (메모리 정리)
-        trainManager.removeProblemSession(request.getSessionId());
+        Set<String> voiceResult = sessionInfo.getQuestionAccuracy().keySet();
 
         return StageCompleteResponse.builder()
-                .sessionId(session.getSessionKey())
-                .stage(session.getStage())
-                .totalProblems(totalProblems)
-                .correctCount((int) correctCount)
-                .wrongCount(wrongCount)
-                .turnedCount(0)
-                .completedAt(LocalDateTime.now())
-                .attemptResponses(attemptResponses)
+                .voiceResult(voiceResult)
                 .build();
     }
 }

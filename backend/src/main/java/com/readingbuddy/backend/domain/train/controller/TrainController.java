@@ -114,7 +114,9 @@ public class TrainController {
     public ResponseEntity<ApiResponse<VoiceCheckResponse>> checkVoice(
             @RequestParam("audio") MultipartFile audioFile,
             @RequestParam("sessionId") String sessionId,
-            @RequestParam("stage") String stage) {
+            @RequestParam("stage") String stage,
+           @RequestParam("problemId") String problemId
+    ) {
 
         try {
             // 파일 검증
@@ -124,7 +126,7 @@ public class TrainController {
             }
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse response = trainManager.sendVoiceToAI(sessionId, audioFile, stage);
+            VoiceCheckResponse response = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
 
             // TODO: 음성 파일 처리 로직 (STT, 정답 판단 등)
 

@@ -20,5 +20,5 @@ public class AttemptResponse {
     private Boolean isCorrect;
     private Boolean isReplyCorrect;
     private Double accuracy;
-    private Integer tryCount;
+    private Integer attemptNumber;
 }

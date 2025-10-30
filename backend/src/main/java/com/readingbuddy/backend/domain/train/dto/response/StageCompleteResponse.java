@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @NoArgsConstructor
@@ -15,11 +16,5 @@ import java.util.List;
 public class StageCompleteResponse {
 
     private String sessionId;
-    private String stage;
-    private Integer totalProblems;
-    private Integer correctCount;
-    private Integer wrongCount;
-    private Integer turnedCount;
-    private LocalDateTime completedAt;
-    private List<AttemptResponse> attemptResponses;
+    private Set<String> voiceResult;
 }

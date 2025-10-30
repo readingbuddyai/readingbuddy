@@ -1,7 +1,7 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.domain.train.dto.response.VoiceCheckResponse;
-import com.readingbuddy.backend.domain.train.dto.result.QuestionInfo;
+import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,22 +19,22 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class TrainManager {
 
-    private final Map<String, QuestionInfo> questionSession = new ConcurrentHashMap<>();
+    private final Map<String, SessionInfo> questionSession = new ConcurrentHashMap<>();
     private final WebClient webClient;
 
     public String generateQuestionSession() {
         String problemId = UUID.randomUUID().toString();
 
-        QuestionInfo questionInfo = QuestionInfo.builder()
+        SessionInfo sessionInfo = SessionInfo.builder()
                 .questionAccuracy(new HashMap<>())
                 .build();
 
-        this.questionSession.put(problemId, questionInfo);
+        this.questionSession.put(problemId, sessionInfo);
 
         return problemId;
     }
 
-    public QuestionInfo getProblemSession(String problemId) {
+    public SessionInfo getProblemSession(String problemId) {
         return this.questionSession.get(problemId);
     }
 
@@ -43,8 +43,12 @@ public class TrainManager {
     }
 
     // TODO : Object -> Dto로 변경
-    public VoiceCheckResponse sendVoiceToAI(String problemId, MultipartFile audioFile, String stage) {
-        QuestionInfo questionInfo = questionSession.get(problemId);
+    public VoiceCheckResponse sendVoiceToAI(
+            String sessionId, MultipartFile audioFile, String stage, String problemId
+    ) {
+        SessionInfo sessionInfo = questionSession.get(sessionId);
+
+        // TODO: S3 저장 후 URL AI server로 전달
 
         Mono<Object> response = webClient.post()
                 .uri("/judge")
@@ -54,8 +58,9 @@ public class TrainManager {
 
         response.subscribe(
                 res -> {
-                    Map<String, Double> map =questionInfo.getQuestionAccuracy();
-                    map.put(stage,Double.MAX_VALUE);
+                    Map<String, Double> map = sessionInfo.getQuestionAccuracy();
+                    // TODO: 답변 저장
+                    map.put(problemId, Double.MAX_VALUE);
                 },
                 err -> {
                     log.error("AI 서버 호출 실패: problemId={}, error={}", problemId, err.getMessage(), err);

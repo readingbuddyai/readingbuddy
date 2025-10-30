@@ -1,6 +1,6 @@
 package com.readingbuddy.backend.domain.train.service;
 
-import com.readingbuddy.backend.domain.train.dto.result.QuestionInfo;
+import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
@@ -23,7 +23,7 @@ class TrainManagerTest {
 
     private MockWebServer mockWebServer;
     private TrainManager trainManager;
-    private Map<String, QuestionInfo> questionSession;
+    private Map<String, SessionInfo> questionSession;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -61,7 +61,7 @@ class TrainManagerTest {
         assertFalse(problemId.isEmpty());
         
         // 세션에 저장되었는지 확인
-        QuestionInfo savedSession = questionSession.get(problemId);
+        SessionInfo savedSession = questionSession.get(problemId);
         assertNotNull(savedSession);
         assertNotNull(savedSession.getQuestionAccuracy());
         assertTrue(savedSession.getQuestionAccuracy().isEmpty());
@@ -72,13 +72,13 @@ class TrainManagerTest {
     void getProblemSession_Success() {
         // given
         String problemId = "test-problem-id";
-        QuestionInfo expectedInfo = QuestionInfo.builder()
+        SessionInfo expectedInfo = SessionInfo.builder()
                 .questionAccuracy(new HashMap<>())
                 .build();
         questionSession.put(problemId, expectedInfo);
 
         // when
-        QuestionInfo result = trainManager.getProblemSession(problemId);
+        SessionInfo result = trainManager.getProblemSession(problemId);
 
         // then
         assertNotNull(result);
@@ -90,10 +90,10 @@ class TrainManagerTest {
     void removeProblemSession_Success() {
         // given
         String problemId = "test-problem-id";
-        QuestionInfo questionInfo = QuestionInfo.builder()
+        SessionInfo sessionInfo = SessionInfo.builder()
                 .questionAccuracy(new HashMap<>())
                 .build();
-        questionSession.put(problemId, questionInfo);
+        questionSession.put(problemId, sessionInfo);
 
         // when
         trainManager.removeProblemSession(problemId);
@@ -108,24 +108,25 @@ class TrainManagerTest {
     void generateQuestionSession_InitializedAccuracyMap() {
         // when
         String problemId = trainManager.generateQuestionSession();
-        QuestionInfo questionInfo = trainManager.getProblemSession(problemId);
+        SessionInfo sessionInfo = trainManager.getProblemSession(problemId);
 
         // then
-        assertNotNull(questionInfo);
-        assertNotNull(questionInfo.getQuestionAccuracy());
-        assertTrue(questionInfo.getQuestionAccuracy().isEmpty());
+        assertNotNull(sessionInfo);
+        assertNotNull(sessionInfo.getQuestionAccuracy());
+        assertTrue(sessionInfo.getQuestionAccuracy().isEmpty());
         
         // 맵에 데이터 추가 가능 확인
-        questionInfo.getQuestionAccuracy().put("test", 0.5);
-        assertEquals(0.5, questionInfo.getQuestionAccuracy().get("test"));
+        sessionInfo.getQuestionAccuracy().put("test", 0.5);
+        assertEquals(0.5, sessionInfo.getQuestionAccuracy().get("test"));
     }
 
     @Test
     @DisplayName("AI 서버에 음성 전송 - 성공 응답")
     void sendVoiceToAI_Success() throws InterruptedException {
         // given
-        String problemId = trainManager.generateQuestionSession();
+        String sessionId = trainManager.generateQuestionSession();
         String stage = "1.1.1";
+        String problemId = "t";
         MockMultipartFile audioFile = new MockMultipartFile(
                 "audio",
                 "test.wav",
@@ -140,19 +141,19 @@ class TrainManagerTest {
                 .addHeader("Content-Type", "application/json"));
 
         // when
-        trainManager.sendVoiceToAI(problemId, audioFile, stage);
+        trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
 
         // 비동기 처리 대기
         Thread.sleep(500);
 
         // then
-        QuestionInfo questionInfo = trainManager.getProblemSession(problemId);
-        assertNotNull(questionInfo);
-        assertNotNull(questionInfo.getQuestionAccuracy());
+        SessionInfo sessionInfo = trainManager.getProblemSession(problemId);
+        assertNotNull(sessionInfo);
+        assertNotNull(sessionInfo.getQuestionAccuracy());
         
         // AI 응답이 정확도 맵에 저장되었는지 확인
-        assertTrue(questionInfo.getQuestionAccuracy().containsKey(stage));
-        assertEquals(Double.MAX_VALUE, questionInfo.getQuestionAccuracy().get(stage));
+        assertTrue(sessionInfo.getQuestionAccuracy().containsKey(stage));
+        assertEquals(Double.MAX_VALUE, sessionInfo.getQuestionAccuracy().get(stage));
     }
 
 }
