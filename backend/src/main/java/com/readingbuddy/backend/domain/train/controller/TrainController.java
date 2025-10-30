@@ -111,7 +111,7 @@ public class TrainController {
     }
 
     @PostMapping(value = "/check/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<String>> checkVoice(
+    public ResponseEntity<ApiResponse<VoiceCheckResponse>> checkVoice(
             @RequestParam("audio") MultipartFile audioFile,
             @RequestParam("sessionId") String sessionId,
             @RequestParam("stage") String stage) {
@@ -128,7 +128,7 @@ public class TrainController {
 
             // TODO: 음성 파일 처리 로직 (STT, 정답 판단 등)
 
-            return ResponseEntity.ok(ApiResponse.success("음성 데이터를 성공적으로 받았습니다: " + response));
+            return ResponseEntity.ok(ApiResponse.success("음성 데이터를 성공적으로 받았습니다: ", response));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
