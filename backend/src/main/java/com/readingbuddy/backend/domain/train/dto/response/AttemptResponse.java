@@ -21,4 +21,5 @@ public class AttemptResponse {
     private Boolean isReplyCorrect;
     private Double accuracy;
     private Integer tryCount;
+    private String audioUrl;
 }

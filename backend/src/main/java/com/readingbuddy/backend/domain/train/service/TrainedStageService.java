@@ -30,6 +30,15 @@ public class TrainedStageService {
     private final TrainManager trainManager;
 
     /**
+     * sessionId로 userId 조회
+     */
+    public Long getUserIdBySessionId(String sessionId) {
+        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(sessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+        return session.getUser().getId();
+    }
+
+    /**
      * Stage 시작 - 새로운 훈련 세션 생성
      * TrainManager의 generateQuestionSession()을 사용하여 sessionKey 생성
      */
@@ -80,6 +89,7 @@ public class TrainedStageService {
                 .tryCount(request.getTryCount())
                 .isCorrect(request.getIsCorrect())
                 .isReplyCorrect(request.getIsReplyCorrect())
+                .audioUrl(request.getAudioUrl())
                 .solvedAt(LocalDateTime.now())
                 .build();
 
@@ -95,6 +105,7 @@ public class TrainedStageService {
                 .isCorrect(attempt.getIsCorrect())
                 .isReplyCorrect(attempt.getIsReplyCorrect())
                 .tryCount(attempt.getTryCount())
+                .audioUrl(attempt.getAudioUrl())
                 .build();
     }
 

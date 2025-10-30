@@ -18,4 +18,5 @@ public class AttemptRequest {
     private String word;
     private Boolean isCorrect;
     private Boolean isReplyCorrect;
+    private String audioUrl;
 }

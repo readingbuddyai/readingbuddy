@@ -14,4 +14,5 @@ public class VoiceCheckResponse {
     private String reply;
     private Boolean isReplyCorrect;
     private Double accuracy;
+    private String audioUrl;
 }
