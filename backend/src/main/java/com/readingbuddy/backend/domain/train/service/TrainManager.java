@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.service;
 
+import com.readingbuddy.backend.domain.train.dto.response.VoiceCheckResponse;
 import com.readingbuddy.backend.domain.train.dto.result.QuestionInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +43,7 @@ public class TrainManager {
     }
 
     // TODO : Object -> Dto로 변경
-    public void sendVoiceToAI(String problemId, MultipartFile audioFile, String stage) {
+    public VoiceCheckResponse sendVoiceToAI(String problemId, MultipartFile audioFile, String stage) {
         QuestionInfo questionInfo = questionSession.get(problemId);
 
         Mono<Object> response = webClient.post()
@@ -60,5 +61,6 @@ public class TrainManager {
                     log.error("AI 서버 호출 실패: problemId={}, error={}", problemId, err.getMessage(), err);
                 }
         );
+        return null;
     }
 }

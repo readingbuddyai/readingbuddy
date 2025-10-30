@@ -30,10 +30,16 @@ public class TrainedProblemHistories {
     private String word;
 
     @Column(nullable = false)
-    private Boolean isCorrect;
+    private Boolean isCorrect;  // 문제 정답 여부
+
+    @Column
+    private Boolean isReplyCorrect;  // 발음 정답 여부
 
     @Column(nullable = false)
     private Integer tryCount;
+
+    @Column(nullable = false)
+    private String selectedAnswer;
 
     @Column(nullable = false)
     private String reply;

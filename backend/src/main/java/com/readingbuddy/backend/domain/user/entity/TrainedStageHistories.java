@@ -46,4 +46,14 @@ public class TrainedStageHistories {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")  // FK 컬럼명
     private User user;
+
+    //== Setter 메서드 ==//
+    public void updateCompleteInfo(int correctCount, int wrongCount, int turnedCount) {
+        this.correctCount = correctCount;
+        this.wrongCount = wrongCount;
+        this.turnedCount = turnedCount;
+        this.completedAt = LocalDateTime.now();
+    }
+
+
 }

@@ -70,9 +70,10 @@ public class TrainedStageService {
                 .problemId(request.getProblemId())
                 .phonemes(request.getPhonemes())
                 .word(request.getWord())
+                .selectedAnswer(request.getSelectedAnswer())
                 .tryCount(request.getTryCount())
-                .reply(request.getReply())
                 .isCorrect(request.getIsCorrect())
+                .isReplyCorrect(request.getIsReplyCorrect())
                 .solvedAt(LocalDateTime.now())
                 .build();
 
@@ -81,7 +82,14 @@ public class TrainedStageService {
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
                 .sessionId(session.getId())
-                .attemptsTried(request.getTryCount())
+                .problemId(attempt.getProblemId())
+                .phonemes(attempt.getPhonemes())
+                .word(attempt.getWord())
+                .selectedAnswer(attempt.getSelectedAnswer())
+                .reply(attempt.getReply())
+                .isCorrect(attempt.getIsCorrect())
+                .isReplyCorrect(attempt.getIsReplyCorrect())
+                .tryCount(attempt.getTryCount())
                 .build();
     }
 
@@ -106,7 +114,23 @@ public class TrainedStageService {
         int totalProblems = session.getProblemCount();
         int wrongCount = totalProblems - (int) correctCount;
 
-        // Setter 추가해서 값 갱신
+        // 시도한 모든 기록
+        List<AttemptResponse> attemptResponses = attempts.stream()
+                .map(a -> AttemptResponse.builder()
+                        .attemptId(a.getId())
+                        .sessionId(session.getId())
+                        .problemId(a.getProblemId())
+                        .phonemes(a.getPhonemes())
+                        .word(a.getWord())
+                        .selectedAnswer(a.getSelectedAnswer())
+                        .reply(a.getReply())
+                        .isCorrect(a.getIsCorrect())
+                        .isReplyCorrect(a.getIsReplyCorrect())
+                        .tryCount(a.getTryCount())
+                        .build())
+                .toList();
+
+        session.updateCompleteInfo((int) correctCount, wrongCount, 0);  // turnedCount - 임ㅅ
 
         return StageCompleteResponse.builder()
                 .sessionId(session.getId())
@@ -116,13 +140,7 @@ public class TrainedStageService {
                 .wrongCount(wrongCount)
                 .turnedCount(0)
                 .completedAt(LocalDateTime.now())
+                .attemptResponses(attemptResponses)
                 .build();
-
-
-
     }
-
-
-
-
 }

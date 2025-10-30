@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -20,4 +21,5 @@ public class StageCompleteResponse {
     private Integer wrongCount;
     private Integer turnedCount;
     private LocalDateTime completedAt;
+    private List<AttemptResponse> attemptResponses;
 }

@@ -9,17 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AttemptResponse {
+public class VoiceCheckResponse {
 
-    private Long attemptId;
-    private Long sessionId;
-    private Integer problemId;
-    private String phonemes;
-    private String word;
-    private String selectedAnswer;
     private String reply;
-    private Boolean isCorrect;
     private Boolean isReplyCorrect;
     private Double accuracy;
-    private Integer tryCount;
 }

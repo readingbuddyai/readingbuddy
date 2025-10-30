@@ -14,7 +14,8 @@ public class AttemptRequest {
     private String stage;
     private Integer tryCount;
     private String phonemes;
+    private String selectedAnswer;
     private String word;
-    private String reply;
     private Boolean isCorrect;
+    private Boolean isReplyCorrect;
 }
