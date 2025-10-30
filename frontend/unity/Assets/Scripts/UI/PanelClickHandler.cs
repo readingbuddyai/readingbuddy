@@ -1,22 +1,25 @@
 using UnityEngine;
-using UnityEngine.UI;
 
 public class PanelClickHandler : MonoBehaviour
 {
-    [Tooltip("이 패널 클릭 시 이동할 씬 이름")]
-    public string targetScene;
+    private SceneFlowManager sceneFlow;
 
-    private Button button;
-
-    void Awake()
+    private void Start()
     {
-        button = GetComponent<Button>();
-        button.onClick.AddListener(OnPanelClicked);
+        sceneFlow = SceneFlowManager.I;
+        if (sceneFlow == null)
+            Debug.LogError("❌ SceneFlowManager를 찾을 수 없습니다. Persistent 씬이 유지되는지 확인하세요.");
     }
 
-    void OnPanelClicked()
+    public void OnPanelClick(string sceneName)
     {
-        Debug.Log($"🟢 Panel clicked → {targetScene}");
-        SceneFlowManager.I.LoadScene(targetScene);
+        if (sceneFlow == null)
+        {
+            Debug.LogError("❌ SceneFlowManager 연결 안됨!");
+            return;
+        }
+
+        Debug.Log($"🟢 Panel clicked → {sceneName}");
+        sceneFlow.LoadScene(sceneName);
     }
 }
