@@ -1,25 +1,31 @@
 using UnityEngine;
+using System.Collections;
 
 public class PanelClickHandler : MonoBehaviour
 {
-    private SceneFlowManager sceneFlow;
-
-    private void Start()
-    {
-        sceneFlow = SceneFlowManager.I;
-        if (sceneFlow == null)
-            Debug.LogError("❌ SceneFlowManager를 찾을 수 없습니다. Persistent 씬이 유지되는지 확인하세요.");
-    }
-
     public void OnPanelClick(string sceneName)
     {
-        if (sceneFlow == null)
+        if (string.IsNullOrEmpty(sceneName))
         {
-            Debug.LogError("❌ SceneFlowManager 연결 안됨!");
+            Debug.LogWarning("❗ 대상 씬 이름이 비어 있습니다.");
             return;
         }
 
         Debug.Log($"🟢 Panel clicked → {sceneName}");
-        sceneFlow.LoadScene(sceneName);
+
+        // 우선순위 1: SceneLoader 사용 (Additive 로드 + _Persistent 유지)
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.LoadScene(sceneName);
+            return;
+        }
+
+        // 우선순위 2: SceneRouter 코루틴 직접 호출 (Additive 로드 + Active 전환)
+        StartCoroutine(LoadViaRouter(sceneName));
+    }
+
+    private IEnumerator LoadViaRouter(string sceneName)
+    {
+        yield return SceneRouter.LoadContent(sceneName);
     }
 }
