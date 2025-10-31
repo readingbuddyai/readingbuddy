@@ -30,18 +30,25 @@ public class TrainedProblemHistories {
     private String word;
 
     @Column(nullable = false)
-    private Boolean isCorrect;
+    private Boolean isCorrect;  // 문제 정답 여부
+
+    @Column
+    private Boolean isReplyCorrect;  // 발음 정답 여부
+
+    // 몇번째 시도인지
+    @Column(nullable = false)
+    private Integer attemptNumber;
+
+    @Column
+    private String audioUrl;  // S3 Url
 
     @Column(nullable = false)
-    private Integer tryCount;
-
-    @Column(nullable = false)
-    private String reply;
+    private String selectedAnswer;
 
     @Column(nullable = false)
     private LocalDateTime solvedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")  // FK 실제 위치
-    private TrainedProblemHistories trainedProblemHistories;
+    @JoinColumn(name = "trained_stage_id")  // FK 실제 위치
+    private TrainedStageHistories trainedStageHistories;
 }
