@@ -126,7 +126,7 @@ class TrainManagerTest {
         // given
         String sessionId = trainManager.generateQuestionSession();
         String stage = "1.1.1";
-        String problemId = "t";
+        Integer problemId = "1";
         MockMultipartFile audioFile = new MockMultipartFile(
                 "audio",
                 "test.wav",
