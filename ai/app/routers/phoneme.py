@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, Form, HTTPException
-from app.services.inference import transcribe_stream, normalize_target_to_jamo
+from app.services.inference_tensor import transcribe_stream, normalize_target_to_jamo
 from app.core.config import settings
 from app.schemas import JamoCheckResponse, SyllableCheckResponse, WordCheckResponse, ErrorResponse
 
