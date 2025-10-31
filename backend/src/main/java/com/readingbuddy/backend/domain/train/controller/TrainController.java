@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.controller;
 
+import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.service.S3Service;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -114,6 +116,7 @@ public class TrainController {
 
     @PostMapping(value = "/check/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<VoiceCheckResponse>> checkVoice(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam("audio") MultipartFile audioFile,
             @RequestParam("sessionId") String sessionId,
             @RequestParam("problemId") Integer problemId,
@@ -126,8 +129,8 @@ public class TrainController {
                         .body(ApiResponse.error("음성 파일이 비어있습니다."));
             }
 
-            // sessionId로 userId 조회
-            Long userId = trainedStageService.getUserIdBySessionId(sessionId);
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
 
             // S3에 업로드
             String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, problemId);
@@ -155,10 +158,14 @@ public class TrainController {
      * 새로운 훈련 세션을 생성하고 sessionId를 반환
      */
     @PostMapping("/stage/start")
-    public ResponseEntity<ApiResponse<StageStartResponse>> startStage(@RequestBody StageStartRequest request) {
+    public ResponseEntity<ApiResponse<StageStartResponse>> startStage(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody StageStartRequest request) {
 
         try {
-            StageStartResponse response = trainedStageService.startStage(request);
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
+            StageStartResponse response = trainedStageService.startStage(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
         } catch (Exception e) {
@@ -172,9 +179,13 @@ public class TrainController {
      * 개별 문제의 시도 결과를 DB에 저장
      */
     @PostMapping("/attempt")
-    public ResponseEntity<ApiResponse<AttemptResponse>> submitAttempt(@RequestBody AttemptRequest request) {
+    public ResponseEntity<ApiResponse<AttemptResponse>> submitAttempt(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody AttemptRequest request) {
 
         try {
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
             AttemptResponse response = trainedStageService.submitAttempt(request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("문제 풀이가 기록되었습니다.", response));
@@ -189,8 +200,13 @@ public class TrainController {
      * 세션의 모든 시도 기록을 집계하고 통계를 업데이트
      */
     @PostMapping("/stage/complete")
-    public ResponseEntity<ApiResponse<StageCompleteResponse>> completeStage(@RequestBody StageCompleteRequest request) {
+    public ResponseEntity<ApiResponse<StageCompleteResponse>> completeStage(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody StageCompleteRequest request) {
+
         try {
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
             StageCompleteResponse response = trainedStageService.completeStage(request);
             return ResponseEntity.ok(ApiResponse.success("스테이지가 완료되었습니다.", response));
         } catch (Exception e) {

@@ -42,10 +42,10 @@ public class TrainedStageService {
      * Stage 시작 - 새로운 훈련 세션 생성
      * TrainManager의 generateQuestionSession()을 사용하여 sessionKey 생성
      */
-    public StageStartResponse startStage(StageStartRequest request) {
+    public StageStartResponse startStage(Long userId, StageStartRequest request) {
 
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다: " + request.getUserId()));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다: " + userId));
 
         // TrainManager에서 sessionKey 생성 (메모리에 세션도 자동 생성됨)
         String sessionKey = trainManager.generateQuestionSession();
