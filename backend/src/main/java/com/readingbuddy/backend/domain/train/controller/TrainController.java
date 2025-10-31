@@ -134,7 +134,7 @@ public class TrainController {
             Long userId = customUserDetails.getId();
 
             // S3에 업로드
-            String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, problemId);
+            String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, Integer.parseInt(problemId));
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
             VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
