@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
@@ -16,6 +17,8 @@ import java.time.LocalDateTime;
 @Builder
 @Getter
 public class TrainedStageHistories {
+
+    int TOTAL_COUNT = 5;
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,9 +38,10 @@ public class TrainedStageHistories {
 
     @Column(nullable = false)
     private Integer wrongCount;
-
+    
+    // 몇번 시도했는지
     @Column(nullable = false)
-    private Integer turnedCount;
+    private Integer tryCount;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
@@ -51,12 +55,25 @@ public class TrainedStageHistories {
     private User user;
 
     //== Setter 메서드 ==//
-    public void updateCompleteInfo(int correctCount, int wrongCount, int turnedCount) {
+    public void updateCompleteInfo(int correctCount, int wrongCount, int tryCount) {
         this.correctCount = correctCount;
         this.wrongCount = wrongCount;
-        this.turnedCount = turnedCount;
+        this.tryCount = tryCount;
         this.completedAt = LocalDateTime.now();
     }
 
+    @Transactional
+    public void updateTryCount() {
+        this.tryCount = this.tryCount + 1;
+    }
 
+    @Transactional
+    public void updateCorrectCount() {
+        this.correctCount = this.correctCount + 1;
+    }
+
+    @Transactional
+    public void updateWrongCount() {
+        this.wrongCount = TOTAL_COUNT - this.correctCount;
+    }
 }

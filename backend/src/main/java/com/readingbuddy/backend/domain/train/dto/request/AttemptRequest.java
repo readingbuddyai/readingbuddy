@@ -12,7 +12,7 @@ public class AttemptRequest {
     private String sessionId;  // 훈련 세션 ID
     private Integer problemId;
     private String stage;
-    private Integer tryCount;
+    private Integer attemptNumber;
     private String phonemes;
     private String selectedAnswer;
     private String word;

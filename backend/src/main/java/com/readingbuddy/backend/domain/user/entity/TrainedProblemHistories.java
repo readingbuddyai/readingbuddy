@@ -35,8 +35,9 @@ public class TrainedProblemHistories {
     @Column
     private Boolean isReplyCorrect;  // 발음 정답 여부
 
+    // 몇번째 시도인지
     @Column(nullable = false)
-    private Integer tryCount;
+    private Integer attemptNumber;
 
     @Column
     private String audioUrl;  // S3 Url

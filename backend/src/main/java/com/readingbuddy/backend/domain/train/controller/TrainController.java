@@ -119,8 +119,9 @@ public class TrainController {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam("audio") MultipartFile audioFile,
             @RequestParam("sessionId") String sessionId,
-            @RequestParam("problemId") Integer problemId,
-            @RequestParam("stage") String stage) {
+            @RequestParam("stage") String stage,
+            @RequestParam("problemId") String problemId
+    ) {
 
         try {
             // 파일 검증
@@ -136,7 +137,7 @@ public class TrainController {
             String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, problemId);
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage);
+            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
 
             VoiceCheckResponse response = VoiceCheckResponse.builder()
                     .reply(aiResponse.getReply())
