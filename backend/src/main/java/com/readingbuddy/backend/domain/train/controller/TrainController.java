@@ -1,17 +1,20 @@
 package com.readingbuddy.backend.domain.train.controller;
 
+import com.readingbuddy.backend.auth.dto.CustomUserDetails;
+import com.readingbuddy.backend.common.service.S3Service;
+import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
+import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
+import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
 import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
-import com.readingbuddy.backend.domain.train.dto.response.ProblemSetResponse;
+import com.readingbuddy.backend.domain.train.dto.response.*;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
-import com.readingbuddy.backend.domain.train.service.ProblemGenerateService;
-import com.readingbuddy.backend.domain.train.dto.response.BasicLevelResponse;
-import com.readingbuddy.backend.domain.train.service.VowelTrainService;
-import com.readingbuddy.backend.domain.train.service.ConsonantTrainService;
+import com.readingbuddy.backend.domain.train.service.*;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -26,10 +29,12 @@ public class TrainController {
     private final ProblemGenerateService problemGenerateService;
     private final VowelTrainService vowelTrainService;
     private final ConsonantTrainService consonantTrainService;
+    private final TrainManager trainManager;
+    private final TrainedStageService trainedStageService;
+    private final S3Service s3Service;
 
     /**
      * 훈련 문제 세트 생성 API
-     *
      * @param stage 문제 단계 ( 1.1.1: 모음 기초, 1.1.2: 모음 심화, 1.2.1: 자음 기초, 1.2.2: 자음 심화, 2: 음절 개수, 3, 4: 음소 개수 )
      * @param count 문제 개수 ( 기본값: 5 )
      * @return 생성된 문제 세트
@@ -110,10 +115,13 @@ public class TrainController {
     }
 
     @PostMapping(value = "/check/voice", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<Void>> checkVoice(
+    public ResponseEntity<ApiResponse<VoiceCheckResponse>> checkVoice(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam("audio") MultipartFile audioFile,
-            @RequestParam("problemId") String problemId,
-            @RequestParam(value = "userId", required = false) Long userId) {
+            @RequestParam("sessionId") String sessionId,
+            @RequestParam("stage") String stage,
+            @RequestParam("problemId") String problemId
+    ) {
 
         try {
             // 파일 검증
@@ -122,9 +130,23 @@ public class TrainController {
                         .body(ApiResponse.error("음성 파일이 비어있습니다."));
             }
 
-            // TODO: 음성 파일 처리 로직 (STT, 정답 판단 등)
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
 
-            return ResponseEntity.ok(ApiResponse.success("음성 데이터를 성공적으로 받았습니다.", null));
+            // S3에 업로드
+            String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, Integer.parseInt(problemId));
+
+            // AI 서버로 음성 전송하고 응답 받기 (동기)
+            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
+
+            VoiceCheckResponse response = VoiceCheckResponse.builder()
+                    .reply(aiResponse.getReply())
+                    .isReplyCorrect(aiResponse.getIsReplyCorrect())
+                    .accuracy(aiResponse.getAccuracy())
+                    .audioUrl(audioUrl)
+                    .build();
+
+            return ResponseEntity.ok(ApiResponse.success("음성 인식이 완료되었습니다.", response));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -132,26 +154,65 @@ public class TrainController {
         }
     }
 
-    @PostMapping(value = "/result", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<Void>> saveResult(@RequestBody TrainResultRequest request) {
+    /**
+     * 훈련 스테이지 시작
+     * 새로운 훈련 세션을 생성하고 sessionId를 반환
+     */
+    @PostMapping("/stage/start")
+    public ResponseEntity<ApiResponse<StageStartResponse>> startStage(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody StageStartRequest request) {
 
         try {
-            // 필수 필드 검증
-            if (request.getUserId() == null) {
-                return ResponseEntity.badRequest()
-                        .body(ApiResponse.error("필수 필드가 누락되었습니다. (userId)"));
-            }
-
-            // TODO: 데이터베이스에 결과 저장 로직
-
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
+            StageStartResponse response = trainedStageService.startStage(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success("문제 결과가 성공적으로 저장되었습니다.", null));
-
+                    .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponse.error("결과 저장 중 오류가 발생했습니다: " + e.getMessage()));
+                    .body(ApiResponse.error("스테이지 시작 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
 
+    /**
+     * 문제 시도 기록 API
+     * 개별 문제의 시도 결과를 DB에 저장
+     */
+    @PostMapping("/attempt")
+    public ResponseEntity<ApiResponse<AttemptResponse>> submitAttempt(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody AttemptRequest request) {
 
+        try {
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
+            AttemptResponse response = trainedStageService.submitAttempt(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(ApiResponse.success("문제 풀이가 기록되었습니다.", response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("문제 풀이 기록 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 스테이지 완료 API
+     * 세션의 모든 시도 기록을 집계하고 통계를 업데이트
+     */
+    @PostMapping("/stage/complete")
+    public ResponseEntity<ApiResponse<StageCompleteResponse>> completeStage(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestBody StageCompleteRequest request) {
+
+        try {
+            // JWT에서 직접 userId 가져오기
+            Long userId = customUserDetails.getId();
+            StageCompleteResponse response = trainedStageService.completeStage(request);
+            return ResponseEntity.ok(ApiResponse.success("스테이지가 완료되었습니다.", response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("스테이지 완료 처리 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
 }

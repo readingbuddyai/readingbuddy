@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.util.Set;
 
 @Configuration
 @RequiredArgsConstructor
@@ -17,8 +18,21 @@ public class LetterSeederConfig {
     private final DataSource dataSource;
 
     // 필요 시 application.yml로 뺄 수 있음
-    private static final String VOICE_FMT      = "";
-    private static final String VOICE_SLOW_FMT = "";
+    private static final String VOICE_FMT      = "https://final-a206.s3.ap-northeast-2.amazonaws.com/voices/letters/%s_normal.mp3";
+    private static final String VOICE_SLOW_FMT = "https://final-a206.s3.ap-northeast-2.amazonaws.com/voices/letters/%s_slow.mp3";
+
+    // 된소리 초성 인덱스: ㄲ(1), ㄸ(3), ㅃ(5), ㅆ(9), ㅉ(11)
+    private static final Set<Integer> TENSED_CHO = Set.of(1, 3, 5, 9, 11);
+
+    private static final Set<Integer> SAME_ORTH_PRON_JUNG = Set.of(
+            2,   // ㅑ
+            6,   // ㅕ
+            9,   // ㅘ
+            12,  // ㅛ
+            14,  // ㅝ
+            16,  // ㅟ
+            17  // ㅠ
+    );
 
     @Bean
     ApplicationRunner seedLettersRunner() {
@@ -36,14 +50,15 @@ public class LetterSeederConfig {
                 try (PreparedStatement ps = con.prepareStatement(sql)) {
                     int batch = 0;
                     for (int cp = 0xAC00; cp <= 0xD7A3; cp++) {
+                        if (!isChoOrthPronSame(cp)) continue;
                         if (!isJongOrthPronSame(cp)) continue;
                         if (!isJungOrthPronSame(cp)) continue;
 
                         String ucode = String.format("U+%04X", cp);
                         String id = ucode; // 필요 시 다른 규칙 사용
                         int cnt = PhonemeCounter.countForCodePoint(cp);
-                        String voice = String.format(VOICE_FMT, cp);
-                        String slow  = String.format(VOICE_SLOW_FMT, cp);
+                        String voice = String.format(VOICE_FMT, ucode);
+                        String slow  = String.format(VOICE_SLOW_FMT, ucode);
 
                         ps.setString(1, id);
                         ps.setString(2, ucode);
@@ -65,11 +80,23 @@ public class LetterSeederConfig {
         };
     }
 
+    static boolean isChoOrthPronSame(int cp) {
+        if (cp < 0xAC00 || cp > 0xD7A3) return false;
+        int si = cp - 0xAC00;
+        int cho = si / 588;  // 초성 인덱스 (0~18)
+
+        // 된소리 초성 제외
+        return !TENSED_CHO.contains(cho);
+    }
+
     static boolean isJungOrthPronSame(int cp) {
         if (cp < 0xAC00 || cp > 0xD7A3) return false;
         int sIndex = cp - 0xAC00;
 
         int jung = (sIndex % (21 * 28)) / 28;
+        int jong = sIndex % 28;  // 종성 인덱스(0~27)
+
+        if (SAME_ORTH_PRON_JUNG.contains(jung) && jong != 0) return false;
 
         switch (jung) {
             // 단모음 동일: ㅏ,ㅑ,ㅓ,ㅕ,ㅗ,ㅛ,ㅜ,ㅠ,ㅡ,ㅣ
@@ -87,7 +114,6 @@ public class LetterSeederConfig {
             case 14:  // ㅝ
             case 16:  // ㅟ
                 return true;
-
             default:
                 return false;
         }
