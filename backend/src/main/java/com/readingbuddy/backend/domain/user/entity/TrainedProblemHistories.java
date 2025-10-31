@@ -39,6 +39,9 @@ public class TrainedProblemHistories {
     @Column(nullable = false)
     private Integer attemptNumber;
 
+    @Column
+    private String audioUrl;  // S3 Url
+
     @Column(nullable = false)
     private String selectedAnswer;
 

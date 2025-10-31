@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.controller;
 
+import com.readingbuddy.backend.common.service.S3Service;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
 import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
@@ -28,6 +29,7 @@ public class TrainController {
     private final ConsonantTrainService consonantTrainService;
     private final TrainManager trainManager;
     private final TrainedStageService trainedStageService;
+    private final S3Service s3Service;
 
     /**
      * 훈련 문제 세트 생성 API
@@ -115,7 +117,7 @@ public class TrainController {
             @RequestParam("audio") MultipartFile audioFile,
             @RequestParam("sessionId") String sessionId,
             @RequestParam("stage") String stage,
-           @RequestParam("problemId") String problemId
+            @RequestParam("problemId") String problemId
     ) {
 
         try {
@@ -125,12 +127,23 @@ public class TrainController {
                         .body(ApiResponse.error("음성 파일이 비어있습니다."));
             }
 
+            // sessionId로 userId 조회
+            Long userId = trainedStageService.getUserIdBySessionId(sessionId);
+
+            // S3에 업로드
+            String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, problemId);
+
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse response = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
+            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
 
-            // TODO: 음성 파일 처리 로직 (STT, 정답 판단 등)
+            VoiceCheckResponse response = VoiceCheckResponse.builder()
+                    .reply(aiResponse.getReply())
+                    .isReplyCorrect(aiResponse.getIsReplyCorrect())
+                    .accuracy(aiResponse.getAccuracy())
+                    .audioUrl(audioUrl)
+                    .build();
 
-            return ResponseEntity.ok(ApiResponse.success("음성 데이터를 성공적으로 받았습니다: ", response));
+            return ResponseEntity.ok(ApiResponse.success("음성 인식이 완료되었습니다.", response));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
