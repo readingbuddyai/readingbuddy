@@ -895,7 +895,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d656ed19ea426c841b5fb4551203c0f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseUrl: 
+  baseUrl: https://readingbuddyai.co.kr
   stage: 1.1
   count: 5
   progressText: {fileID: 0}

@@ -8,7 +8,7 @@ using UnityEngine;
 public static class EnvConfig
 {
     [Serializable]
-    private class ApiConfigJson { public string baseUrl; }
+    private class ApiConfigJson { public string baseUrl; public string authToken; }
 
     public static string ResolveBaseUrl(string inspectorValue)
     {
@@ -32,6 +32,34 @@ public static class EnvConfig
             catch (Exception e)
             {
                 Debug.LogWarning($"[EnvConfig] api_config*.json 파싱 실패: {e.Message}");
+            }
+        }
+
+        // 3) 인스펙터 값
+        return inspectorValue;
+    }
+
+    public static string ResolveAuthToken(string inspectorValue)
+    {
+        // 1) ENV 우선
+        var env = Environment.GetEnvironmentVariable("API_AUTH_TOKEN");
+        if (!string.IsNullOrWhiteSpace(env)) return env.Trim();
+
+        // 2) Resources (local 우선)
+        var text = LoadResourceText("api_config_local");
+        if (string.IsNullOrWhiteSpace(text))
+            text = LoadResourceText("api_config");
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            try
+            {
+                var obj = JsonUtility.FromJson<ApiConfigJson>(text);
+                if (obj != null && !string.IsNullOrWhiteSpace(obj.authToken))
+                    return obj.authToken.Trim();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[EnvConfig] api_config*.json 파싱 실패(authToken): {e.Message}");
             }
         }
 

@@ -16,10 +16,12 @@ using UnityEngine.UI;
 //  4) 정답이면 "최고야" 재생 후 다음 문항, 오답이면 "다시 한번 골라볼까?" 재생 후 재선택 대기
     public class Stage11Controller : MonoBehaviour
     {
-    [Header("API 설정")]
-    public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
-    public string stage = "1.1";
-    public int count = 5;
+        [Header("API 설정")]
+        public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
+        public string stage = "1.1";
+        public int count = 5;
+        [Tooltip("Authorization: Bearer {token}")]
+        public string authToken = ""; // 필요 시 토큰
 
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
@@ -107,7 +109,8 @@ using UnityEngine.UI;
     private void Start()
     {
         // baseUrl 자동 해석 (ENV > Resources > Inspector)
-        baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
+        baseUrl   = EnvConfig.ResolveBaseUrl(baseUrl);
+        authToken = EnvConfig.ResolveAuthToken(authToken);
         if (applyAutoLayout)
             TryApplyAutoLayout();
         StartCoroutine(RunStage());
@@ -161,6 +164,7 @@ using UnityEngine.UI;
         string url = ComposeUrl($"/api/train/question?stage={UnityWebRequest.EscapeURL(stage)}&count={count}");
         using (var req = UnityWebRequest.Get(url))
         {
+            ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -287,6 +291,7 @@ using UnityEngine.UI;
         var audioType = GuessAudioType(voiceUrl);
         using (var req = UnityWebRequestMultimedia.GetAudioClip(voiceUrl, audioType))
         {
+            ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -327,6 +332,7 @@ using UnityEngine.UI;
 
         using (var req = UnityWebRequest.Post(url, form))
         {
+            ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -337,6 +343,13 @@ using UnityEngine.UI;
                 Debug.Log($"[Stage11] 업로드 완료: {req.downloadHandler.text}");
             }
         }
+    }
+
+    private void ApplyCommonHeaders(UnityWebRequest req)
+    {
+        if (!string.IsNullOrWhiteSpace(authToken))
+            req.SetRequestHeader("Authorization", $"Bearer {authToken}");
+        req.SetRequestHeader("Accept", "application/json");
     }
 
     private IEnumerator RecordBackgroundCoroutine(int seconds)
