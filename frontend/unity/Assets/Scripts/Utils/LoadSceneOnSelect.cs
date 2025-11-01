@@ -19,15 +19,15 @@ public class LoadSceneOnSelect : MonoBehaviour
 
     private void OnEnable()
     {
-        interactable.selectEntered.AddListener(OnSelectEntered);
+        interactable.activated.AddListener(OnActivated);
     }
 
     private void OnDisable()
     {
-        interactable.selectEntered.RemoveListener(OnSelectEntered);
+        interactable.activated.RemoveListener(OnActivated);
     }
 
-    private void OnSelectEntered(SelectEnterEventArgs _)
+    private void OnActivated(ActivateEventArgs _)
     {
         TryLoad();
     }
