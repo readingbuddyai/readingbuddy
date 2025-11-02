@@ -7,8 +7,11 @@ using UnityEngine.Networking;
 using UnityEngine.UI;
 
 // Stage 1.1 진행 컨트롤러
-// - GET: /api/train/question?stage=1.1&count=5
-// - POST: /api/train/check/voice (multipart: questionId, file=voice.wav)
+// - GET: /api/train/set?stage=1.1.1&count=5
+// - POST: /api/train/stage/start (body: { userId, stage, totalProblems })
+// - GET: /api/train/set?stage=1.1.1&count=5
+// - POST: /api/train/check/voice?sessionId=&stage=&problemId= (multipart: audio=voice.wav)
+// - POST: /api/train/stage/complete (body: { sessionId })
 // 흐름(문항당):
 //  1) 상단에 "문제 i/5" 표시, 중앙 이미지(imageUrl) 표시
 //  2) "앞에 있는 그림을 잘 보고, 소리를 따라해봐~!" 안내 음성 → 마이크 녹음 → 업로드
@@ -18,10 +21,15 @@ using UnityEngine.UI;
     {
         [Header("API 설정")]
         public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
-        public string stage = "1.1";
+        public string stage = "1.1.1";
         public int count = 5;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰
+        [Header("세션")]
+        [Tooltip("/api/train/stage/start 응답의 sessionId. 미설정 시 업로드 403 가능")]
+        public string sessionId = "";
+        [Tooltip("스웨거 start 바디에 포함되는 userId (선택)")]
+        public int userId = 0;
 
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
@@ -90,6 +98,7 @@ using UnityEngine.UI;
     [Serializable]
     public class QuestionDto
     {
+        public int id;            // fallback: 일부 응답에서 questionId 대신 id 사용 가능
         public int questionId;
         public string value;      // 정답 값(예: "ㅏ")
         public string unicode;
@@ -160,32 +169,44 @@ using UnityEngine.UI;
         // 0-1) 도입 대사 (가이드 이미지는 고정, 이동은 sfxNext 타이밍에 수행)
         yield return RunIntroSequence();
 
+        // 0-2) 세션 시작 호출로 sessionId 확보 (없을 때만)
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            yield return StartStageSession();
+            if (string.IsNullOrWhiteSpace(sessionId))
+            {
+                Debug.LogError("[Stage11] sessionId 발급 실패. 진행을 중단합니다.");
+                yield break;
+            }
+        }
+
         // 문제 요청
-        string url = ComposeUrl($"/api/train/question?stage={UnityWebRequest.EscapeURL(stage)}&count={count}");
+        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}");
         using (var req = UnityWebRequest.Get(url))
         {
             ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"[Stage11] 문제 요청 실패: {req.error}\nURL={url}");
+                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.LogError($"[Stage11] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
                 yield break;
             }
 
             var json = req.downloadHandler.text;
-            var list = JsonUtility.FromJson<QuestionListWrapper>(WrapJson(json));
-            if (list == null || list.data == null || list.data.Count == 0)
+            var questions = ExtractQuestions(json);
+            if (questions == null || questions.Count == 0)
             {
-                Debug.LogError("[Stage11] 응답 파싱 실패 또는 데이터 없음");
+                Debug.LogError($"[Stage11] 응답 파싱 실패 또는 데이터 없음\nRaw={json}");
                 yield break;
             }
 
-            for (int i = 0; i < list.data.Count; i++)
+            for (int i = 0; i < questions.Count; i++)
             {
-                var q = list.data[i];
-                yield return RunOneQuestion(i + 1, list.data.Count, q);
+                var q = questions[i];
+                yield return RunOneQuestion(i + 1, questions.Count, q);
                 // 다음 문제로 넘어가는 효과음 (마지막 문제 제외)
-                if (i < list.data.Count - 1)
+                if (i < questions.Count - 1)
                 {
                     // sfxNext 재생과 동시에 가이드 이미지 이동/축소(최초 1회)
                     if (guideImage && (!_guideMoved || !guideMoveOnlyOnce))
@@ -197,6 +218,9 @@ using UnityEngine.UI;
                 }
             }
         }
+
+        // 세션 완료 보고 (best-effort)
+        yield return CompleteStageSession();
     }
 
     // JsonUtility는 루트에 배열을 직접 파싱하지 못하므로 래퍼 클래스로 우회
@@ -208,11 +232,282 @@ using UnityEngine.UI;
         public List<QuestionDto> data;
     }
 
+    // /api/train/set 이 data 아래에 questions 배열을 둘 수 있는 경우를 대비한 보조 모델
+    [Serializable]
+    private class QuestionSet
+    {
+        public List<QuestionDto> questions;
+        public List<QuestionDto> problems; // 서버가 problems 키를 사용하는 경우 대응
+    }
+
+    [Serializable]
+    private class QuestionSetResponse
+    {
+        public bool success;
+        public string message;
+        public QuestionSet data;
+    }
+
+    [Serializable]
+    private class StartStageBody
+    {
+        public int userId;
+        public string stage;
+        public int totalProblems;
+    }
+
+    [Serializable]
+    private class StartStageData
+    {
+        public string sessionId;
+        public string stage;
+        public int totalProblems;
+        public string startAt;
+    }
+
+    [Serializable]
+    private class StartStageResponse
+    {
+        public bool success;
+        public string message;
+        public StartStageData data;
+    }
+
+    [Serializable]
+    private class CompleteStageBody
+    {
+        public string sessionId;
+    }
+
+    [Serializable]
+    private class CompleteStageData
+    {
+        public string sessionId;
+        public List<string> voiceResult;
+    }
+
+    [Serializable]
+    private class CompleteStageResponse
+    {
+        public bool success;
+        public string message;
+        public CompleteStageData data;
+    }
+
+    // 일부 서버가 data를 문자열(JSON)로 감싸서 반환하는 경우 대응
+    [Serializable]
+    private class QuestionStringDataWrapper
+    {
+        public bool success;
+        public string message;
+        public string data; // JSON string
+    }
+
     private string WrapJson(string raw)
     {
         // 서버가 이미 { success, message, data:[...] } 형태라면 그대로 사용
         // 아닌 경우를 대비한 방어 로직은 생략
         return raw;
+    }
+
+    // 세션 시작: /api/train/stage/start
+    private IEnumerator StartStageSession()
+    {
+        string url = ComposeUrl("/api/train/stage/start");
+        int uid = userId > 0 ? userId : TryInferUserIdFromToken();
+        var body = new StartStageBody { userId = uid, stage = stage, totalProblems = count };
+        var json = JsonUtility.ToJson(body);
+        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        {
+            ApplyCommonHeaders(req);
+            req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            Debug.Log($"[Stage11] stage/start 요청 바디: {json}");
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                var resp = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.LogError($"[Stage11] stage/start 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={resp}");
+                yield break;
+            }
+            var respJson = req.downloadHandler.text;
+            try
+            {
+                var resp = JsonUtility.FromJson<StartStageResponse>(respJson);
+                if (resp != null && resp.data != null && !string.IsNullOrWhiteSpace(resp.data.sessionId))
+                {
+                    sessionId = resp.data.sessionId;
+                    Debug.Log($"[Stage11] sessionId 발급: {sessionId}");
+                }
+                else
+                {
+                    Debug.LogError($"[Stage11] stage/start 응답 파싱 실패\nRaw={respJson}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Stage11] stage/start 파싱 예외: {e.Message}\nRaw={respJson}");
+            }
+        }
+    }
+
+    // JWT 토큰에서 userId 유추 (없으면 0)
+    private int TryInferUserIdFromToken()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(authToken)) return 0;
+            var token = authToken.Trim();
+            // "Bearer ..." 형태 방어
+            if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                token = token.Substring(7).Trim();
+            var parts = token.Split('.');
+            if (parts.Length < 2) return 0;
+            string payloadB64 = parts[1];
+            // base64url → base64
+            payloadB64 = payloadB64.Replace('-', '+').Replace('_', '/');
+            switch (payloadB64.Length % 4)
+            {
+                case 2: payloadB64 += "=="; break;
+                case 3: payloadB64 += "="; break;
+            }
+            var bytes = System.Convert.FromBase64String(payloadB64);
+            var json = System.Text.Encoding.UTF8.GetString(bytes);
+            // 간단 파싱: 숫자 후보 키 찾기
+            int val;
+            if (TryFindIntValue(json, new []{"userId","id","sub","nameid"}, out val))
+                return val;
+        }
+        catch { }
+        return 0;
+    }
+
+    private bool TryFindIntValue(string json, string[] keys, out int value)
+    {
+        value = 0;
+        try
+        {
+            foreach (var k in keys)
+            {
+                // 매우 단순한 키 검색(정규식 없이)
+                var idx = json.IndexOf("\"" + k + "\"", StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) continue;
+                var colon = json.IndexOf(':', idx);
+                if (colon < 0) continue;
+                var end = colon + 1;
+                // 숫자 부분 추출
+                while (end < json.Length && char.IsWhiteSpace(json[end])) end++;
+                var start = end;
+                while (end < json.Length && (char.IsDigit(json[end]) || json[end] == '-')) end++;
+                if (end > start)
+                {
+                    var numStr = json.Substring(start, end - start);
+                    if (int.TryParse(numStr, out value)) return true;
+                }
+            }
+        }
+        catch { }
+        return false;
+    }
+
+    // 세션 완료: /api/train/stage/complete
+    private IEnumerator CompleteStageSession()
+    {
+        if (string.IsNullOrWhiteSpace(sessionId)) yield break;
+        string url = ComposeUrl("/api/train/stage/complete");
+        var body = new CompleteStageBody { sessionId = sessionId };
+        var json = JsonUtility.ToJson(body);
+        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        {
+            ApplyCommonHeaders(req);
+            req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                var resp = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.LogWarning($"[Stage11] stage/complete 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={resp}");
+                yield break;
+            }
+            Debug.Log("[Stage11] stage/complete OK");
+        }
+    }
+
+    // 서버 응답 형태가 몇 가지 변형일 수 있으므로 유연하게 파싱
+    private List<QuestionDto> ExtractQuestions(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        // 1) 기본 형태: { success, message, data: [ ... ] }
+        try
+        {
+            var list = JsonUtility.FromJson<QuestionListWrapper>(WrapJson(raw));
+            if (list != null && list.data != null && list.data.Count > 0)
+                return list.data;
+        }
+        catch { }
+
+        // 2) set 형태: { success, message, data: { questions: [ ... ] } } 또는 { problems: [ ... ] }
+        try
+        {
+            var set = JsonUtility.FromJson<QuestionSetResponse>(raw);
+            if (set != null && set.data != null)
+            {
+                if (set.data.questions != null && set.data.questions.Count > 0)
+                    return set.data.questions;
+                if (set.data.problems != null && set.data.problems.Count > 0)
+                    return set.data.problems;
+            }
+        }
+        catch { }
+
+        // 2-b) data가 문자열(JSON)로 들어온 경우 처리
+        try
+        {
+            var strWrap = JsonUtility.FromJson<QuestionStringDataWrapper>(raw);
+            if (strWrap != null && !string.IsNullOrWhiteSpace(strWrap.data))
+            {
+                var inner = strWrap.data.Trim();
+                // 문자열 내의 이스케이프가 제거되지 않았다면 그대로 시도
+                if (inner.StartsWith("["))
+                {
+                    var wrapped = $"{{\"success\":true,\"message\":\"\",\"data\":{inner}}}";
+                    var list = JsonUtility.FromJson<QuestionListWrapper>(wrapped);
+                    if (list != null && list.data != null && list.data.Count > 0)
+                        return list.data;
+                }
+                else if (inner.StartsWith("{"))
+                {
+                    var set2 = JsonUtility.FromJson<QuestionSetResponse>("{\"success\":true,\"message\":\"\",\"data\":" + inner + "}");
+                    if (set2 != null && set2.data != null)
+                    {
+                        if (set2.data.questions != null && set2.data.questions.Count > 0)
+                            return set2.data.questions;
+                        if (set2.data.problems != null && set2.data.problems.Count > 0)
+                            return set2.data.problems;
+                    }
+                }
+            }
+        }
+        catch { }
+
+        // 3) 루트가 배열인 경우: [ ... ]
+        try
+        {
+            var trimmed = raw.TrimStart();
+            if (trimmed.StartsWith("["))
+            {
+                var wrapped = $"{{\"success\":true,\"message\":\"\",\"data\":{trimmed}}}";
+                var list = JsonUtility.FromJson<QuestionListWrapper>(wrapped);
+                if (list != null && list.data != null && list.data.Count > 0)
+                    return list.data;
+            }
+        }
+        catch { }
+
+        return null;
     }
 
     private IEnumerator RunOneQuestion(int index, int total, QuestionDto q)
@@ -263,7 +558,8 @@ using UnityEngine.UI;
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[Stage11] 이미지 로드 실패: {req.error}\nURL={imageUrl}");
+                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.LogWarning($"[Stage11] 이미지 로드 실패: {req.error} (code={req.responseCode})\nURL={imageUrl}\nBody={body}");
                 yield break;
             }
 
@@ -291,7 +587,7 @@ using UnityEngine.UI;
         var audioType = GuessAudioType(voiceUrl);
         using (var req = UnityWebRequestMultimedia.GetAudioClip(voiceUrl, audioType))
         {
-            ApplyCommonHeaders(req);
+            // 외부(S3/CloudFront 등)일 수 있으므로 인증 헤더는 붙이지 않음
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -323,20 +619,29 @@ using UnityEngine.UI;
         yield return new WaitForSeconds(recordSeconds);
         var wav = WavUtility.FromAudioClip(clip);
 
-        // 업로드
-        string url = ComposeUrl("/api/train/check/voice");
+        // 업로드 (Swagger)
+        // POST /api/train/check/voice?sessionId=&stage=&problemId=
+        int qid = q.questionId != 0 ? q.questionId : q.id;
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            Debug.LogWarning("[Stage11] sessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 sessionId를 발급받으세요.");
+        }
+        string qs = $"sessionId={UnityWebRequest.EscapeURL(sessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stage ?? string.Empty)}&problemId={UnityWebRequest.EscapeURL(qid.ToString())}";
+        string url = ComposeUrl($"/api/train/check/voice?{qs}");
         var form = new WWWForm();
-        form.AddField("questionId", q.questionId);
-        // 서버 사양에 따라 필드명(file/formFile 등) 맞춰주세요
-        form.AddBinaryData("file", wav, "voice.wav", "audio/wav");
+        // multipart 필드명은 audio
+        form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
 
         using (var req = UnityWebRequest.Post(url, form))
         {
             ApplyCommonHeaders(req);
+            // 일부 서버/프록시는 chunked 업로드를 거부합니다.
+            req.chunkedTransfer = false;
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[Stage11] 음성 업로드 실패: {req.error}");
+                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.LogWarning($"[Stage11] 음성 업로드 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
             }
             else
             {
@@ -348,7 +653,12 @@ using UnityEngine.UI;
     private void ApplyCommonHeaders(UnityWebRequest req)
     {
         if (!string.IsNullOrWhiteSpace(authToken))
-            req.SetRequestHeader("Authorization", $"Bearer {authToken}");
+        {
+            var tokenTrim = authToken.Trim();
+            req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
+            // 디버그: 토큰 길이만 로깅
+            Debug.Log($"[Stage11] Auth header attached (len={tokenTrim.Length})");
+        }
         req.SetRequestHeader("Accept", "application/json");
     }
 

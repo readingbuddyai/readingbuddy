@@ -896,8 +896,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseUrl: https://readingbuddyai.co.kr
-  stage: 1.1
+  stage: 1.1.1
   count: 5
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IuyxiOyxiCIsImlhdCI6MTc2MjA5NjYwOSwiZXhwIjoxNzYyMTAwMjA5fQ.pFCuTNIQBhUHkZX1yyemYRZYepi_ioK1FT_USlpjYMcPUij4xx11CYaPltlEBJID
+  sessionId: 
+  userId: 0
   progressText: {fileID: 0}
   mainImage: {fileID: 940543878}
   optionsContainer: {fileID: 211129656}
