@@ -72,14 +72,16 @@ public class ConsonantTrainService {
         List<Words> selectedWords = new ArrayList<>();
         boolean foundCorrect = false;
 
-        // 전체를 돌면서 처음 4개를 바로 선택, 정답은 따로 찾기
+        // 전체를 돌면서 처음 2개를 바로 선택, 정답은 따로 찾기
         for (Words word : allWords) {
-            if (foundCorrect && selectedWords.size() == 5) {
+            if (foundCorrect && selectedWords.size() == 3) {
                 break;
             }
 
-            if (selectedWords.size() < 4) {
-                selectedWords.add(word);
+            if (selectedWords.size() < 2) {
+                if (!checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
+                    selectedWords.add(word);
+                }
             }
 
             // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
@@ -107,6 +109,7 @@ public class ConsonantTrainService {
         return Stage1_2Problem.builder()
                 .questionId(targetPhoneme.getId())
                 .targetPhoneme(targetPhoneme.getValue())
+                .imageUrl(targetPhoneme.getImageUrl())
                 .voiceUrl(targetPhoneme.getVoiceUrl())
                 .options(options)
                 .build();
