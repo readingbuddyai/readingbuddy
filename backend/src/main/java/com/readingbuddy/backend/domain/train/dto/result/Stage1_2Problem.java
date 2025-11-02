@@ -13,13 +13,15 @@ public class Stage1_2Problem extends ProblemResult {
 
     private final Long questionId;
     private final String targetPhoneme;
+    private final String imageUrl;
     private final String voiceUrl;
     private final List<OptionDto> options;
 
-    public Stage1_2Problem(String problemWord, Long questionId, String targetPhoneme, String voiceUrl, List<OptionDto> options) {
+    public Stage1_2Problem(String problemWord, Long questionId, String targetPhoneme, String imageUrl, String voiceUrl, List<OptionDto> options) {
         super(problemWord);
         this.questionId = questionId;
         this.targetPhoneme = targetPhoneme;
+        this.imageUrl = imageUrl;
         this.voiceUrl = voiceUrl;
         this.options = options;
     }
