@@ -53,7 +53,7 @@ public class ConsonantTrainService {
 
         return Stage1_1Problem.builder()
                 .imageUrl(answerConsonant.getImageUrl())
-                .questionId(answerConsonant.getId())
+                .phonemeId(answerConsonant.getId())
                 .voiceUrl(answerConsonant.getVoiceUrl())
                 .options(optionDtos)
                 .build();
@@ -107,7 +107,7 @@ public class ConsonantTrainService {
         Collections.shuffle(options);
 
         return Stage1_2Problem.builder()
-                .questionId(targetPhoneme.getId())
+                .phonemeId(targetPhoneme.getId())
                 .targetPhoneme(targetPhoneme.getValue())
                 .imageUrl(targetPhoneme.getImageUrl())
                 .voiceUrl(targetPhoneme.getVoiceUrl())
