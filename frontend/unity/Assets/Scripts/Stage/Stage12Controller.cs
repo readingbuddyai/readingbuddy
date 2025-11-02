@@ -5,6 +5,7 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Stage 1.2 진행 컨트롤러
@@ -30,6 +31,16 @@ public class Stage12Controller : MonoBehaviour
     public Image mainImage;
     public RectTransform optionsContainer;
     public Button optionButtonPrefab;
+
+    [Header("Option 시각 리소스")]
+    public Sprite correctOptionSprite;
+    public Sprite wrongOptionSprite;
+    public Color correctTextColor = Color.white;
+    public Color wrongTextColor = Color.white;
+    [Tooltip("단어를 표시할 Text (선택)")]
+    public TMP_Text optionWordText;
+    public string trueButtonLabel = "O";
+    public string falseButtonLabel = "X";
 
     [Header("오디오 재생")]
     public AudioSource audioSource;
@@ -60,7 +71,8 @@ public class Stage12Controller : MonoBehaviour
     public float optionsHeight = 220f;
     public float optionsBottomMargin = 40f;
     public Vector2 imageFixedSize = new Vector2(1500f, 1500f);
-    public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
+    public Vector2 optionButtonPreferredSize = new Vector2(800f, 400f);
+    public Vector2 gridSpacing = new Vector2(40f, 40f);
 
     [Serializable]
     public class WordOptionDto
@@ -178,6 +190,10 @@ public class Stage12Controller : MonoBehaviour
 
         yield return LoadAndShowImage(q.imageUrl);
 
+        // 옵션을 보여줄 때 이미지가 가리지 않도록 레이캐스트를 잠시 끕니다.
+        if (mainImage != null)
+            mainImage.raycastTarget = false;
+
         yield return PlayClip(clipListen);
         yield return PlayVoiceUrl(q.voiceUrl);
 
@@ -187,7 +203,10 @@ public class Stage12Controller : MonoBehaviour
         yield return PlayClip(clipPowerUp);
         yield return PlayClip(clipMatchPrompt);
 
-        yield return ShowOptionsUntilCorrect(q);
+        yield return ShowOptionsSequence(q);
+
+        if (mainImage != null)
+            mainImage.raycastTarget = false;
     }
 
     private void TryApplyAutoLayout()
@@ -199,7 +218,20 @@ public class Stage12Controller : MonoBehaviour
             rt.anchorMax = new Vector2(1f, 0f);
             rt.pivot = new Vector2(0.5f, 0f);
             rt.anchoredPosition = new Vector2(0f, optionsBottomMargin);
-            rt.sizeDelta = new Vector2(0f, Mathf.Max(optionsHeight, optionButtonPreferredSize.y + 20f));
+            rt.sizeDelta = new Vector2(0f, Mathf.Max(optionsHeight, optionButtonPreferredSize.y + gridSpacing.y + 20f));
+
+            var grid = optionsContainer.GetComponent<GridLayoutGroup>();
+            if (grid)
+            {
+                grid.cellSize = optionButtonPreferredSize;
+                grid.spacing = gridSpacing;
+                grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+                grid.constraintCount = 2;
+            }
+            else
+            {
+                Debug.LogWarning("[Stage12] OptionsContainer에 GridLayoutGroup이 없습니다. 버튼 정렬이 올바르지 않을 수 있습니다.");
+            }
         }
 
         if (mainImage)
@@ -276,7 +308,7 @@ public class Stage12Controller : MonoBehaviour
         }
     }
 
-    private IEnumerator ShowOptionsUntilCorrect(QuestionDto q)
+    private IEnumerator ShowOptionsSequence(QuestionDto q)
     {
         if (optionsContainer == null)
         {
@@ -301,39 +333,51 @@ public class Stage12Controller : MonoBehaviour
         foreach (Transform child in optionsContainer)
             Destroy(child.gameObject);
 
-        bool answered = false;
-        bool correct = false;
-
-        void SetupOption(WordOptionDto opt)
-        {
-            var btn = Instantiate(optionButtonPrefab, optionsContainer);
-            var text = btn.GetComponentInChildren<Text>();
-            if (text) text.text = opt.word;
-
-            var rt = btn.GetComponent<RectTransform>();
-            if (rt) rt.sizeDelta = optionButtonPreferredSize;
-
-            var layout = btn.GetComponent<LayoutElement>();
-            if (layout)
-            {
-                layout.preferredWidth = optionButtonPreferredSize.x;
-                layout.preferredHeight = optionButtonPreferredSize.y;
-                layout.layoutPriority = Mathf.Max(layout.layoutPriority, 1);
-            }
-
-            btn.onClick.AddListener(() =>
-            {
-                answered = true;
-                correct = opt.answer;
-            });
-        }
+        if (optionWordText)
+            optionWordText.text = string.Empty;
 
         foreach (var opt in q.options ?? Enumerable.Empty<WordOptionDto>())
-            SetupOption(opt);
+        {
+            yield return ShowSingleOption(opt);
+        }
+
+        foreach (Transform child in optionsContainer)
+            Destroy(child.gameObject);
+
+        if (optionWordText)
+            optionWordText.text = string.Empty;
+    }
+
+    private IEnumerator ShowSingleOption(WordOptionDto opt)
+    {
+        if (optionWordText)
+        {
+            optionWordText.text = opt.word;
+            optionWordText.enableWordWrapping = true;
+            optionWordText.gameObject.SetActive(true);
+        }
+
+        foreach (Transform child in optionsContainer)
+            Destroy(child.gameObject);
+
+        bool answered = false;
+        bool selectionIsCorrect = false;
+
+        CreateChoiceButton(trueButtonLabel, correctOptionSprite, correctTextColor, () =>
+        {
+            answered = true;
+            selectionIsCorrect = opt.answer;
+        });
+
+        CreateChoiceButton(falseButtonLabel, wrongOptionSprite, wrongTextColor, () =>
+        {
+            answered = true;
+            selectionIsCorrect = !opt.answer;
+        });
 
         if (optionsContainer.childCount == 0)
         {
-            Debug.LogWarning("[Stage12] 선택지가 없습니다.");
+            Debug.LogWarning("[Stage12] O/X 버튼 생성에 실패했습니다.");
             yield break;
         }
 
@@ -341,7 +385,7 @@ public class Stage12Controller : MonoBehaviour
         {
             yield return new WaitUntil(() => answered);
 
-            if (correct)
+            if (selectionIsCorrect)
             {
                 yield return PlayClip(clipCorrect);
                 break;
@@ -355,6 +399,62 @@ public class Stage12Controller : MonoBehaviour
 
         foreach (Transform child in optionsContainer)
             Destroy(child.gameObject);
+    }
+
+    private void CreateChoiceButton(string label, Sprite sprite, Color textColor, Action onClicked)
+    {
+        if (optionButtonPrefab == null || optionsContainer == null)
+            return;
+
+        var btn = Instantiate(optionButtonPrefab, optionsContainer);
+        var tmpText = btn.GetComponentInChildren<TMP_Text>();
+        if (tmpText)
+        {
+            tmpText.text = label;
+            tmpText.color = textColor;
+        }
+        else
+        {
+            var legacyText = btn.GetComponentInChildren<Text>();
+            if (legacyText)
+            {
+                legacyText.text = label;
+                legacyText.color = textColor;
+            }
+        }
+
+        var image = btn.GetComponent<Image>();
+        if (image && sprite)
+        {
+            image.sprite = sprite;
+            image.preserveAspect = true;
+        }
+
+        var rt = btn.GetComponent<RectTransform>();
+        if (rt)
+        {
+            rt.sizeDelta = optionButtonPreferredSize;
+            rt.localScale = Vector3.one;
+        }
+
+        var layout = btn.GetComponent<LayoutElement>();
+        if (layout)
+        {
+            layout.preferredWidth = optionButtonPreferredSize.x;
+            layout.preferredHeight = optionButtonPreferredSize.y;
+            layout.layoutPriority = Mathf.Max(layout.layoutPriority, 1);
+        }
+
+        var grid = optionsContainer.GetComponent<GridLayoutGroup>();
+        if (grid)
+        {
+            grid.cellSize = optionButtonPreferredSize;
+            grid.spacing = gridSpacing;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
+        }
+
+        btn.onClick.RemoveAllListeners();
+        btn.onClick.AddListener(() => onClicked?.Invoke());
     }
 
     private IEnumerator LoadAndShowImage(string imageUrl)
