@@ -37,6 +37,9 @@ UserSettings/
 .vs/
 .vs/*
 
+# Local API config (do not commit)
+Assets/Resources/api_config_local.json
+
 # Unity crash / build logs
 sysinfo.txt
 *.stacktrace
