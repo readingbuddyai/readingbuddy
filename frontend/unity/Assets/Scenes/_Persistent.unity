@@ -468,6 +468,10 @@ PrefabInstance:
       propertyPath: m_AllowHoveredActivate
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 2804289884270011078, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_InteractionLayers.m_Bits
+      value: 4294967295
+      objectReference: {fileID: 0}
     - target: {fileID: 5285114283119352416, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_CameraYOffset
       value: 3
