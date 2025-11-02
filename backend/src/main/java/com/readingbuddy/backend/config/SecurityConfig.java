@@ -23,8 +23,8 @@ public class SecurityConfig {
             "/api/v1/user/login",
             "/api/v1/user/reissue-token",
             "/api/v1/user/signup",
-            "/api/v1/term/*",
-            "/",
+            "/api/v1/user/activation",
+            "/api/v1/user/polling",
             // Swagger UI
             "/v3/api-docs/**",
             "/swagger-ui/**",
