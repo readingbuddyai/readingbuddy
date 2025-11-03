@@ -122,4 +122,5 @@ INSERT INTO phonemes (category, value, unicode, image_url, voice_url) VALUES
 ('consonant', 'ㄸ', 'U+3138', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B8.png', NULL),
 ('consonant', 'ㅃ', 'U+3143', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%83.png', NULL),
 ('consonant', 'ㅆ', 'U+3146', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%86.png', NULL),
-('consonant', 'ㅉ', 'U+3149', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%89.png', NULL);
+('consonant', 'ㅉ', 'U+3149', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%89.png', NULL)
+ON CONFLICT (category, value) DO NOTHING;
