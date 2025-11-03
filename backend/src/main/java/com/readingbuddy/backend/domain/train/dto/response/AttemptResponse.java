@@ -12,9 +12,8 @@ import lombok.NoArgsConstructor;
 public class AttemptResponse {
 
     private Long attemptId;
-    private String sessionId;
-    private Integer problemNumber;  // 문제 번호
-    private Long phonemeId;  // Phonemes ID
+    private String stageSessionId;
+    private Integer problemId;
     private String phonemes;
     private String word;
     private String selectedAnswer;

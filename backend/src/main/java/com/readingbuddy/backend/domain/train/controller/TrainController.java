@@ -115,9 +115,9 @@ public class TrainController {
     public ResponseEntity<ApiResponse<VoiceCheckResponse>> checkVoice(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam("audio") MultipartFile audioFile,
-            @RequestParam("sessionId") String sessionId,
+            @RequestParam("stageSessionId") String stageSessionId,
             @RequestParam("stage") String stage,
-            @RequestParam("problemId") String problemId
+            @RequestParam("problemNumber") Integer problemNumber
     ) {
 
         try {
@@ -131,10 +131,10 @@ public class TrainController {
             Long userId = customUserDetails.getId();
 
             // S3에 업로드
-            String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, Integer.parseInt(problemId));
+            String audioUrl = s3Service.uploadAudioFile(audioFile, stageSessionId, userId, problemNumber);
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, Integer.parseInt(problemId));
+            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemNumber);
 
             VoiceCheckResponse response = VoiceCheckResponse.builder()
                     .reply(aiResponse.getReply())
@@ -153,7 +153,7 @@ public class TrainController {
 
     /**
      * 훈련 스테이지 시작
-     * 새로운 훈련 세션을 생성하고 sessionId를 반환
+     * 새로운 훈련 세션을 생성하고 stageSessionId 반환
      */
     @PostMapping("/stage/start")
     public ResponseEntity<ApiResponse<StageStartResponse>> startStage(

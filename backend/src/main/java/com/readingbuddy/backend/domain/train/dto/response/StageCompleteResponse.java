@@ -15,6 +15,6 @@ import java.util.Set;
 @Builder
 public class StageCompleteResponse {
 
-    private String sessionId;
+    private String stageSessionId;
     private Set<Integer> voiceResult;
 }
