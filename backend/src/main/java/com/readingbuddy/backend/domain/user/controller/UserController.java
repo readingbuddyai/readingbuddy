@@ -26,7 +26,7 @@ public class UserController {
     private final UserService userService;
     private final AuthService authService;
 
-    @Operation(summary = "회원가입", description = "사용자의 정보(JSON)와 프로필 이미지(파일)를 받아 회원으로 등록합니다.")
+    @Operation(summary = "회원가입", description = "사용자의 정보를 받아 회원으로 등록합니다.")
     @PostMapping(value = "/signup", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<Void> signUp(@RequestBody @Valid SignUpRequest request) {
         userService.signUp(request);
