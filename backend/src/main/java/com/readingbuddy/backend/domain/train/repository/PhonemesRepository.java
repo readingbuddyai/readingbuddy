@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PhonemesRepository extends JpaRepository<Phonemes, Long> {
 
@@ -37,4 +38,9 @@ public interface PhonemesRepository extends JpaRepository<Phonemes, Long> {
      */
     @Query(value = "SELECT * FROM phonemes WHERE category = 'consonant' AND id != :excludeId ORDER BY RANDOM() LIMIT 1", nativeQuery = true)
     Phonemes findRandomConsonant(Long excludeId);
+
+    /**
+     * 음소 값으로 조회 (예: 'ㅏ', 'ㄱ')
+     */
+    Optional<Phonemes> findByValue(String value);
 }

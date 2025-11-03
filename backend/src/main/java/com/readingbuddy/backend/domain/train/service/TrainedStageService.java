@@ -7,6 +7,8 @@ import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
 import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
+import com.readingbuddy.backend.domain.train.entity.Phonemes;
+import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -29,6 +31,7 @@ public class TrainedStageService {
     private final UserRepository userRepository;
     private final TrainedStageHistoriesRepository trainedStageHistoriesRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
+    private final PhonemesRepository phonemesRepository;
     private final TrainManager trainManager;
 
     /**
@@ -82,11 +85,15 @@ public class TrainedStageService {
         TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
 
+        // phonemes 문자열로 Phonemes 엔티티 조회
+        Phonemes phoneme = phonemesRepository.findByValue(request.getPhonemes()).orElse(null);
+
         // 시도 기록 생성
         TrainedProblemHistories attempt = TrainedProblemHistories.builder()
                 .trainedStageHistories(stage)
-                .problemId(request.getProblemId())
-                .phonemes(request.getPhonemes())
+                .problemNumber(request.getProblemNumber())
+                .phoneme(phoneme)  // FK 관계 설정
+                .phonemes(request.getPhonemes())  // 문자열도 함께 저장
                 .word(request.getWord())
                 .selectedAnswer(request.getSelectedAnswer())
                 .attemptNumber(request.getAttemptNumber())
@@ -107,7 +114,8 @@ public class TrainedStageService {
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
                 .sessionId(stage.getSessionKey())
-                .problemId(attempt.getProblemId())
+                .problemNumber(attempt.getProblemNumber())
+                .phonemeId(phoneme.getId())
                 .phonemes(attempt.getPhonemes())
                 .word(attempt.getWord())
                 .selectedAnswer(attempt.getSelectedAnswer())

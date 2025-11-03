@@ -1,14 +1,11 @@
 package com.readingbuddy.backend.domain.user.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.List;
 
 @Schema(description = "회원가입 요청 DTO")
 @Getter
@@ -32,7 +29,7 @@ public class SignUpRequest {
     @Size(min = 8, max = 100, message = "비밀번호 8자 이상, 100자 이하")
     private String password;
 
-    @Schema(description = "닉네임", example = "그린Mate")
+    @Schema(description = "닉네임", example = "리딩버디")
     @NotBlank(message = "닉네임 필수")
     @Size(min = 2, max = 10, message = "닉네임 2자 이상, 10자 이하")
     @Pattern(regexp = "^[ㄱ-ㅎ가-힣A-Za-z0-9]+$", message = "닉네임에 한글, 영문, 숫자만 가능")
