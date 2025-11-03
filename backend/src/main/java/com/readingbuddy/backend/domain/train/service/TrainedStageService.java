@@ -138,6 +138,7 @@ public class TrainedStageService {
         Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
 
         return StageCompleteResponse.builder()
+                .stageSessionId(stageSessionId)
                 .voiceResult(voiceResult)
                 .build();
     }
