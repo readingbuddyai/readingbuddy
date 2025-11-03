@@ -3,6 +3,7 @@ package com.readingbuddy.backend.domain.dashboard.controller;
 import com.amazonaws.Response;
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
+import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesTryRankResponse;
 import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.dashboard.service.DashBoardService;
 import com.readingbuddy.backend.domain.dashboard.dto.response.AttendanceResponse;
@@ -97,6 +98,19 @@ public class DashBoardController {
 
     }
 
+    /**
+     * 사용자별 시도 횟수가 많은 음소 조회 (내림차순)
+     */
+    @GetMapping("/try/phonemes/rank")
+    public ResponseEntity<ApiResponse<List<PhonemesTryRankResponse>>> getTryPhonemesRanking(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestParam("limit") int limit) {
+
+        Long userId = customUserDetails.getId();
+
+        List<PhonemesTryRankResponse> ranking = dashBoardService.getTryPhonemesRanking(userId, limit);
+        return ResponseEntity.ok(ApiResponse.success("시도 횟수가 많은 음소 랭킹이 조회되었습니다.", ranking));
+    }
 
 
     //== 헬퍼 메서드 ==//
