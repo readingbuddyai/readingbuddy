@@ -20,7 +20,6 @@ public class DeviceSessionManager {
     private final int DEVICE_CODE_LENGTH = 10;
 
     public String generateDeviceCodeSession() {
-        // 1. 10자리 코드 생성
         StringBuilder sb = new StringBuilder(DEVICE_CODE_LENGTH);
         for (int i = 0; i < DEVICE_CODE_LENGTH; i++) {
             sb.append(CHARS.charAt(random.nextInt(CHARS.length())));
@@ -49,16 +48,17 @@ public class DeviceSessionManager {
 
         checkSession(session);
 
-        if(session.isAuthorized()){
-            deviceSessionMap.remove(deviceAuthCode);
-            return session.getUserId();
+        if(!session.isAuthorized()){
+            throw new RuntimeException("인증 처리되지 않았습니다.");
         }
 
         if(session.getExpiredAt().isBefore(LocalDateTime.now())) {
             deviceSessionMap.remove(deviceAuthCode);
-            throw new RuntimeException("Device code session expired");
+            throw new RuntimeException("요청 시간이 만료되었습니다.");
         }
-        throw new RuntimeException("Device session is Unauthorized");
+
+        deviceSessionMap.remove(deviceAuthCode);
+        return session.getUserId();
 
     }
 
