@@ -1,9 +1,8 @@
 import torch
 import time
 import numpy as np
-import onnxruntime as ort
 from fastapi import UploadFile, HTTPException
-from transformers import Wav2Vec2Processor
+from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
 from app.services.utils_audio import load_audio_to_mono_16k, chunk_audio
 from app.core.config import settings
 import logging
@@ -47,38 +46,37 @@ TO_CODA = {
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 MODEL_PATH = str(settings.get_model_path())
-ONNX_PATH = f"{MODEL_PATH}/model.onnx"
 
-# 모델 로드
+# 모델 로드 (SafeTensor / PyTorch)
 try:
     processor = Wav2Vec2Processor.from_pretrained(MODEL_PATH)
-    available = ort.get_available_providers()
-    providers = ["CUDAExecutionProvider"] if "CUDAExecutionProvider" in available else ["CPUExecutionProvider"]
-
-    # SessionOptions 최적화
-    sess_options = ort.SessionOptions()
-    sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-    sess_options.enable_mem_pattern = True
-    sess_options.enable_cpu_mem_arena = True
-
-    session = ort.InferenceSession(ONNX_PATH, sess_options, providers=providers)
-    logger.info(f"ONNX 모델 로드 성공: {ONNX_PATH} (providers={providers})")
+    model = Wav2Vec2ForCTC.from_pretrained(MODEL_PATH)
+    model.to(DEVICE)
+    model.eval()
+    logger.info(f"SafeTensor 모델 로드 성공: {MODEL_PATH} (device={DEVICE})")
 
     # 웜업 추론 (콜드 런 오버헤드 제거)
     logger.info("웜업 추론 시작...")
-    warmup_audio = np.random.randn(1, 16000).astype(np.float32)  # 1초 더미 오디오
-    for i in range(5):
-        _ = session.run(None, {"audio": warmup_audio})
+    warmup_audio = np.random.randn(16000).astype(np.float32)  # 1초 더미 오디오
+    warmup_inputs = processor(warmup_audio, sampling_rate=16000, return_tensors="pt")
+    warmup_inputs = {k: v.to(DEVICE) for k, v in warmup_inputs.items()}
+
+    with torch.no_grad():
+        for i in range(5):
+            _ = model(**warmup_inputs).logits
     logger.info("웜업 추론 완료 - 모델 준비됨")
 
     # GPU Keep-Alive: 백그라운드에서 주기적으로 더미 추론 실행 (GPU 절전 방지)
     def gpu_keepalive():
         """GPU가 절전 모드로 들어가지 않도록 주기적으로 더미 추론 실행"""
-        dummy = np.random.randn(1, 8000).astype(np.float32)  # 0.5초 짧은 오디오
+        dummy = np.random.randn(8000).astype(np.float32)  # 0.5초 짧은 오디오
         while True:
             try:
                 time.sleep(3)  # 3초마다 실행
-                _ = session.run(None, {"audio": dummy})
+                dummy_inputs = processor(dummy, sampling_rate=16000, return_tensors="pt")
+                dummy_inputs = {k: v.to(DEVICE) for k, v in dummy_inputs.items()}
+                with torch.no_grad():
+                    _ = model(**dummy_inputs).logits
             except Exception:
                 break
 
@@ -91,22 +89,23 @@ except Exception as e:
     raise RuntimeError(f"모델 로드 실패: {e}")
 
 @torch.no_grad()
-def infer_chunk_onnx(waveform: np.ndarray, sr: int = 16000):
-    """단일 청크 추론 (ONNX GPU)"""
+def infer_chunk_safetensor(waveform: np.ndarray, sr: int = 16000):
+    """단일 청크 추론 (SafeTensor / PyTorch)"""
     try:
         # 1. Wav2Vec2 Processor 전처리
         t_prep = time.time()
-        inputs = processor(waveform, sampling_rate=sr, return_tensors="np")
+        inputs = processor(waveform, sampling_rate=sr, return_tensors="pt")
+        inputs = {k: v.to(DEVICE) for k, v in inputs.items()}
         prep_time = time.time() - t_prep
 
-        # 2. ONNX 모델 추론 (순수 모델 실행)
-        t_onnx = time.time()
-        logits = session.run(None, {"audio": inputs.input_values})[0]
-        onnx_time = time.time() - t_onnx
+        # 2. PyTorch 모델 추론 (순수 모델 실행)
+        t_infer = time.time()
+        logits = model(**inputs).logits
+        infer_time = time.time() - t_infer
 
         # 3. Argmax 연산
         t_argmax = time.time()
-        pred_ids = np.argmax(logits, axis=-1)
+        pred_ids = torch.argmax(logits, dim=-1)
         argmax_time = time.time() - t_argmax
 
         # 4. Processor 디코딩 (vocab.json 사용)
@@ -116,15 +115,15 @@ def infer_chunk_onnx(waveform: np.ndarray, sr: int = 16000):
 
         # 세부 시간 로그 출력
         print(f"[전처리] Processor: {prep_time:.4f}초")
-        print(f"[ONNX 추론] 순수 모델: {onnx_time:.4f}초")
+        print(f"[PyTorch 추론] 순수 모델: {infer_time:.4f}초")
         print(f"[Argmax] 연산: {argmax_time:.4f}초")
         print(f"[디코딩] Vocab 변환: {decode_time:.4f}초")
-        print(f"[합계] {prep_time + onnx_time + argmax_time + decode_time:.4f}초")
+        print(f"[합계] {prep_time + infer_time + argmax_time + decode_time:.4f}초")
 
         return text
     except Exception as e:
-        logger.error(f"ONNX 추론 중 오류: {e}")
-        raise HTTPException(status_code=500, detail="ONNX 추론 중 오류가 발생했습니다.")
+        logger.error(f"SafeTensor 추론 중 오류: {e}")
+        raise HTTPException(status_code=500, detail="SafeTensor 추론 중 오류가 발생했습니다.")
 
 
 def ctc_decode(logits: torch.Tensor) -> str:
@@ -138,23 +137,23 @@ def ctc_decode(logits: torch.Tensor) -> str:
 
 def transcribe_stream(file: UploadFile):
     start_time = time.time()
-    
+
     try:
         # 1단계: 오디오 로딩
         t1 = time.time()
         wave = load_audio_to_mono_16k(file.file)
         logger.info(f"오디오 로딩: {time.time() - t1:.3f}초")
-        
+
         sr = 16000
-        
+
         # # 2단계: 노이즈 제거
         # t2 = time.time()
         # wave = denoise_audio(wave, sr)
         # logger.info(f"노이즈 제거: {time.time() - t2:.3f}초")
-        
+
         # 오디오 길이 계산
         audio_length = len(wave) / sr
-        
+
         # 3단계: 추론
         print(f"\n{'='*60}")
         print(f"[추론 시작] 오디오 길이: {audio_length:.2f}초")
@@ -163,7 +162,7 @@ def transcribe_stream(file: UploadFile):
         t3 = time.time()
         if audio_length <= 5.0:
             print(f"모드: 전체 추론 (청크 분리 없음)")
-            result = infer_chunk_onnx(wave, sr)
+            result = infer_chunk_safetensor(wave, sr)
 
             t_postprocess = time.time()
             decoded = result  # 자모 시퀀스 그대로 반환
@@ -179,7 +178,7 @@ def transcribe_stream(file: UploadFile):
             results = []
             for i, chunk in enumerate(chunks):
                 print(f"\n[청크 {i+1}/{len(chunks)}]")
-                result = infer_chunk_onnx(chunk, sr)
+                result = infer_chunk_safetensor(chunk, sr)
                 results.append(result)
 
             t_postprocess = time.time()
@@ -193,7 +192,7 @@ def transcribe_stream(file: UploadFile):
         print(f"[추론 완료] 총 시간: {total_inference_time:.4f}초")
         print(f"{'='*60}\n")
         logger.info(f"모델 추론: {total_inference_time:.3f}초")
-        
+
         # 전체 시간
         elapsed_time = time.time() - start_time
         logger.info(f"[전체] 처리 시간: {elapsed_time:.3f}초 (오디오: {audio_length:.2f}초)")
@@ -204,7 +203,7 @@ def transcribe_stream(file: UploadFile):
     except Exception as e:
         logger.error(f"스트리밍 추론 중 오류: {e}")
         raise HTTPException(status_code=500, detail="청크 기반 음성 인식 중 오류가 발생했습니다.")
-    
+
 
 def normalize_target_to_jamo(target_word):
     """

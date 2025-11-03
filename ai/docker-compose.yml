@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  ai-server:
+    image: korean-pronunciation-ai:latest
+    container_name: ai-server
+    restart: unless-stopped
+
+    # GPU 사용 설정
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # 환경변수 (.env 파일에서 로드)
+    environment:
+      - MODEL_PATH=${MODEL_PATH:-./models/slplab_wav2vec2_korean}
+      - HOST=${HOST:-0.0.0.0}
+      - PORT=${PORT:-8000}
+      - MAX_AUDIO_LENGTH_SECONDS=${MAX_AUDIO_LENGTH_SECONDS:-30}
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-10}
+      - TZ=Asia/Seoul
+
+    # 포트 매핑
+    ports:
+      - "8000:8000"
+
+    # 볼륨 마운트
+    volumes:
+      - ./models:/app/models:ro  # 모델 파일 (읽기 전용)
+      - ./logs:/app/logs          # 로그 파일
+
+    # 헬스체크
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    # 로깅 설정
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    networks:
+      - ai-network
+
+networks:
+  ai-network:
+    driver: bridge
+
+volumes:
+  models:
+  logs:

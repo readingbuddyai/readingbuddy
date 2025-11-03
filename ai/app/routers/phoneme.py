@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, Form, HTTPException
-from app.services.inference import transcribe_stream, normalize_target_to_jamo
+from app.services.inference_tensor import transcribe_stream, normalize_target_to_jamo
 from app.core.config import settings
 from app.schemas import JamoCheckResponse, SyllableCheckResponse, WordCheckResponse, ErrorResponse
 
@@ -112,7 +112,7 @@ async def check_word(file: UploadFile, target: str = Form(...)):
 
     # 비교 (띄어쓰기 무시하고 비교)
     target_no_space = target_jamo.replace(" ", "")
-    model_no_space = model_output.replace("|", "").strip()
+    model_no_space = model_output.replace("|", "").replace(" ", "").strip()
     is_correct = (target_no_space == model_no_space)
 
     feedback = f"'{target}' 발음이 정확해요!" if is_correct else f"'{target}' 발음이 달라요."

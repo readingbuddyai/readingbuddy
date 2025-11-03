@@ -115,5 +115,21 @@ save_model_local.py
 # Claude Code
 .claude
 
+# Deployment
+*.pem
+*.key
 
-frontend
+# 테스트/벤치마크 파일 (개발 전용)
+benchmark_*.py
+compare_*.py
+test_*.py
+*_GUIDE.md
+benchmark_analysis.md
+
+# 테스트 오디오 파일
+*.wav
+*.mp3
+!tests/**/*.wav  # 테스트 필수 파일 예외
+
+# AI 프론트엔드 (별도 관리)
+frontend/
