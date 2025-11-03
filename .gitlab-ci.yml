@@ -1,79 +1,75 @@
-stages:
-  - build
-  - deploy
+stages: [build, deploy]
 
 variables:
   DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""         # dind TLS 비활성화
   AI_IMAGE_NAME: korean-pronunciation-ai
   AI_IMAGE_TAG: latest
 
-# AI 서버 빌드
+# 1) GitLab 내에서 Docker 이미지 빌드(dind)
 build-ai:
   stage: build
-  only:
-    changes:
-      - ai/**/*
-    refs:
-      - master
-      - ai-dev
+  image: docker:24
+  services:
+    - name: docker:24-dind
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(ai-dev|master)$/'
+      changes:
+        - "ai/**"
   script:
     - echo "Building AI Docker image..."
-    - cd ai
-    - docker build -t ${AI_IMAGE_NAME}:${AI_IMAGE_TAG} .
-    - docker save ${AI_IMAGE_NAME}:${AI_IMAGE_TAG} -o ai-image.tar
+    - docker version
+    - docker build -t ${AI_IMAGE_NAME}:${AI_IMAGE_TAG} ./ai
+    - mkdir -p ai
+    - docker save ${AI_IMAGE_NAME}:${AI_IMAGE_TAG} -o ai/ai-image.tar
   artifacts:
     paths:
       - ai/ai-image.tar
-    expire_in: 1 hour
-  tags:
-    - docker
+    expire_in: 2 hours
+  tags: ["docker"]               # 해당 태그를 가진 러너 필요
 
-# AI 서버 배포
+# 2) EC2로 이미지 전송 → compose 교체 기동
 deploy-ai:
   stage: deploy
-  only:
-    changes:
-      - ai/**/*
-    refs:
-      - master
-      - ai-dev
+  image: alpine:3.20
+  needs: ["build-ai"]
+  rules:
+    - if: '$CI_COMMIT_BRANCH =~ /^(ai-dev|master)$/'
+      changes:
+        - "ai/**"
   before_script:
-    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - apk add --no-cache openssh-client curl
     - eval $(ssh-agent -s)
     - echo "$AI_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
-    - ssh-keyscan -H $AI_SERVER_IP >> ~/.ssh/known_hosts
+    - ssh-keyscan -H "$AI_SERVER_IP" >> ~/.ssh/known_hosts
   script:
     - echo "Deploying AI server to EC2..."
-    # Docker 이미지 전송
-    - scp ai/ai-image.tar $AI_SERVER_USER@$AI_SERVER_IP:/tmp/
-    # EC2에서 배포 스크립트 실행
+    - scp ai/ai-image.tar "$AI_SERVER_USER@$AI_SERVER_IP:/tmp/ai-image.tar"
     - |
-      ssh $AI_SERVER_USER@$AI_SERVER_IP << 'EOF'
-        cd /home/ubuntu/app/ai
-
-        # Docker 이미지 로드
+      ssh "$AI_SERVER_USER@$AI_SERVER_IP" << 'EOF'
+        set -e
         docker load -i /tmp/ai-image.tar
-        rm /tmp/ai-image.tar
+        rm -f /tmp/ai-image.tar
 
-        # 기존 컨테이너 중지 및 제거
-        docker-compose down || true
+        cd /home/ubuntu/S13P31A206
+        # compose v2(권장)
+        if docker compose version >/dev/null 2>&1; then
+          docker compose -f ai/docker-compose.yml down || true
+          docker compose -f ai/docker-compose.yml up -d --no-build
+        else
+          # 구버전 docker-compose 대응
+          docker-compose -f ai/docker-compose.yml down || true
+          docker-compose -f ai/docker-compose.yml up -d --no-build
+        fi
 
-        # 새 컨테이너 실행
-        docker-compose up -d
-
-        # 헬스체크
         sleep 10
-        curl -f http://localhost:8000/health || exit 1
-
-        echo "✅ AI server deployed successfully!"
+        curl -fsS http://localhost:8000/health
+        echo "AI server deployed successfully."
       EOF
-  dependencies:
-    - build-ai
-  tags:
-    - docker
   environment:
-    name: production-ai
+    name: ai
     url: http://$AI_SERVER_IP:8000
-  when: manual
+  when: manual                   # 필요 시 자동으로 변경 가능
+  tags: ["docker"]
