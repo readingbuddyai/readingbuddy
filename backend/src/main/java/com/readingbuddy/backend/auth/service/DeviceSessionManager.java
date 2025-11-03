@@ -1,12 +1,12 @@
 package com.readingbuddy.backend.auth.service;
 
-import com.readingbuddy.backend.auth.dto.DeviceLoginResponse;
 import com.readingbuddy.backend.auth.dto.DeviceSessionInfo;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -72,6 +72,12 @@ public class DeviceSessionManager {
         }
 
         return session;
+    }
+
+    public void clearExpiredSessions() {
+        deviceSessionMap.entrySet().removeIf(
+                entry -> entry.getValue().getExpiredAt().isBefore(LocalDateTime.now())
+        );
     }
 
     private void checkSession(DeviceSessionInfo session) {
