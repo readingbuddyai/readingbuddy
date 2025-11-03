@@ -6,7 +6,16 @@
       "Bash(if [ -d \"venv/Scripts\" ])",
       "Bash(then ./venv/Scripts/pip.exe list --format=freeze)",
       "Bash(else pip list --format=freeze)",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Bash(sudo gitlab-runner list:*)",
+      "Bash(gitlab-runner list:*)",
+      "Bash(systemctl status:*)",
+      "Bash(sudo gitlab-runner verify:*)",
+      "Bash(docker system:*)",
+      "Bash(sudo cat:*)",
+      "Bash(sudo du:*)",
+      "Bash(cat:*)",
+      "Bash(docker volume:*)"
     ],
     "deny": [],
     "ask": []

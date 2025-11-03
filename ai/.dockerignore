@@ -1,27 +1,27 @@
-# 테스트/벤치마크 파일
+# Test and benchmark files
 benchmark_*.py
 compare_*.py
 test_*.py
 *_GUIDE.md
 *_analysis.md
 
-# 테스트 오디오 파일
+# Test audio files
 *.wav
 *.mp3
-!models/**/*.wav  # 모델 필요 파일 예외
+!models/**/*.wav
 
-# 프론트엔드
+# Frontend
 frontend/
 
-# 개발 환경
+# Development environment
 venv/
 .venv/
 __pycache__/
 *.pyc
 
-# 문서
+# Documentation
 README.md
 
-# 배포 스크립트 (로컬 전용)
+# Deployment scripts (local only)
 setup-ec2.sh
 deploy.sh
