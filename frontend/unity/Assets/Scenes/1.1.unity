@@ -335,7 +335,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIxNTg2OTMsImV4cCI6MTc2MjE2MjI5M30.J52UYOF2_FYpeYRK2--7FDIoxdh6IL95JYKowEDj16kPMjzIog-EcP911CZqbaof
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIxODEwMzAsImV4cCI6MTc2MjE4NDYzMH0.ALcB_QsXdbxO9DacAR99PWuZ9M95Hg26R6fwd7ve4Fy7C3oKRqQJfMOeAcgaIkVt
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -372,6 +372,8 @@ MonoBehaviour:
   imageVerticalMargin: 40
   imageFixedSize: {x: 1500, y: 1500}
   optionButtonPreferredSize: {x: 1200, y: 600}
+  againButtonPrefab: {fileID: 0}
+  lobbyButtonPrefab: {fileID: 0}
   optionSpacing: 20
   optionsPaddingLeft: 20
   optionsPaddingTop: 20

@@ -106,6 +106,12 @@ using System.Text;
         [Tooltip("옵션 버튼 권장 크기(px)")]
         public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
 
+        [Header("End Modal Buttons")]
+        [Tooltip("끝 모달 '다시 학습하기' 버튼 프리팹")]
+        public Button againButtonPrefab;
+        [Tooltip("끝 모달 '로비로 나가기' 버튼 프리팹")]
+        public Button lobbyButtonPrefab;
+
         [Header("Options Layout")]
         [Tooltip("옵션 버튼 간 간격(px)")]
         public float optionSpacing = 20f;
@@ -1034,7 +1040,7 @@ using System.Text;
         prt.anchorMin = new Vector2(0.5f, 0.5f);
         prt.anchorMax = new Vector2(0.5f, 0.5f);
         prt.pivot = new Vector2(0.5f, 0.5f);
-        prt.sizeDelta = new Vector2(1200, 900);
+        prt.sizeDelta = new Vector2(1500, 1000);
         var pbg = panel.GetComponent<Image>();
         pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
 
@@ -1051,7 +1057,7 @@ using System.Text;
         var t = title.GetComponent<Text>();
         t.text = "학습이 끝났어요!";
         t.alignment = TextAnchor.MiddleCenter;
-        t.fontSize = 72;
+        t.fontSize = 90;
         t.fontStyle = FontStyle.Bold;
         t.color = Color.white;
         t.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
@@ -1059,32 +1065,72 @@ using System.Text;
         // 버튼들
         Vector2 btnSize = optionButtonPreferredSize;
         float gap = 40f;
+
+        Button ResolveButton(Button preferred, string[] resourcePaths, out bool isCustom)
+        {
+            // custom: inspector or resources provided
+            if (preferred)
+            {
+                isCustom = true;
+                return preferred;
+            }
+            foreach (var path in resourcePaths)
+            {
+                var loaded = Resources.Load<Button>(path);
+                if (loaded)
+                {
+                    isCustom = true;
+                    return loaded;
+                }
+                var go = Resources.Load<GameObject>(path);
+                if (go)
+                {
+                    var childBtn = go.GetComponentInChildren<Button>(true) ?? go.GetComponent<Button>();
+                    if (childBtn)
+                    {
+                        isCustom = true;
+                        return childBtn;
+                    }
+                }
+            }
+            isCustom = false;
+            return optionButtonPrefab;
+        }
+
         // 다시 학습하기
-        var btn1 = Instantiate(optionButtonPrefab, panel.transform as RectTransform);
+        bool againCustom;
+        var btn1 = Instantiate(ResolveButton(againButtonPrefab, new[]{"againbutton","UI/againbutton","Images/againbutton"}, out againCustom), panel.transform as RectTransform);
         var btn1rt = btn1.GetComponent<RectTransform>();
         btn1rt.anchorMin = new Vector2(0.5f, 0.5f);
         btn1rt.anchorMax = new Vector2(0.5f, 0.5f);
         btn1rt.pivot = new Vector2(1f, 0.5f);
         btn1rt.sizeDelta = btnSize;
         btn1rt.anchoredPosition = new Vector2(-gap*0.5f, -100f);
-        var txt1 = btn1.GetComponentInChildren<Text>();
-        var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
-        if (txt1) { txt1.text = "다시 학습하기"; if (uiFont) txt1.font = uiFont; }
-        else if (tmp1) { tmp1.text = "다시 학습하기"; if (tmpFont) tmp1.font = tmpFont; }
+        if (!againCustom)
+        {
+            var txt1 = btn1.GetComponentInChildren<Text>();
+            var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
+            if (txt1) { txt1.text = "다시 학습하기"; if (uiFont) txt1.font = uiFont; }
+            else if (tmp1) { tmp1.text = "다시 학습하기"; if (tmpFont) tmp1.font = tmpFont; }
+        }
         btn1.onClick.AddListener(() => { Destroy(overlay); RestartStage(); });
 
         // 로비로 나가기
-        var btn2 = Instantiate(optionButtonPrefab, panel.transform as RectTransform);
+        bool lobbyCustom;
+        var btn2 = Instantiate(ResolveButton(lobbyButtonPrefab, new[]{"lobbybutton","UI/lobbybutton","Images/lobbybutton"}, out lobbyCustom), panel.transform as RectTransform);
         var btn2rt = btn2.GetComponent<RectTransform>();
         btn2rt.anchorMin = new Vector2(0.5f, 0.5f);
         btn2rt.anchorMax = new Vector2(0.5f, 0.5f);
         btn2rt.pivot = new Vector2(0f, 0.5f);
         btn2rt.sizeDelta = btnSize;
         btn2rt.anchoredPosition = new Vector2(gap*0.5f, -100f);
-        var txt2 = btn2.GetComponentInChildren<Text>();
-        var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
-        if (txt2) { txt2.text = "로비로 나가기"; if (uiFont) txt2.font = uiFont; }
-        else if (tmp2) { tmp2.text = "로비로 나가기"; if (tmpFont) tmp2.font = tmpFont; }
+        if (!lobbyCustom)
+        {
+            var txt2 = btn2.GetComponentInChildren<Text>();
+            var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
+            if (txt2) { txt2.text = "로비로 나가기"; if (uiFont) txt2.font = uiFont; }
+            else if (tmp2) { tmp2.text = "로비로 나가기"; if (tmpFont) tmp2.font = tmpFont; }
+        }
         btn2.onClick.AddListener(() => { Destroy(overlay); GoToLobby(); });
     }
 
