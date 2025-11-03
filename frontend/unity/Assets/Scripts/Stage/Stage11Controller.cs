@@ -1034,7 +1034,7 @@ using System.Text;
         prt.anchorMin = new Vector2(0.5f, 0.5f);
         prt.anchorMax = new Vector2(0.5f, 0.5f);
         prt.pivot = new Vector2(0.5f, 0.5f);
-        prt.sizeDelta = new Vector2(1200, 900);
+        prt.sizeDelta = new Vector2(1500, 1000);
         var pbg = panel.GetComponent<Image>();
         pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
 
@@ -1051,7 +1051,7 @@ using System.Text;
         var t = title.GetComponent<Text>();
         t.text = "학습이 끝났어요!";
         t.alignment = TextAnchor.MiddleCenter;
-        t.fontSize = 72;
+        t.fontSize = 90;
         t.fontStyle = FontStyle.Bold;
         t.color = Color.white;
         t.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
