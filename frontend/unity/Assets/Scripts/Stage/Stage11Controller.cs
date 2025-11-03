@@ -12,8 +12,8 @@ using UnityEngine.SceneManagement;
 // - GET: /api/train/set?stage=1.1.1&count=5
 // - POST: /api/train/stage/start (body: { userId, stage, totalProblems })
 // - GET: /api/train/set?stage=1.1.1&count=5
-// - POST: /api/train/check/voice?sessionId=&stage=&problemId= (multipart: audio=voice.wav)
-// - POST: /api/train/stage/complete (body: { sessionId })
+// - POST: /api/train/check/voice?stageSessionId=&stage=&problemId= (multipart: audio=voice.wav)
+// - POST: /api/train/stage/complete (query: stageSessionId)
 // 흐름(문항당):
 //  1) 상단에 "문제 i/5" 표시, 중앙 이미지(imageUrl) 표시
 //  2) "앞에 있는 그림을 잘 보고, 소리를 따라해봐~!" 안내 음성 → 마이크 녹음 → 업로드
@@ -28,8 +28,8 @@ using UnityEngine.SceneManagement;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰
         [Header("세션")]
-        [Tooltip("/api/train/stage/start 응답의 sessionId. 미설정 시 업로드 403 가능")]
-        public string sessionId = "";
+        [Tooltip("/api/train/stage/start 응답의 stageSessionId. 미설정 시 업로드 403 가능")]
+        public string stageSessionId = "";
         [Tooltip("스웨거 start 바디에 포함되는 userId (선택)")]
         public int userId = 0;
 
@@ -263,13 +263,13 @@ using UnityEngine.SceneManagement;
             _guideMoved = true;
         }
 
-        // 0-2) 세션 시작 호출로 sessionId 확보 (테스트 시 우회 가능)
-        if (!bypassStartRequest && string.IsNullOrWhiteSpace(sessionId))
+        // 0-2) 세션 시작 호출로 stageSessionId 확보 (테스트 시 우회 가능)
+        if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
         {
             yield return StartStageSession();
-            if (string.IsNullOrWhiteSpace(sessionId))
+            if (string.IsNullOrWhiteSpace(stageSessionId))
             {
-                Debug.LogWarning("[Stage11] sessionId 발급 실패. bypassStartRequest=true 이므로 계속 진행합니다.");
+                Debug.LogWarning("[Stage11] stageSessionId 발급 실패. bypassStartRequest=true 이므로 계속 진행합니다.");
             }
         }
 
@@ -367,7 +367,7 @@ using UnityEngine.SceneManagement;
     [Serializable]
     private class StartStageData
     {
-        public string sessionId;
+        public string stageSessionId;
         public string stage;
         public int totalProblems;
         public string startAt;
@@ -384,13 +384,13 @@ using UnityEngine.SceneManagement;
     [Serializable]
     private class CompleteStageBody
     {
-        public string sessionId;
+        public string stageSessionId;
     }
 
     [Serializable]
     private class CompleteStageData
     {
-        public string sessionId;
+        public string stageSessionId;
         public List<string> voiceResult;
     }
 
@@ -421,17 +421,21 @@ using UnityEngine.SceneManagement;
     // 세션 시작: /api/train/stage/start
     private IEnumerator StartStageSession()
     {
-        string url = ComposeUrl("/api/train/stage/start");
-        int uid = userId > 0 ? userId : TryInferUserIdFromToken();
-        var body = new StartStageBody { userId = uid, stage = stage, totalProblems = count };
-        var json = JsonUtility.ToJson(body);
+        // Use query parameters (e.g., /api/train/stage/start?stage=1.1&totalProblems=5)
+        string stageForStart = stage;
+        if (!string.IsNullOrEmpty(stage))
+        {
+            var parts = stage.Split('.');
+            if (parts.Length >= 2) stageForStart = parts[0] + "." + parts[1];
+        }
+        string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageForStart)}&totalProblems={count}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
-            req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+            // No JSON body; parameters are in the query string
+            req.uploadHandler = null;
             req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            Debug.Log($"[Stage11] stage/start 요청 바디: {json}");
+            // No Content-Type needed without body
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -443,10 +447,10 @@ using UnityEngine.SceneManagement;
             try
             {
                 var resp = JsonUtility.FromJson<StartStageResponse>(respJson);
-                if (resp != null && resp.data != null && !string.IsNullOrWhiteSpace(resp.data.sessionId))
+                if (resp != null && resp.data != null && !string.IsNullOrWhiteSpace(resp.data.stageSessionId))
                 {
-                    sessionId = resp.data.sessionId;
-                    Debug.Log($"[Stage11] sessionId 발급: {sessionId}");
+                    stageSessionId = resp.data.stageSessionId;
+                    Debug.Log($"[Stage11] stageSessionId 발급: {stageSessionId}");
                 }
                 else
                 {
@@ -522,16 +526,13 @@ using UnityEngine.SceneManagement;
     // 세션 완료: /api/train/stage/complete
     private IEnumerator CompleteStageSession()
     {
-        if (string.IsNullOrWhiteSpace(sessionId)) yield break;
-        string url = ComposeUrl("/api/train/stage/complete");
-        var body = new CompleteStageBody { sessionId = sessionId };
-        var json = JsonUtility.ToJson(body);
+        if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
+        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
-            req.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(json));
+            req.uploadHandler = null;
             req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -748,13 +749,13 @@ using UnityEngine.SceneManagement;
         var wav = WavUtility.FromAudioClip(clip);
 
         // 업로드 (Swagger)
-        // POST /api/train/check/voice?sessionId=&stage=&problemId=
+        // POST /api/train/check/voice?stageSessionId=&stage=&problemId=
         int qid = q.questionId != 0 ? q.questionId : q.id;
-        if (string.IsNullOrWhiteSpace(sessionId))
+        if (string.IsNullOrWhiteSpace(stageSessionId))
         {
-            Debug.LogWarning("[Stage11] sessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 sessionId를 발급받으세요.");
+            Debug.LogWarning("[Stage11] stageSessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 stageSessionId를 발급받으세요.");
         }
-        string qs = $"sessionId={UnityWebRequest.EscapeURL(sessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stage ?? string.Empty)}&problemId={UnityWebRequest.EscapeURL(qid.ToString())}";
+        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stage ?? string.Empty)}&problemId={UnityWebRequest.EscapeURL(qid.ToString())}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         var form = new WWWForm();
         // multipart 필드명은 audio
@@ -1048,7 +1049,7 @@ using UnityEngine.SceneManagement;
         _guideLocked = false;
         _guideMoveCo = null;
         _guideMoved = false;
-        sessionId = string.Empty;
+        stageSessionId = string.Empty;
         StartCoroutine(RunStage());
     }
 

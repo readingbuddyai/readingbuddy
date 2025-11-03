@@ -335,13 +335,36 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IuyxiOyxiCIsImlhdCI6MTc2MjEzNTA1NCwiZXhwIjoxNzYyMTM4NjU0fQ.Suh6IOxl4bP0hP2BykxSmAwN7C8m5OMJlBl6WtgYVmV4Fk12IRin0foBwHykeCiu
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IuyxiOyxiCIsImlhdCI6MTc2MjE1MzI0OCwiZXhwIjoxNzYyMTU2ODQ4fQ.IRnX014U_jV36mQ2g3wqWAyexNKNRVXVKkd8-1Cm4OrSVDd5nHeXCIex2-esQUnw
   sessionId: 
-  userId: 0
+  optionLabelMode: 1
+  uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
+  tmpFont: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
+  optionTextFontSize: 72
+  optionTMPFontSize: 90
+  optionTextColor: {r: 1, g: 1, b: 1, a: 1}
+  optionTMPColor: {r: 1, g: 1, b: 1, a: 1}
+  optionsLayoutVertical: 1
+  optionsLayoutSpacing: 20
+  optionsPaddingLeft: 40
+  optionsPaddingRight: 40
+  optionsPaddingTop: 20
+  optionsPaddingBottom: 20
+  forceOptionsOnTop: 1
+  optionsSortingOrder: 100
+  addContainerDebugBackground: 0
+  containerDebugBgColor: {r: 0, g: 0, b: 0, a: 0.2}
+  centerizeOptionsOnShow: 0
+  centerOptionsContainerSize: {x: 2100, y: 700}
+  centerOptionsSpacing: 20
+  centerOptionButtonSize: {x: 1000, y: 600}
+  centerOptionTextFontSize: 120
+  centerOptionTMPFontSize: 160
+  centerOptionsOffsetY: -500
   progressText: {fileID: 0}
   mainImage: {fileID: 940543878}
   optionsContainer: {fileID: 211129656}
-  optionButtonPrefab: {fileID: 0}
+  optionButtonPrefab: {fileID: 3536607101297841266, guid: e5ad1b1348914c04b9a2fcfb5bcc51f2, type: 3}
   audioSource: {fileID: 8777454411221847077}
   sfxStart: {fileID: 8300000, guid: fcf036472f5841f48b0e9a92afd900ad, type: 3}
   sfxNext: {fileID: 8300000, guid: 075a8b91a9271fb40b60536f5b4494df, type: 3}
@@ -370,10 +393,25 @@ MonoBehaviour:
   imageVerticalMargin: 40
   imageFixedSize: {x: 1500, y: 1500}
   optionButtonPreferredSize: {x: 1200, y: 600}
-  bypassStartRequest: 1
-  bypassVoiceUpload: 1
+  endModalTitleText: "\uD559\uC2B5\uC774 \uB05D\uB0AC\uC5B4\uC694!"
+  endModalPrimaryButtonText: "\uB2E4\uC2DC \uD559\uC2B5\uD558\uAE30"
+  endModalSecondaryButtonText: "\uB85C\uBE44\uB85C \uB098\uAC00\uAE30"
+  endModalButtonSize: {x: 1200, y: 600}
+  endModalButtonsGap: 40
+  endModalTitleFontSize: 72
+  endModalTitleColor: {r: 1, g: 1, b: 1, a: 1}
+  endModalUseIcons: 0
+  endModalPrimaryIcon: {fileID: 21300000, guid: 9b3cb92896ed67641b3496f94e557913, type: 3}
+  endModalSecondaryIcon: {fileID: 21300000, guid: 9acb445faca0d304fb8464d72c2dabc0, type: 3}
+  endModalIconSize: {x: 256, y: 256}
+  endModalIconColor: {r: 1, g: 1, b: 1, a: 1}
+  endModalHideTextWhenIcon: 1
+  bypassStartRequest: 0
+  bypassVoiceUpload: 0
   logQuestionsVerbose: 1
   showPlaceholderOnImageFail: 1
+  logHttpRequests: 1
+  logHttpResponses: 1
 --- !u!1 &698153752
 GameObject:
   m_ObjectHideFlags: 0
@@ -820,11 +858,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4086632909834952389, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 4086632909834952389, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -1015
+      value: -969
       objectReference: {fileID: 0}
     - target: {fileID: 4834236683208198523, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_fontSize
@@ -852,6 +890,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5211751809758897890, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6548458318717127266, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_RaycastTarget
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6754449320914356513, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
@@ -955,7 +997,9 @@ PrefabInstance:
       value: Canvas
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 9212479344401353466, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+    - {fileID: 5211751809758897890, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
