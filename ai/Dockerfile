@@ -1,5 +1,5 @@
 # GPU 지원 CUDA 베이스 이미지
-FROM nvidia/cuda:12.4.0-cudnn-runtime-ubuntu22.04
+FROM nvidia/cuda:12.4.1-cudnn-runtime-ubuntu22.04
 
 # 작업 디렉토리 설정
 WORKDIR /app
