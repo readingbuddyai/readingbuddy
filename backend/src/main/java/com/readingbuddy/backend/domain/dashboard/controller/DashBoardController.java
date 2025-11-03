@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.dashboard.controller;
 
+import com.readingbuddy.backend.common.util.format.ApiResponse;
 import com.amazonaws.Response;
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
@@ -10,6 +11,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +36,12 @@ public class DashBoardController {
 
     private final DashBoardService dashBoardService;
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyMMdd");
+
+    @GetMapping(value = "/stage/info")
+    public ResponseEntity<ApiResponse<?>> stageInfo(@RequestParam String stage) {
+
+        return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.success("a"));
+    }
 
     @GetMapping("/attendance")
     public ResponseEntity<ApiResponse<AttendanceResponse>> getAttendance(
