@@ -66,6 +66,8 @@ public class DashBoardService {
                 .totalTryCount(totalTryCount)
                 .totalCorrectCount(totalCorrectCount)
                 .totalWrongCount(totalWrongCount)
+                .build();
+    }
 
     /**
      * 특정 기간의 출석 기록 조회
@@ -127,6 +129,8 @@ public class DashBoardService {
                 .stage(stage)
                 .averageTryCount(Math.round(average * 100.0) / 100.0) // 소수점 2자리까지
                 .totalSessions(histories.size())
+                .build();
+    }
     
     /**
      * 특정 날짜의 출석 기록 조회

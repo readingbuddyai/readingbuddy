@@ -1,12 +1,12 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
 import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
+import com.readingbuddy.backend.domain.train.entity.Phonemes;
+import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -66,7 +66,7 @@ public class TrainedStageService {
         createStage = trainedStageHistoriesRepository.save(createStage);
 
         return StageStartResponse.builder()
-                .sessionId(createStage.getSessionKey())
+                .stageSessionId(createStage.getSessionKey())
                 .stage(createStage.getStage())
                 .totalProblems(createStage.getProblemCount())
                 .startAt(createStage.getStartedAt())
@@ -111,8 +111,8 @@ public class TrainedStageService {
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
                 .stageSessionId(stage.getSessionKey())
-                .problemId(attempt.getProblemId())
-                .sessionId(stage.getSessionKey())
+                .problemNumber(attempt.getProblemNumber())
+                .stageSessionId(stage.getSessionKey())
                 .problemNumber(attempt.getProblemNumber())
                 .phonemeId(phoneme.getId())
                 .phonemes(attempt.getPhonemes())

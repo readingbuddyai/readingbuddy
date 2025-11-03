@@ -13,7 +13,8 @@ public class AttemptResponse {
 
     private Long attemptId;
     private String stageSessionId;
-    private Integer problemId;
+    private Integer problemNumber;
+    private Long phonemeId;
     private String phonemes;
     private String word;
     private String selectedAnswer;

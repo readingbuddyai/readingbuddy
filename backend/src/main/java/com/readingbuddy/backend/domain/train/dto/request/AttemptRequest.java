@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 public class AttemptRequest {
 
     private String stageSessionId;  // 훈련 세션 ID
-    private Integer problemId;
+    private Integer problemNumber;
     private String stage;
     private Integer attemptNumber;
     private String phonemes;
