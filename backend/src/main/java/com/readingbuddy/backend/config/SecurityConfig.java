@@ -24,6 +24,8 @@ public class SecurityConfig {
             "/api/user/reissue-token",
             "/api/user/signup",
             "/api/term/*",
+            "/api/user/activation",
+            "/api/user/polling",
             "/",
             // Swagger UI
             "/v3/api-docs/**",
