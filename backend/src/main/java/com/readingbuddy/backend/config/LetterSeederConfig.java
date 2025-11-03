@@ -21,8 +21,8 @@ public class LetterSeederConfig {
     private static final String VOICE_FMT      = "https://final-a206.s3.ap-northeast-2.amazonaws.com/voices/letters/%s_normal.mp3";
     private static final String VOICE_SLOW_FMT = "https://final-a206.s3.ap-northeast-2.amazonaws.com/voices/letters/%s_slow.mp3";
 
-    // 된소리 초성 인덱스: ㄲ(1), ㄸ(3), ㅃ(5), ㅆ(9), ㅉ(11)
-    private static final Set<Integer> TENSED_CHO = Set.of(1, 3, 5, 9, 11);
+    // 된소리 초성 인덱스: ㄲ(1), ㄸ(4), ㅃ(8), ㅆ(10), ㅉ(13)
+    private static final Set<Integer> TENSED_CHO = Set.of(1, 4, 8, 10, 13);
 
     private static final Set<Integer> SAME_ORTH_PRON_JUNG = Set.of(
             2,   // ㅑ
