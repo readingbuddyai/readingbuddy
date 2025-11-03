@@ -1,7 +1,7 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.domain.train.dto.response.VoiceCheckResponse;
-import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
+import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,34 +19,34 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class TrainManager {
 
-    private final Map<String, SessionInfo> questionSession = new ConcurrentHashMap<>();
+    private final Map<String, StageSessionInfo> stageSessions = new ConcurrentHashMap<>();
     private final WebClient webClient;
 
     public String generateQuestionSession() {
-        String problemId = UUID.randomUUID().toString();
+        String stageSessionId = UUID.randomUUID().toString();
 
-        SessionInfo sessionInfo = SessionInfo.builder()
-                .questionAccuracy(new HashMap<>())
+        StageSessionInfo stageSessionInfo = StageSessionInfo.builder()
+                .isProblemCorrect(new HashMap<>())
                 .build();
 
-        this.questionSession.put(problemId, sessionInfo);
+        this.stageSessions.put(stageSessionId, stageSessionInfo);
 
-        return problemId;
+        return stageSessionId;
     }
 
-    public SessionInfo getProblemSession(String problemId) {
-        return this.questionSession.get(problemId);
+    public StageSessionInfo getStageSession(String stageSessionId) {
+        return this.stageSessions.get(stageSessionId);
     }
 
-    public void removeProblemSession(String problemId) {
-        this.questionSession.remove(problemId);
+    public void removeStageSession(String stageSessionId) {
+        this.stageSessions.remove(stageSessionId);
     }
 
     // TODO : Object -> Dto로 변경
     public VoiceCheckResponse sendVoiceToAI(
-            String sessionId, MultipartFile audioFile, String stage, String problemId
+            String stageSessionId, MultipartFile audioFile, String stage, Integer problemNumber
     ) {
-        SessionInfo sessionInfo = questionSession.get(sessionId);
+        StageSessionInfo stageSessionInfo = stageSessions.get(stageSessionId);
 
         // TODO: S3 저장 후 URL AI server로 전달
 
@@ -58,12 +58,12 @@ public class TrainManager {
 
         response.subscribe(
                 res -> {
-                    Map<String, Double> map = sessionInfo.getQuestionAccuracy();
-                    // TODO: 답변 저장
-                    map.put(problemId, Double.MAX_VALUE);
+                    Map<Integer, Boolean> map = stageSessionInfo.getIsProblemCorrect();
+                    // TODO: 실제 답변 저장
+                    map.put(problemNumber, Boolean.TRUE);
                 },
                 err -> {
-                    log.error("AI 서버 호출 실패: problemId={}, error={}", problemId, err.getMessage(), err);
+                    log.error("AI 서버 호출 실패: problemId={}, error={}", problemNumber, err.getMessage(), err);
                 }
         );
         return null;

@@ -4,9 +4,9 @@ import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
-import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
 import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
+import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -126,14 +126,14 @@ public class TrainedStageService {
     /**
      * Stage 완료 - 부족한 음성 리스트 전달
      */
-    public StageCompleteResponse completeStage(String sessionId) {
-        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+    public StageCompleteResponse completeStage(String stageSessionId) {
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(stageSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
-        SessionInfo sessionInfo = trainManager.getProblemSession(sessionId);
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
         stage.updateWrongCount();
 
-        Set<String> voiceResult = sessionInfo.getQuestionAccuracy().keySet();
+        Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
 
         return StageCompleteResponse.builder()
                 .voiceResult(voiceResult)

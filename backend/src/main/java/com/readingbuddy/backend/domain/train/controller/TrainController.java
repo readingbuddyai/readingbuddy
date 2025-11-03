@@ -134,7 +134,7 @@ public class TrainController {
             String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, Integer.parseInt(problemId));
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
+            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, Integer.parseInt(problemId));
 
             VoiceCheckResponse response = VoiceCheckResponse.builder()
                     .reply(aiResponse.getReply())
