@@ -467,7 +467,6 @@ public class Stage12Controller : MonoBehaviour
 
         using (var req = UnityWebRequestTexture.GetTexture(imageUrl))
         {
-            ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success)
@@ -501,7 +500,6 @@ public class Stage12Controller : MonoBehaviour
 
         using (var req = UnityWebRequestMultimedia.GetAudioClip(voiceUrl, GuessAudioType(voiceUrl)))
         {
-            ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success)

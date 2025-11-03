@@ -544,6 +544,18 @@ PrefabInstance:
       propertyPath: m_Name
       value: '[UI]'
       objectReference: {fileID: 0}
+    - target: {fileID: 6791438848145105429, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 4041c41b17eb6b14cb51a2745660d8c6, type: 2}
+    - target: {fileID: 6791438848145105429, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: 634908745534583579, guid: 4041c41b17eb6b14cb51a2745660d8c6, type: 2}
+    - target: {fileID: 6791438848145105429, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: authToken
       value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7KeETWF0ZSIsImlhdCI6MTc2MjE3MDY1MCwiZXhwIjoxNzYyMTc0MjUwfQ.BWK0MI8vcJ5VOF-clfG_nyWU7cBE1scHkKP0SfVMcIkkuqMokFnATNttM4usfPM6
