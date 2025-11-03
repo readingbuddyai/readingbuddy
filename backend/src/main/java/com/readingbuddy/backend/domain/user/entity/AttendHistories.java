@@ -21,8 +21,13 @@ public class AttendHistories {
     private Long id;
 
     @Column(nullable = false)
-    private LocalDate startDate;
+    private LocalDate attendDate;
 
     @Column(nullable = false)
     private Integer playtime;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 }
