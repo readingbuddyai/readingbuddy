@@ -9,8 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AttemptRequest {
 
-    private String sessionId;  // 훈련 세션 ID
-    private Integer problemId;
+    private String stageSessionId;  // 훈련 세션 ID
+    private Integer problemNumber;
     private String stage;
     private Integer attemptNumber;
     private String phonemes;

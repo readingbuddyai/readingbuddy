@@ -1,8 +1,11 @@
 package com.readingbuddy.backend.domain.train.repository;
 
+import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
 import com.readingbuddy.backend.domain.user.entity.TrainedStageHistories;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -12,5 +15,51 @@ public interface TrainedProblemHistoriesRepository extends JpaRepository<Trained
      * 세션 완료 시 통계 집계용
      */
     List<TrainedProblemHistories> findByTrainedStageHistories(TrainedStageHistories session);
+
+
+    /**
+     * 사용자별 틀린 음소 조회 (내림차순)
+     */
+    @Query(value = """
+            SELECT p.id as phonemeId, p.value, p.category, COUNT(tph.id) as wrongCnt
+            FROM trained_problem_histories tph
+            JOIN trained_stage_histories tsh ON tph.trained_stage_id = tsh.id
+            JOIN phonemes p ON tph.phoneme_id = p.id
+            WHERE tsh.user_id = :userId
+            AND tph.is_correct = false
+            GROUP BY p.id, p.value, p.category
+            ORDER BY wrongCnt DESC
+            LIMIT :limit""",
+            nativeQuery = true)
+    List<Object[]> getWrongPhonemesRanking(@Param("userId") Long userId, @Param("limit") int limit);
+
+    /**
+     * 사용자별 시도 횟수가 많은 음소 조회 (내림차순)
+     */
+    @Query(value = """
+          SELECT
+              p.id as phonemeId,
+              p.value,
+              p.category,
+              SUM(max_attempts.max_attempt_number) as tryCnt
+          FROM (
+              SELECT
+                  tph.phoneme_id,
+                  tph.trained_stage_id,
+                  tph.problem_number,
+                  MAX(tph.attempt_number) as max_attempt_number
+              FROM trained_problem_histories tph
+              JOIN trained_stage_histories tsh ON tph.trained_stage_id = tsh.id
+              WHERE tsh.user_id = :userId
+              GROUP BY tph.phoneme_id, tph.trained_stage_id, tph.problem_number
+          ) max_attempts
+          JOIN phonemes p ON max_attempts.phoneme_id = p.id
+          GROUP BY p.id, p.value, p.category
+          ORDER BY tryCnt DESC
+          LIMIT :limit
+          """,
+            nativeQuery = true)
+    List<Object[]> getTryPhonemesRanking(@Param("userId") Long userId, @Param("limit") int limit);
+
 
 }

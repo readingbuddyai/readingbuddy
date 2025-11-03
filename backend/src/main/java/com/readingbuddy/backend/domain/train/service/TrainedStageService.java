@@ -1,12 +1,12 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
-import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
+import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
+import com.readingbuddy.backend.domain.train.entity.Phonemes;
+import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 @Service
@@ -29,14 +28,15 @@ public class TrainedStageService {
     private final UserRepository userRepository;
     private final TrainedStageHistoriesRepository trainedStageHistoriesRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
+    private final PhonemesRepository phonemesRepository;
     private final TrainManager trainManager;
 
     /**
-     * sessionId로 userId 조회
+     * stageSessionId로 userId 조회
      */
-    public Long getUserIdBySessionId(String sessionId) {
-        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+    public Long getUserIdByStageSessionId(String stageSessionId) {
+        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(stageSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
         return session.getUser().getId();
     }
 
@@ -44,7 +44,7 @@ public class TrainedStageService {
      * Stage 시작 - 새로운 훈련 세션 생성
      * TrainManager의 generateQuestionSession()을 사용하여 sessionKey 생성
      */
-    public StageStartResponse startStage(Long userId, StageStartRequest request) {
+    public StageStartResponse startStage(Long userId, String stage, Integer totalProblems) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다: " + userId));
@@ -53,23 +53,23 @@ public class TrainedStageService {
         String sessionKey = trainManager.generateQuestionSession();
 
         // 새 세션 생성
-        TrainedStageHistories stage = TrainedStageHistories.builder()
+        TrainedStageHistories createStage = TrainedStageHistories.builder()
                 .user(user)
                 .sessionKey(sessionKey)
-                .stage(request.getStage())
-                .problemCount(request.getTotalProblems())
+                .stage(stage)
+                .problemCount(totalProblems)
                 .correctCount(0)
                 .wrongCount(0)
                 .tryCount(0)
                 .build();
 
-        stage = trainedStageHistoriesRepository.save(stage);
+        createStage = trainedStageHistoriesRepository.save(createStage);
 
         return StageStartResponse.builder()
-                .sessionId(stage.getSessionKey())
-                .stage(stage.getStage())
-                .totalProblems(stage.getProblemCount())
-                .startAt(stage.getStartedAt())
+                .stageSessionId(createStage.getSessionKey())
+                .stage(createStage.getStage())
+                .totalProblems(createStage.getProblemCount())
+                .startAt(createStage.getStartedAt())
                 .build();
     }
 
@@ -79,14 +79,18 @@ public class TrainedStageService {
      */
     public AttemptResponse submitAttempt(AttemptRequest request) {
         // 세션 조회
-        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getStageSessionId())
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getStageSessionId()));
+
+        // phonemes 문자열로 Phonemes 엔티티 조회
+        Phonemes phoneme = phonemesRepository.findByValue(request.getPhonemes()).orElse(null);
 
         // 시도 기록 생성
         TrainedProblemHistories attempt = TrainedProblemHistories.builder()
                 .trainedStageHistories(stage)
-                .problemId(request.getProblemId())
-                .phonemes(request.getPhonemes())
+                .problemNumber(request.getProblemNumber())
+                .phoneme(phoneme)  // FK 관계 설정
+                .phonemes(request.getPhonemes())  // 문자열도 함께 저장
                 .word(request.getWord())
                 .selectedAnswer(request.getSelectedAnswer())
                 .attemptNumber(request.getAttemptNumber())
@@ -106,8 +110,11 @@ public class TrainedStageService {
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
-                .sessionId(stage.getSessionKey())
-                .problemId(attempt.getProblemId())
+                .stageSessionId(stage.getSessionKey())
+                .problemNumber(attempt.getProblemNumber())
+                .stageSessionId(stage.getSessionKey())
+                .problemNumber(attempt.getProblemNumber())
+                .phonemeId(phoneme.getId())
                 .phonemes(attempt.getPhonemes())
                 .word(attempt.getWord())
                 .selectedAnswer(attempt.getSelectedAnswer())
@@ -121,14 +128,14 @@ public class TrainedStageService {
     /**
      * Stage 완료 - 부족한 음성 리스트 전달
      */
-    public StageCompleteResponse completeStage(StageCompleteRequest request) {
-        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
+    public StageCompleteResponse completeStage(String stageSessionId) {
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(stageSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
-        SessionInfo sessionInfo = trainManager.getProblemSession(request.getSessionId());
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
         stage.updateWrongCount();
 
-        Set<String> voiceResult = sessionInfo.getQuestionAccuracy().keySet();
+        Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
 
         return StageCompleteResponse.builder()
                 .voiceResult(voiceResult)

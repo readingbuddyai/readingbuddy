@@ -3,9 +3,6 @@ package com.readingbuddy.backend.domain.train.controller;
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.service.S3Service;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
-import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
 import com.readingbuddy.backend.domain.train.dto.response.*;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.service.*;
@@ -118,9 +115,9 @@ public class TrainController {
     public ResponseEntity<ApiResponse<VoiceCheckResponse>> checkVoice(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam("audio") MultipartFile audioFile,
-            @RequestParam("sessionId") String sessionId,
+            @RequestParam("stageSessionId") String stageSessionId,
             @RequestParam("stage") String stage,
-            @RequestParam("problemId") String problemId
+            @RequestParam("problemNumber") Integer problemNumber
     ) {
 
         try {
@@ -134,10 +131,10 @@ public class TrainController {
             Long userId = customUserDetails.getId();
 
             // S3에 업로드
-            String audioUrl = s3Service.uploadAudioFile(audioFile, sessionId, userId, Integer.parseInt(problemId));
+            String audioUrl = s3Service.uploadAudioFile(audioFile, stageSessionId, userId, problemNumber);
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
+            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemNumber);
 
             VoiceCheckResponse response = VoiceCheckResponse.builder()
                     .reply(aiResponse.getReply())
@@ -156,17 +153,18 @@ public class TrainController {
 
     /**
      * 훈련 스테이지 시작
-     * 새로운 훈련 세션을 생성하고 sessionId를 반환
+     * 새로운 훈련 세션을 생성하고 stageSessionId 반환
      */
     @PostMapping("/stage/start")
     public ResponseEntity<ApiResponse<StageStartResponse>> startStage(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @RequestBody StageStartRequest request) {
+            @RequestParam("stage") String stage,
+            @RequestParam("totalProblems") Integer totalProblems) {
 
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            StageStartResponse response = trainedStageService.startStage(userId, request);
+            StageStartResponse response = trainedStageService.startStage(userId, stage, totalProblems);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
         } catch (Exception e) {
@@ -203,12 +201,12 @@ public class TrainController {
     @PostMapping("/stage/complete")
     public ResponseEntity<ApiResponse<StageCompleteResponse>> completeStage(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @RequestBody StageCompleteRequest request) {
+            @RequestParam("sessionId") String sessionId) {
 
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            StageCompleteResponse response = trainedStageService.completeStage(request);
+            StageCompleteResponse response = trainedStageService.completeStage(sessionId);
             return ResponseEntity.ok(ApiResponse.success("스테이지가 완료되었습니다.", response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

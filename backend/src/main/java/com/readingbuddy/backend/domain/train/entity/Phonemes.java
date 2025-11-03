@@ -5,7 +5,8 @@ import lombok.Getter;
 
 @Entity
 @Getter
-@Table(name = "phonemes")
+@Table(name = "phonemes",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"category", "value"}))
 public class Phonemes {
 
     @Id
@@ -14,6 +15,7 @@ public class Phonemes {
 
     private String category;  // 자음 / 모음
 
+    @Column(unique = true)
     private String value;  // 자음 / 모음 값
 
     private String unicode;

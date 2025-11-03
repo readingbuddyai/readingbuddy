@@ -11,14 +11,14 @@ import java.util.List;
 @Builder
 public class Stage1_1Problem extends ProblemResult {
 
-    private final Long questionId;
+    private final Long phonemeId;
     private final String voiceUrl;
     private final String imageUrl;
     private final List<OptionDto> options;
 
-    public Stage1_1Problem(String problemWord, Long questionId, String voiceUrl, String imageUrl, List<OptionDto> options) {
+    public Stage1_1Problem(String problemWord, Long phonemeId, String voiceUrl, String imageUrl, List<OptionDto> options) {
         super(problemWord);
-        this.questionId = questionId;
+        this.phonemeId = phonemeId;
         this.voiceUrl = voiceUrl;
         this.imageUrl = imageUrl;
         this.options = options;
