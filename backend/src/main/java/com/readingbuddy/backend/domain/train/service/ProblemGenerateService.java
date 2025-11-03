@@ -32,11 +32,7 @@ public class ProblemGenerateService {
     public List<ProblemResult> extractLetters(String stage, Integer cnt) {
         List<ProblemResult> results = null;
 
-        List<Integer> unicodePoints = random.ints(0, TOTAL)
-                .distinct()  // 중복 제거
-                .limit(cnt)
-                .mapToObj(i -> START + i)
-                .toList();
+        List<Integer> unicodePoints = lettersRepository.findRandomLetters(cnt);
 
         if (stage.equals("3")) {
             results = generateStage3(unicodePoints);
