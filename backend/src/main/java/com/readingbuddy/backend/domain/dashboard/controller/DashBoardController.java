@@ -1,7 +1,9 @@
 package com.readingbuddy.backend.domain.dashboard.controller;
 
+import com.amazonaws.Response;
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
+import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.dashboard.service.DashBoardService;
 import com.readingbuddy.backend.domain.dashboard.dto.response.AttendanceResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 
 @Tag(name = "대시보드", description = "대시보드 관련 API")
 @Slf4j
@@ -80,9 +83,28 @@ public class DashBoardController {
     }
 
     /**
+     * 사용자별 틀린 음소 조회 (내림차순)
+     */
+    @GetMapping("/mistake/phonemes/rank")
+    public ResponseEntity<ApiResponse<List<PhonemesWrongRankResponse>>> getWrongPhonemesRanking(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestParam("limit") int limit) {
+
+        Long userId = customUserDetails.getId();
+
+        List<PhonemesWrongRankResponse> ranking = dashBoardService.getWrongPhonemesRanking(userId, limit);
+        return ResponseEntity.ok(ApiResponse.success("틀린 음소 랭킹이 조회되었습니다. ", ranking));
+
+    }
+
+
+
+    //== 헬퍼 메서드 ==//
+    /**
      * 날짜 문자열 파싱 헬퍼 메서드
      */
     private LocalDate parseDate(String dateString) throws DateTimeParseException {
         return LocalDate.parse(dateString, DATE_FORMATTER);
     }
+
 }

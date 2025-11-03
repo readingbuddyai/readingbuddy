@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.user.entity;
 
+import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "trained_histories")
+@Table(name = "trained_problem_histories")
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -21,7 +22,11 @@ public class TrainedProblemHistories {
     private Long id;
 
     @Column(nullable = false)
-    private Integer problemId;
+    private Integer problemNumber;  // 문제 번호 (1, 2, 3, ...)
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "phoneme_id", nullable = true)
+    private Phonemes phoneme;
 
     @Column(nullable = true)
     private String phonemes;
