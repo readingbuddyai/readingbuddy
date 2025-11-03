@@ -29,7 +29,7 @@ public class UserService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .nickname(request.getNickname())
-                .build();;
+                .build();
         userRepository.save(user);
     }
 

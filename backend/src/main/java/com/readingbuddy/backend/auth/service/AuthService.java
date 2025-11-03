@@ -2,9 +2,7 @@ package com.readingbuddy.backend.auth.service;
 
 import com.readingbuddy.backend.auth.RefreshTokenRepository;
 import com.readingbuddy.backend.auth.domain.RefreshToken;
-import com.readingbuddy.backend.auth.dto.LoginRequest;
-import com.readingbuddy.backend.auth.dto.ReissueTokenRequest;
-import com.readingbuddy.backend.auth.dto.TokenResponse;
+import com.readingbuddy.backend.auth.dto.*;
 import com.readingbuddy.backend.auth.jwt.JWTUtil;
 import com.readingbuddy.backend.common.properties.JwtProperties;
 import com.readingbuddy.backend.domain.user.entity.User;
@@ -29,6 +27,7 @@ public class AuthService {
     private final JWTUtil jwtUtil;
     private final JwtProperties jwtProperties;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final DeviceSessionManager deviceSessionManager;
 
     @Transactional
     public TokenResponse login(LoginRequest request, HttpServletRequest servletRequest) {
@@ -67,6 +66,36 @@ public class AuthService {
         refreshToken.rotate(newRefreshToken, jwtUtil.getExpiredAt(jwtProperties.getRefreshTokenValidityInMs()));
 
         return createTokenResponse(newAccessToken, newRefreshToken);
+    }
+
+    public DeviceLoginResponse createDeviceLoginResponse(){
+        return DeviceLoginResponse.builder()
+                .authCode(deviceSessionManager.generateDeviceCodeSession())
+                .build();
+    }
+
+    public void authorizeDeviceCode(DeviceCodeRequest request, Long userId) {
+        String deviceAuthCode = request.getDeviceAuthCode();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("로그인 정보에 일치하는 회원이 없습니다."));
+
+        DeviceSessionInfo deviceSessionInfo = deviceSessionManager.getSession(deviceAuthCode);
+
+        deviceSessionManager.authorizeDevice(deviceSessionInfo,user.getId());
+    }
+
+    public TokenResponse checkDeviceAuthorized(DeviceCodeRequest request, HttpServletRequest servletRequest) {
+        Long userId = deviceSessionManager.checkAuthorizedDevice(request.getDeviceAuthCode());
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("로그인 정보에 일치하는 회원이 없습니다."));
+
+        String accessToken = createAccessToken(user);
+        String refreshToken = createRefreshToken(user);
+        saveRefreshToken(user, refreshToken, servletRequest);
+
+        return createTokenResponse(accessToken, refreshToken);
     }
 
     private TokenResponse createTokenResponse(String accessToken, String refreshToken) {

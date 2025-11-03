@@ -53,7 +53,7 @@ public class VowelTrainService {
 
         return Stage1_1Problem.builder()
                 .imageUrl(answerVowel.getImageUrl())
-                .questionId(answerVowel.getId())
+                .phonemeId(answerVowel.getId())
                 .voiceUrl(answerVowel.getVoiceUrl())
                 .options(optionDtos)
                 .build();
@@ -106,7 +106,7 @@ public class VowelTrainService {
         Collections.shuffle(options);
 
         return Stage1_2Problem.builder()
-                .questionId(targetPhoneme.getId())
+                .phonemeId(targetPhoneme.getId())
                 .targetPhoneme(targetPhoneme.getValue())
                 .imageUrl(targetPhoneme.getImageUrl())
                 .voiceUrl(targetPhoneme.getVoiceUrl())

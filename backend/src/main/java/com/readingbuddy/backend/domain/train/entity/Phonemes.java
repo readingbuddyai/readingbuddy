@@ -15,6 +15,7 @@ public class Phonemes {
 
     private String category;  // 자음 / 모음
 
+    @Column(unique = true)
     private String value;  // 자음 / 모음 값
 
     private String unicode;

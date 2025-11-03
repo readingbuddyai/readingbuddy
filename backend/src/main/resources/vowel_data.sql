@@ -20,4 +20,4 @@ INSERT INTO phonemes (category, value, unicode, image_url, voice_url) VALUES
 ('vowel', 'ㅡ', 'U+3161', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%A1.png', NULL),
 ('vowel', 'ㅢ', 'U+3162', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%A2.png', NULL),
 ('vowel', 'ㅣ', 'U+3163', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%A3.png', NULL)
-ON CONFLICT (category, value) DO NOTHING;
+ON CONFLICT (value) DO NOTHING;
