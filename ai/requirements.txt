@@ -3,7 +3,8 @@ fastapi==0.115.4
 uvicorn[standard]==0.30.6
 python-multipart==0.0.9
 
-# PyTorch & ML (SafeTensor 사용)
+# PyTorch & ML
+--extra-index-url https://download.pytorch.org/whl/cu124
 torch==2.5.1
 torchaudio==2.5.1
 transformers==4.44.2

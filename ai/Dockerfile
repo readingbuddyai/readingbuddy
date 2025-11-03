@@ -1,5 +1,5 @@
 # GPU 지원 CUDA 베이스 이미지
-FROM nvidia/cuda:11.8.0-cudnn8-runtime-ubuntu22.04
+FROM nvidia/cuda:12.4.0-cudnn-runtime-ubuntu22.04
 
 # 작업 디렉토리 설정
 WORKDIR /app
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 심볼릭 링크 생성
-RUN ln -s /usr/bin/python3.11 /usr/bin/python
+RUN ln -s /usr/bin/python3.10 /usr/bin/python
 
 # pip 업그레이드
 RUN pip install --no-cache-dir --upgrade pip
