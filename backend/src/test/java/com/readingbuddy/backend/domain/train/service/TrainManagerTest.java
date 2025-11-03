@@ -126,7 +126,7 @@ class TrainManagerTest {
         // given
         String sessionId = trainManager.generateQuestionSession();
         String stage = "1.1.1";
-        Integer problemId = "1";
+        String problemId = "1";
         MockMultipartFile audioFile = new MockMultipartFile(
                 "audio",
                 "test.wav",
@@ -150,7 +150,7 @@ class TrainManagerTest {
         SessionInfo sessionInfo = trainManager.getProblemSession(problemId);
         assertNotNull(sessionInfo);
         assertNotNull(sessionInfo.getQuestionAccuracy());
-        
+
         // AI 응답이 정확도 맵에 저장되었는지 확인
         assertTrue(sessionInfo.getQuestionAccuracy().containsKey(stage));
         assertEquals(Double.MAX_VALUE, sessionInfo.getQuestionAccuracy().get(stage));
