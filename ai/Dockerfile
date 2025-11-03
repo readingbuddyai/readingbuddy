@@ -6,7 +6,7 @@ WORKDIR /app
 
 # 시스템 패키지 업데이트 및 필수 도구 설치
 RUN apt-get update && apt-get install -y \
-    python3.11 \
+    python3.10 \
     python3-pip \
     ffmpeg \
     libsndfile1 \
