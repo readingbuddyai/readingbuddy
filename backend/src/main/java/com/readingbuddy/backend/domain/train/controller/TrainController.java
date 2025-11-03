@@ -3,9 +3,6 @@ package com.readingbuddy.backend.domain.train.controller;
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.service.S3Service;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
-import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
-import com.readingbuddy.backend.domain.train.dto.request.TrainResultRequest;
 import com.readingbuddy.backend.domain.train.dto.response.*;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.service.*;
@@ -161,12 +158,13 @@ public class TrainController {
     @PostMapping("/stage/start")
     public ResponseEntity<ApiResponse<StageStartResponse>> startStage(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @RequestBody StageStartRequest request) {
+            @RequestParam("stage") String stage,
+            @RequestParam("totalProblems") Integer totalProblems) {
 
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            StageStartResponse response = trainedStageService.startStage(userId, request);
+            StageStartResponse response = trainedStageService.startStage(userId, stage, totalProblems);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
         } catch (Exception e) {
@@ -203,12 +201,12 @@ public class TrainController {
     @PostMapping("/stage/complete")
     public ResponseEntity<ApiResponse<StageCompleteResponse>> completeStage(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @RequestBody StageCompleteRequest request) {
+            @RequestParam("sessionId") String sessionId) {
 
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            StageCompleteResponse response = trainedStageService.completeStage(request);
+            StageCompleteResponse response = trainedStageService.completeStage(sessionId);
             return ResponseEntity.ok(ApiResponse.success("스테이지가 완료되었습니다.", response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
