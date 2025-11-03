@@ -27,16 +27,16 @@ public class S3Service {
 
     /**
      * 음성 파일을 S3에 업로드하고 URL 반환
-     * 파일명 형식: audio/{sessionId}/{userId}_{problemId}_{timestamp}.확장자
+     * 파일명 형식: audio/{stageSessionId}/{userId}_{problemId}_{timestamp}.확장자
      */
-    public String uploadAudioFile(MultipartFile file, String sessionId, Long userId, Integer problemId) {
+    public String uploadAudioFile(MultipartFile file, String stageSessionId, Long userId, Integer problemId) {
         try {
             // 현재 시간을 타임스탬프로 변환
             String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
 
-            // 파일명 생성: audio/{sessionId}/{userId}_{problemId}_{timestamp}.확장자
+            // 파일명 생성: audio/{stageSessionId}/{userId}_{problemId}_{timestamp}.확장자
             String fileName = String.format("audio/%s/%d_%d_%s.%s",
-                    sessionId,
+                    stageSessionId,
                     userId,
                     problemId,
                     timestamp,

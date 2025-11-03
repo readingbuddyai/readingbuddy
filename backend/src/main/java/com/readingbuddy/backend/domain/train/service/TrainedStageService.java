@@ -1,12 +1,12 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
+import com.readingbuddy.backend.domain.train.dto.request.StageCompleteRequest;
+import com.readingbuddy.backend.domain.train.dto.request.StageStartRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
-import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
-import com.readingbuddy.backend.domain.train.entity.Phonemes;
-import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
+import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -32,11 +32,11 @@ public class TrainedStageService {
     private final TrainManager trainManager;
 
     /**
-     * sessionId로 userId 조회
+     * stageSessionId로 userId 조회
      */
-    public Long getUserIdBySessionId(String sessionId) {
-        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+    public Long getUserIdByStageSessionId(String stageSessionId) {
+        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(stageSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
         return session.getUser().getId();
     }
 
@@ -79,8 +79,8 @@ public class TrainedStageService {
      */
     public AttemptResponse submitAttempt(AttemptRequest request) {
         // 세션 조회
-        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getSessionId())
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getSessionId()));
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getStageSessionId())
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getStageSessionId()));
 
         // phonemes 문자열로 Phonemes 엔티티 조회
         Phonemes phoneme = phonemesRepository.findByValue(request.getPhonemes()).orElse(null);
@@ -110,6 +110,8 @@ public class TrainedStageService {
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
+                .stageSessionId(stage.getSessionKey())
+                .problemId(attempt.getProblemId())
                 .sessionId(stage.getSessionKey())
                 .problemNumber(attempt.getProblemNumber())
                 .phonemeId(phoneme.getId())
@@ -126,14 +128,14 @@ public class TrainedStageService {
     /**
      * Stage 완료 - 부족한 음성 리스트 전달
      */
-    public StageCompleteResponse completeStage(String sessionId) {
-        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(sessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + sessionId));
+    public StageCompleteResponse completeStage(String stageSessionId) {
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(stageSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
-        SessionInfo sessionInfo = trainManager.getProblemSession(sessionId);
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
         stage.updateWrongCount();
 
-        Set<String> voiceResult = sessionInfo.getQuestionAccuracy().keySet();
+        Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
 
         return StageCompleteResponse.builder()
                 .voiceResult(voiceResult)

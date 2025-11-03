@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 public class StageStartResponse {
 
-    private String sessionId;
+    private String stageSessionId;
     private String stage;
     private Integer totalProblems;
     private LocalDateTime startAt;

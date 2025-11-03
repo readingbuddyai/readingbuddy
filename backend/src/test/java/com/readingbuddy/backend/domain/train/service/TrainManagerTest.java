@@ -1,6 +1,6 @@
 package com.readingbuddy.backend.domain.train.service;
 
-import com.readingbuddy.backend.domain.train.dto.result.SessionInfo;
+import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
@@ -23,7 +23,7 @@ class TrainManagerTest {
 
     private MockWebServer mockWebServer;
     private TrainManager trainManager;
-    private Map<String, SessionInfo> questionSession;
+    private Map<String, StageSessionInfo> stageSessions;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -36,10 +36,10 @@ class TrainManagerTest {
                 .baseUrl(mockWebServer.url("/").toString())
                 .build();
 
-        // TrainManager 생성 및 questionSession 필드 직접 설정
+        // TrainManager 생성 및 stageSessions 필드 직접 설정
         trainManager = new TrainManager(webClient);
-        questionSession = new ConcurrentHashMap<>();
-        ReflectionTestUtils.setField(trainManager, "questionSession", questionSession);
+        stageSessions = new ConcurrentHashMap<>();
+        ReflectionTestUtils.setField(trainManager, "stageSessions", stageSessions);
     }
 
     @AfterEach
@@ -54,31 +54,31 @@ class TrainManagerTest {
     @DisplayName("문제 세션 생성 성공")
     void generateQuestionSession_Success() {
         // when
-        String problemId = trainManager.generateQuestionSession();
+        String stageSessionId = trainManager.generateQuestionSession();
 
         // then
-        assertNotNull(problemId);
-        assertFalse(problemId.isEmpty());
+        assertNotNull(stageSessionId);
+        assertFalse(stageSessionId.isEmpty());
         
         // 세션에 저장되었는지 확인
-        SessionInfo savedSession = questionSession.get(problemId);
+        StageSessionInfo savedSession = stageSessions.get(stageSessionId);
         assertNotNull(savedSession);
-        assertNotNull(savedSession.getQuestionAccuracy());
-        assertTrue(savedSession.getQuestionAccuracy().isEmpty());
+        assertNotNull(savedSession.getIsProblemCorrect());
+        assertTrue(savedSession.getIsProblemCorrect().isEmpty());
     }
 
     @Test
     @DisplayName("문제 세션 조회 성공")
-    void getProblemSession_Success() {
+    void getStageSession_Success() {
         // given
         String problemId = "test-problem-id";
-        SessionInfo expectedInfo = SessionInfo.builder()
-                .questionAccuracy(new HashMap<>())
+        StageSessionInfo expectedInfo = StageSessionInfo.builder()
+                .isProblemCorrect(new HashMap<>())
                 .build();
-        questionSession.put(problemId, expectedInfo);
+        stageSessions.put(problemId, expectedInfo);
 
         // when
-        SessionInfo result = trainManager.getProblemSession(problemId);
+        StageSessionInfo result = trainManager.getStageSession(problemId);
 
         // then
         assertNotNull(result);
@@ -87,20 +87,20 @@ class TrainManagerTest {
 
     @Test
     @DisplayName("문제 세션 삭제 성공")
-    void removeProblemSession_Success() {
+    void removeStageSession_Success() {
         // given
         String problemId = "test-problem-id";
-        SessionInfo sessionInfo = SessionInfo.builder()
-                .questionAccuracy(new HashMap<>())
+        StageSessionInfo stageSessionInfo = StageSessionInfo.builder()
+                .isProblemCorrect(new HashMap<>())
                 .build();
-        questionSession.put(problemId, sessionInfo);
+        stageSessions.put(problemId, stageSessionInfo);
 
         // when
-        trainManager.removeProblemSession(problemId);
+        trainManager.removeStageSession(problemId);
 
         // then
-        assertFalse(questionSession.containsKey(problemId));
-        assertNull(questionSession.get(problemId));
+        assertFalse(stageSessions.containsKey(problemId));
+        assertNull(stageSessions.get(problemId));
     }
 
     @Test
@@ -108,16 +108,16 @@ class TrainManagerTest {
     void generateQuestionSession_InitializedAccuracyMap() {
         // when
         String problemId = trainManager.generateQuestionSession();
-        SessionInfo sessionInfo = trainManager.getProblemSession(problemId);
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(problemId);
 
         // then
-        assertNotNull(sessionInfo);
-        assertNotNull(sessionInfo.getQuestionAccuracy());
-        assertTrue(sessionInfo.getQuestionAccuracy().isEmpty());
+        assertNotNull(stageSessionInfo);
+        assertNotNull(stageSessionInfo.getIsProblemCorrect());
+        assertTrue(stageSessionInfo.getIsProblemCorrect().isEmpty());
         
         // 맵에 데이터 추가 가능 확인
-        sessionInfo.getQuestionAccuracy().put("test", 0.5);
-        assertEquals(0.5, sessionInfo.getQuestionAccuracy().get("test"));
+        stageSessionInfo.getIsProblemCorrect().put(1, Boolean.TRUE);
+        assertEquals(Boolean.TRUE, stageSessionInfo.getIsProblemCorrect().get(1));
     }
 
     @Test
@@ -126,7 +126,7 @@ class TrainManagerTest {
         // given
         String sessionId = trainManager.generateQuestionSession();
         String stage = "1.1.1";
-        String problemId = "1";
+        int problemId = 1;
         MockMultipartFile audioFile = new MockMultipartFile(
                 "audio",
                 "test.wav",
@@ -147,13 +147,13 @@ class TrainManagerTest {
         Thread.sleep(500);
 
         // then
-        SessionInfo sessionInfo = trainManager.getProblemSession(problemId);
-        assertNotNull(sessionInfo);
-        assertNotNull(sessionInfo.getQuestionAccuracy());
-
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(sessionId);
+        assertNotNull(stageSessionInfo);
+        assertNotNull(stageSessionInfo.getIsProblemCorrect());
+        
         // AI 응답이 정확도 맵에 저장되었는지 확인
-        assertTrue(sessionInfo.getQuestionAccuracy().containsKey(stage));
-        assertEquals(Double.MAX_VALUE, sessionInfo.getQuestionAccuracy().get(stage));
+        assertTrue(stageSessionInfo.getIsProblemCorrect().containsKey(1));
+        assertEquals(Boolean.TRUE, stageSessionInfo.getIsProblemCorrect().get(1));
     }
 
 }
