@@ -412,6 +412,7 @@ public class Stage12Controller : MonoBehaviour
         {
             tmpText.text = label;
             tmpText.color = textColor;
+            Debug.Log($"[Stage12] TMP 라벨 적용 → '{label}', font={tmpText.font?.name}");
         }
         else
         {
@@ -420,6 +421,7 @@ public class Stage12Controller : MonoBehaviour
             {
                 legacyText.text = label;
                 legacyText.color = textColor;
+                Debug.Log($"[Stage12] UI.Text 라벨 적용 → '{label}'");
             }
         }
 
@@ -496,24 +498,38 @@ public class Stage12Controller : MonoBehaviour
     private IEnumerator PlayVoiceUrl(string voiceUrl)
     {
         if (string.IsNullOrEmpty(voiceUrl) || !audioSource)
+        {
+            Debug.LogWarning(string.IsNullOrEmpty(voiceUrl)
+                ? "[Stage12] voiceUrl가 비어 있어 음성을 재생하지 못했습니다."
+                : "[Stage12] audioSource가 설정되지 않아 음성을 재생하지 못했습니다.");
             yield break;
+        }
 
-        using (var req = UnityWebRequestMultimedia.GetAudioClip(voiceUrl, GuessAudioType(voiceUrl)))
+        string sanitizedUrl = SanitizeUrl(voiceUrl);
+        Debug.Log($"[Stage12] 음성 요청 시작 → {sanitizedUrl}");
+
+        using (var req = UnityWebRequestMultimedia.GetAudioClip(sanitizedUrl, GuessAudioType(sanitizedUrl)))
         {
             yield return req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[Stage12] 음성 로드 실패: {req.error}\nURL={voiceUrl}");
+                Debug.LogWarning($"[Stage12] 음성 로드 실패: {req.error}\nURL={sanitizedUrl}");
                 yield break;
             }
 
             var clip = DownloadHandlerAudioClip.GetContent(req);
+            Debug.Log($"[Stage12] 음성 로드 성공 → length={clip.length:F2}s, samples={clip.samples}");
             audioSource.Stop();
             audioSource.clip = clip;
             audioSource.Play();
             yield return new WaitWhile(() => audioSource.isPlaying);
         }
+    }
+
+    private string SanitizeUrl(string url)
+    {
+        return string.IsNullOrEmpty(url) ? url : url.Replace("+", "%2B");
     }
 
     private AudioType GuessAudioType(string url)
