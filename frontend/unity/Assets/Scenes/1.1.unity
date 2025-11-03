@@ -335,32 +335,11 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IuyxiOyxiCIsImlhdCI6MTc2MjE1MzI0OCwiZXhwIjoxNzYyMTU2ODQ4fQ.IRnX014U_jV36mQ2g3wqWAyexNKNRVXVKkd8-1Cm4OrSVDd5nHeXCIex2-esQUnw
-  sessionId: 
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIxNTg2OTMsImV4cCI6MTc2MjE2MjI5M30.J52UYOF2_FYpeYRK2--7FDIoxdh6IL95JYKowEDj16kPMjzIog-EcP911CZqbaof
+  stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
   tmpFont: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
-  optionTextFontSize: 72
-  optionTMPFontSize: 90
-  optionTextColor: {r: 1, g: 1, b: 1, a: 1}
-  optionTMPColor: {r: 1, g: 1, b: 1, a: 1}
-  optionsLayoutVertical: 1
-  optionsLayoutSpacing: 20
-  optionsPaddingLeft: 40
-  optionsPaddingRight: 40
-  optionsPaddingTop: 20
-  optionsPaddingBottom: 20
-  forceOptionsOnTop: 1
-  optionsSortingOrder: 100
-  addContainerDebugBackground: 0
-  containerDebugBgColor: {r: 0, g: 0, b: 0, a: 0.2}
-  centerizeOptionsOnShow: 0
-  centerOptionsContainerSize: {x: 2100, y: 700}
-  centerOptionsSpacing: 20
-  centerOptionButtonSize: {x: 1000, y: 600}
-  centerOptionTextFontSize: 120
-  centerOptionTMPFontSize: 160
-  centerOptionsOffsetY: -500
   progressText: {fileID: 0}
   mainImage: {fileID: 940543878}
   optionsContainer: {fileID: 211129656}
@@ -393,25 +372,15 @@ MonoBehaviour:
   imageVerticalMargin: 40
   imageFixedSize: {x: 1500, y: 1500}
   optionButtonPreferredSize: {x: 1200, y: 600}
-  endModalTitleText: "\uD559\uC2B5\uC774 \uB05D\uB0AC\uC5B4\uC694!"
-  endModalPrimaryButtonText: "\uB2E4\uC2DC \uD559\uC2B5\uD558\uAE30"
-  endModalSecondaryButtonText: "\uB85C\uBE44\uB85C \uB098\uAC00\uAE30"
-  endModalButtonSize: {x: 1200, y: 600}
-  endModalButtonsGap: 40
-  endModalTitleFontSize: 72
-  endModalTitleColor: {r: 1, g: 1, b: 1, a: 1}
-  endModalUseIcons: 0
-  endModalPrimaryIcon: {fileID: 21300000, guid: 9b3cb92896ed67641b3496f94e557913, type: 3}
-  endModalSecondaryIcon: {fileID: 21300000, guid: 9acb445faca0d304fb8464d72c2dabc0, type: 3}
-  endModalIconSize: {x: 256, y: 256}
-  endModalIconColor: {r: 1, g: 1, b: 1, a: 1}
-  endModalHideTextWhenIcon: 1
+  optionSpacing: 20
+  optionsPaddingLeft: 20
+  optionsPaddingTop: 20
+  optionsPaddingRight: 20
+  optionsPaddingBottom: 100
   bypassStartRequest: 0
   bypassVoiceUpload: 0
   logQuestionsVerbose: 1
   showPlaceholderOnImageFail: 1
-  logHttpRequests: 1
-  logHttpResponses: 1
 --- !u!1 &698153752
 GameObject:
   m_ObjectHideFlags: 0
@@ -891,6 +860,22 @@ PrefabInstance:
     - target: {fileID: 5211751809758897890, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6548458318717127266, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_Color.a
+      value: 0.69411767
+      objectReference: {fileID: 0}
+    - target: {fileID: 6548458318717127266, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_Color.b
+      value: 0.11087481
+      objectReference: {fileID: 0}
+    - target: {fileID: 6548458318717127266, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_Color.g
+      value: 0.38039216
+      objectReference: {fileID: 0}
+    - target: {fileID: 6548458318717127266, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_Color.r
+      value: 0.14117648
       objectReference: {fileID: 0}
     - target: {fileID: 6548458318717127266, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_RaycastTarget

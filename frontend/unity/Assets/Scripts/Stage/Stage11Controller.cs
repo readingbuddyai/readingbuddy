@@ -7,17 +7,23 @@ using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.SceneManagement;
+using System.Text.RegularExpressions;
+using System.Text;
 
 // Stage 1.1 진행 컨트롤러
 // - GET: /api/train/set?stage=1.1.1&count=5
-// - POST: /api/train/stage/start (body: { userId, stage, totalProblems })
+// - POST: /api/train/stage/start?stage=1.1&totalProblems=5 (헤더에 토큰 포함)
 // - GET: /api/train/set?stage=1.1.1&count=5
-// - POST: /api/train/check/voice?stageSessionId=&stage=&problemId= (multipart: audio=voice.wav)
-// - POST: /api/train/stage/complete (query: stageSessionId)
+// - POST: /api/train/check/voice?stageSessionId=&stage=&problemId= (multipart: audio=voice.wav, 헤더에 토큰 포함)
+// - POST: /api/train/stage/complete?stageSessionId=... (헤더에 토큰 포함)
 // 흐름(문항당):
 //  1) 상단에 "문제 i/5" 표시, 중앙 이미지(imageUrl) 표시
-//  2) "앞에 있는 그림을 잘 보고, 소리를 따라해봐~!" 안내 음성 → 마이크 녹음 → 업로드
-//  3) "아까 발음했던 소리가 둘 중 어떤건지 맞춰볼래?" 안내 음성 → voiceUrl 재생 → 옵션 버튼 표시
+//  흐름(문항당):
+//  - [1.1.3] 앞에 떠오른 마법 그림을 잘 보고, 나랑 함께 주문을 외워보자!
+//  - voiceUrl 재생
+//  - [1.1.4] 이제 너 차례야, 주문을 들려줘!
+//  - 사용자 음성 발신(POST) - 3초간 녹음
+//  - [1.1.5] 우와~ 정말 멋지게 외웠는걸!
 //  4) 정답이면 "최고야" 재생 후 다음 문항, 오답이면 "다시 한번 골라볼까?" 재생 후 재선택 대기
     public class Stage11Controller : MonoBehaviour
     {
@@ -30,8 +36,6 @@ using UnityEngine.SceneManagement;
         [Header("세션")]
         [Tooltip("/api/train/stage/start 응답의 stageSessionId. 미설정 시 업로드 403 가능")]
         public string stageSessionId = "";
-        [Tooltip("스웨거 start 바디에 포함되는 userId (선택)")]
-        public int userId = 0;
 
     [Header("옵션 라벨")]
     public OptionLabelMode optionLabelMode = OptionLabelMode.ValueThenUnicode;
@@ -101,6 +105,15 @@ using UnityEngine.SceneManagement;
         public Vector2 imageFixedSize = new Vector2(1500f, 1500f);
         [Tooltip("옵션 버튼 권장 크기(px)")]
         public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
+
+        [Header("Options Layout")]
+        [Tooltip("옵션 버튼 간 간격(px)")]
+        public float optionSpacing = 20f;
+        [Tooltip("옵션 컨테이너 패딩(px)")]
+        public int optionsPaddingLeft = 20;
+        public int optionsPaddingTop = 20;
+        public int optionsPaddingRight = 20;
+        public int optionsPaddingBottom = 20;
 
         [Header("개발용 우회")]
         [Tooltip("/api/train/stage/start 요청을 건너뛰고 문제 GET만 진행합니다.")]
@@ -218,6 +231,9 @@ using UnityEngine.SceneManagement;
             float minNeeded = optionButtonPreferredSize.y + 20f; // 상단 여백 여지
             float h = Mathf.Max(optionsHeight, minNeeded);
             rt.sizeDelta = new Vector2(0f, h);
+
+            // 컨테이너에 레이아웃 그룹이 있으면 패딩/스페이싱 적용
+            ApplyOptionsLayoutConfig();
         }
 
         // 메인 이미지: 하단 옵션 영역을 피해 위쪽/중앙 영역에 배치(가로 스트레치)
@@ -356,13 +372,7 @@ using UnityEngine.SceneManagement;
         public QuestionSet data;
     }
 
-    [Serializable]
-    private class StartStageBody
-    {
-        public int userId;
-        public string stage;
-        public int totalProblems;
-    }
+    // userId를 사용하지 않으므로 StartStageBody는 제거됨
 
     [Serializable]
     private class StartStageData
@@ -464,64 +474,7 @@ using UnityEngine.SceneManagement;
         }
     }
 
-    // JWT 토큰에서 userId 유추 (없으면 0)
-    private int TryInferUserIdFromToken()
-    {
-        try
-        {
-            if (string.IsNullOrWhiteSpace(authToken)) return 0;
-            var token = authToken.Trim();
-            // "Bearer ..." 형태 방어
-            if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                token = token.Substring(7).Trim();
-            var parts = token.Split('.');
-            if (parts.Length < 2) return 0;
-            string payloadB64 = parts[1];
-            // base64url → base64
-            payloadB64 = payloadB64.Replace('-', '+').Replace('_', '/');
-            switch (payloadB64.Length % 4)
-            {
-                case 2: payloadB64 += "=="; break;
-                case 3: payloadB64 += "="; break;
-            }
-            var bytes = System.Convert.FromBase64String(payloadB64);
-            var json = System.Text.Encoding.UTF8.GetString(bytes);
-            // 간단 파싱: 숫자 후보 키 찾기
-            int val;
-            if (TryFindIntValue(json, new []{"userId","id","sub","nameid"}, out val))
-                return val;
-        }
-        catch { }
-        return 0;
-    }
-
-    private bool TryFindIntValue(string json, string[] keys, out int value)
-    {
-        value = 0;
-        try
-        {
-            foreach (var k in keys)
-            {
-                // 매우 단순한 키 검색(정규식 없이)
-                var idx = json.IndexOf("\"" + k + "\"", StringComparison.OrdinalIgnoreCase);
-                if (idx < 0) continue;
-                var colon = json.IndexOf(':', idx);
-                if (colon < 0) continue;
-                var end = colon + 1;
-                // 숫자 부분 추출
-                while (end < json.Length && char.IsWhiteSpace(json[end])) end++;
-                var start = end;
-                while (end < json.Length && (char.IsDigit(json[end]) || json[end] == '-')) end++;
-                if (end > start)
-                {
-                    var numStr = json.Substring(start, end - start);
-                    if (int.TryParse(numStr, out value)) return true;
-                }
-            }
-        }
-        catch { }
-        return false;
-    }
+    // userId 관련 토큰 파싱 로직 제거됨
 
     // 세션 완료: /api/train/stage/complete
     private IEnumerator CompleteStageSession()
@@ -645,13 +598,8 @@ using UnityEngine.SceneManagement;
         // 3) [1.1.5] 칭찬 대사
         yield return PlayClip(clipGreat);
 
-        // 4) [1.1.6] 선택 유도 대사
+        // 4) [1.1.6] 선택 유도 대사 → 옵션 선택
         yield return PlayClip(clipChoose);
-        if (micDuringChoice)
-        {
-            // 선택 단계에서도 짧게 마이크 ON (비차단적)
-            StartCoroutine(RecordBackgroundCoroutine(recordSeconds));
-        }
         yield return ShowOptionsUntilCorrect(q);
     }
 
@@ -713,14 +661,18 @@ using UnityEngine.SceneManagement;
     {
         if (string.IsNullOrEmpty(voiceUrl) || !audioSource) yield break;
 
-        var audioType = GuessAudioType(voiceUrl);
-        using (var req = UnityWebRequestMultimedia.GetAudioClip(voiceUrl, audioType))
+        // S3 경로에 '+'가 포함된 파일명을 안전하게 로드하기 위해
+        // 경로 부분의 '+'를 '%2B'로 인코딩한다. (쿼리스트링은 유지)
+        string safeUrl = EncodePlusInPath(voiceUrl);
+
+        var audioType = GuessAudioType(safeUrl);
+        using (var req = UnityWebRequestMultimedia.GetAudioClip(safeUrl, audioType))
         {
             // 외부(S3/CloudFront 등)일 수 있으므로 인증 헤더는 붙이지 않음
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[Stage11] 음성 로드 실패: {req.error}\nURL={voiceUrl}");
+                Debug.LogWarning($"[Stage11] 음성 로드 실패: {req.error}\nURL(raw)={voiceUrl}\nURL(safe)={safeUrl}");
                 yield break;
             }
 
@@ -729,6 +681,73 @@ using UnityEngine.SceneManagement;
             audioSource.clip = clip;
             audioSource.Play();
             yield return new WaitWhile(() => audioSource.isPlaying);
+        }
+    }
+
+    private void ApplyOptionsLayoutConfig()
+    {
+        if (!optionsContainer) return;
+        var h = optionsContainer.GetComponent<HorizontalLayoutGroup>();
+        var v = optionsContainer.GetComponent<VerticalLayoutGroup>();
+        var g = optionsContainer.GetComponent<GridLayoutGroup>();
+        var padding = new RectOffset(optionsPaddingLeft, optionsPaddingRight, optionsPaddingTop, optionsPaddingBottom);
+        if (h)
+        {
+            h.padding = padding;
+            h.spacing = optionSpacing;
+        }
+        if (v)
+        {
+            v.padding = padding;
+            v.spacing = optionSpacing;
+        }
+        if (g)
+        {
+            g.padding = padding;
+            g.spacing = new Vector2(optionSpacing, optionSpacing);
+        }
+    }
+
+    // URL의 경로 부분에 포함된 '+'를 '%2B'로 치환한다.
+    // 쿼리스트링(서명 등)은 변경하지 않도록 주의.
+    private string EncodePlusInPath(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return url;
+        try
+        {
+            int q = url.IndexOf('?');
+            int schemeIdx = url.IndexOf("://");
+            int pathStart;
+            if (schemeIdx >= 0)
+            {
+                // 스킴 이후 첫 '/'
+                pathStart = url.IndexOf('/', schemeIdx + 3);
+                if (pathStart < 0)
+                {
+                    // 경로가 없으면 그대로 반환
+                    return url;
+                }
+            }
+            else
+            {
+                // 상대경로 또는 루트 경로
+                pathStart = 0;
+            }
+
+            int pathEnd = (q >= 0) ? q : url.Length;
+            if (pathEnd <= pathStart) return url;
+
+            string prefix = url.Substring(0, pathStart);
+            string path = url.Substring(pathStart, pathEnd - pathStart);
+            string suffix = (q >= 0) ? url.Substring(q) : string.Empty;
+
+            // 경로 내 '+'만 인코딩
+            path = path.Replace("+", "%2B");
+            return prefix + path + suffix;
+        }
+        catch
+        {
+            return url;
         }
     }
 
@@ -846,10 +865,43 @@ using UnityEngine.SceneManagement;
         bool correct = false;
         int wrongCount = 0;
 
+        // 서버가 보낸 문자열이 "U+XXXX" 또는 "\uXXXX" 형태일 수 있으므로
+        // 표시 및 비교 전에 실제 문자로 정규화한다.
+        string NormalizeField(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+            s = s.Trim();
+            try
+            {
+                // 1) \uXXXX 시퀀스들 디코딩
+                s = Regex.Replace(s, @"\\u([0-9A-Fa-f]{4})", m =>
+                {
+                    int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                    return char.ConvertFromUtf32(code);
+                });
+                // 2) U+XXXX 또는 u+XXXX 패턴 디코딩
+                s = Regex.Replace(s, @"(?i)U\+([0-9A-Fa-f]{4,6})", m =>
+                {
+                    int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                    return char.ConvertFromUtf32(code);
+                });
+            }
+            catch { }
+            return s;
+        }
+
+        string NormalizeForCompare(string s)
+        {
+            s = NormalizeField(s);
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+            try { s = s.Normalize(NormalizationForm.FormKC).Trim(); } catch { }
+            return s;
+        }
+
         string ComposeOptionLabel(OptionDto opt)
         {
-            string uni = opt != null ? (opt.unicode ?? string.Empty) : string.Empty;
-            string val = opt != null ? (opt.value ?? string.Empty) : string.Empty;
+            string uni = NormalizeField(opt != null ? (opt.unicode ?? string.Empty) : string.Empty);
+            string val = NormalizeField(opt != null ? (opt.value ?? string.Empty) : string.Empty);
             switch (optionLabelMode)
             {
                 case OptionLabelMode.UnicodeOnly:
@@ -879,6 +931,7 @@ using UnityEngine.SceneManagement;
             {
                 tmp.text = label;
                 if (tmpFont) tmp.font = tmpFont;
+                try { tmp.fontStyle &= ~FontStyles.Underline; } catch { }
             }
             // 버튼 크기 강제 설정 (LayoutElement와 RectTransform 동시 적용)
             var rt = btn.GetComponent<RectTransform>();
@@ -895,12 +948,16 @@ using UnityEngine.SceneManagement;
             {
                 answered = true;
                 var chosenCandidates = new List<string>();
-                if (!string.IsNullOrEmpty(opt.value)) chosenCandidates.Add(opt.value.Trim());
-                if (!string.IsNullOrEmpty(opt.unicode)) chosenCandidates.Add(opt.unicode.Trim());
+                if (!string.IsNullOrEmpty(opt.value)) chosenCandidates.Add(NormalizeForCompare(opt.value));
+                if (!string.IsNullOrEmpty(opt.unicode)) chosenCandidates.Add(NormalizeForCompare(opt.unicode));
                 var answerCandidates = new List<string>();
-                if (!string.IsNullOrEmpty(q.value)) answerCandidates.Add(q.value.Trim());
-                if (!string.IsNullOrEmpty(q.unicode)) answerCandidates.Add(q.unicode.Trim());
+                if (!string.IsNullOrEmpty(q.value)) answerCandidates.Add(NormalizeForCompare(q.value));
+                if (!string.IsNullOrEmpty(q.unicode)) answerCandidates.Add(NormalizeForCompare(q.unicode));
                 correct = chosenCandidates.Any(cc => answerCandidates.Any(ac => string.Equals(cc, ac, System.StringComparison.Ordinal)));
+                if (!correct)
+                {
+                    Debug.Log($"[Stage11] 비교 불일치 chosen=[{string.Join(",", chosenCandidates)}] answer=[{string.Join(",", answerCandidates)}]");
+                }
             });
         }
 
