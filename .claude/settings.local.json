@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(python -m pip:*)",
+      "Bash(if [ -d \"venv/Scripts\" ])",
+      "Bash(then ./venv/Scripts/pip.exe list --format=freeze)",
+      "Bash(else pip list --format=freeze)",
+      "Bash(fi)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

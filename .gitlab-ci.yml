@@ -1,0 +1,79 @@
+stages:
+  - build
+  - deploy
+
+variables:
+  DOCKER_DRIVER: overlay2
+  AI_IMAGE_NAME: korean-pronunciation-ai
+  AI_IMAGE_TAG: latest
+
+# AI 서버 빌드
+build-ai:
+  stage: build
+  only:
+    changes:
+      - ai/**/*
+    refs:
+      - master
+      - ai-dev
+  script:
+    - echo "Building AI Docker image..."
+    - cd ai
+    - docker build -t ${AI_IMAGE_NAME}:${AI_IMAGE_TAG} .
+    - docker save ${AI_IMAGE_NAME}:${AI_IMAGE_TAG} -o ai-image.tar
+  artifacts:
+    paths:
+      - ai/ai-image.tar
+    expire_in: 1 hour
+  tags:
+    - docker
+
+# AI 서버 배포
+deploy-ai:
+  stage: deploy
+  only:
+    changes:
+      - ai/**/*
+    refs:
+      - master
+      - ai-dev
+  before_script:
+    - 'command -v ssh-agent >/dev/null || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    - echo "$AI_SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H $AI_SERVER_IP >> ~/.ssh/known_hosts
+  script:
+    - echo "Deploying AI server to EC2..."
+    # Docker 이미지 전송
+    - scp ai/ai-image.tar $AI_SERVER_USER@$AI_SERVER_IP:/tmp/
+    # EC2에서 배포 스크립트 실행
+    - |
+      ssh $AI_SERVER_USER@$AI_SERVER_IP << 'EOF'
+        cd /home/ubuntu/app/ai
+
+        # Docker 이미지 로드
+        docker load -i /tmp/ai-image.tar
+        rm /tmp/ai-image.tar
+
+        # 기존 컨테이너 중지 및 제거
+        docker-compose down || true
+
+        # 새 컨테이너 실행
+        docker-compose up -d
+
+        # 헬스체크
+        sleep 10
+        curl -f http://localhost:8000/health || exit 1
+
+        echo "✅ AI server deployed successfully!"
+      EOF
+  dependencies:
+    - build-ai
+  tags:
+    - docker
+  environment:
+    name: production-ai
+    url: http://$AI_SERVER_IP:8000
+  when: manual
