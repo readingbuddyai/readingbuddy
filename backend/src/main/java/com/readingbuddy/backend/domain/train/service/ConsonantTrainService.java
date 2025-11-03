@@ -52,6 +52,7 @@ public class ConsonantTrainService {
                 ).toList();
 
         return Stage1_1Problem.builder()
+                .problemWord(answerConsonant.getValue())
                 .imageUrl(answerConsonant.getImageUrl())
                 .phonemeId(answerConsonant.getId())
                 .voiceUrl(answerConsonant.getVoiceUrl())
@@ -107,6 +108,7 @@ public class ConsonantTrainService {
         Collections.shuffle(options);
 
         return Stage1_2Problem.builder()
+                .problemWord(targetPhoneme.getValue())
                 .phonemeId(targetPhoneme.getId())
                 .targetPhoneme(targetPhoneme.getValue())
                 .imageUrl(targetPhoneme.getImageUrl())
