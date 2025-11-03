@@ -5,6 +5,8 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using TMPro;
+using UnityEngine.SceneManagement;
 
 // Stage 1.1 진행 컨트롤러
 // - GET: /api/train/set?stage=1.1.1&count=5
@@ -30,6 +32,13 @@ using UnityEngine.UI;
         public string sessionId = "";
         [Tooltip("스웨거 start 바디에 포함되는 userId (선택)")]
         public int userId = 0;
+
+    [Header("옵션 라벨")]
+    public OptionLabelMode optionLabelMode = OptionLabelMode.ValueThenUnicode;
+
+    [Header("Fonts")]
+    public Font uiFont;                  // UGUI Text용 폰트 (예: GmarketSansTTFMedium.ttf)
+    public TMP_FontAsset tmpFont;        // TMP용 폰트 (예: GmarketSansTTFMedium SDF.asset)
 
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
@@ -69,7 +78,13 @@ using UnityEngine.UI;
         public Vector2 guideEndSize   = new Vector2(800, 800);
         public float guideMoveDuration = 1.5f; // sfxNext가 재생되는 동안 살며시 이동/축소
         public bool guideMoveOnlyOnce  = true; // 최초 1회만 이동할지
+        [Tooltip("문제 전환 시 가이드 다시 이동 여부")]
+        public bool enableGuideMoveBetweenQuestions = false;
         private bool _guideMoved;
+        private Coroutine _guideMoveCo;
+        private bool _guideLocked;
+        private Vector2 _guideFinalPos;
+        private Vector2 _guideFinalSize;
 
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
@@ -86,6 +101,21 @@ using UnityEngine.UI;
         public Vector2 imageFixedSize = new Vector2(1500f, 1500f);
         [Tooltip("옵션 버튼 권장 크기(px)")]
         public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
+
+        [Header("개발용 우회")]
+        [Tooltip("/api/train/stage/start 요청을 건너뛰고 문제 GET만 진행합니다.")]
+        public bool bypassStartRequest = true;
+        [Tooltip("음성 녹음 및 /api/train/check/voice 업로드를 건너뜁니다.")]
+        public bool bypassVoiceUpload = true;
+
+        [Header("진단/로그")]
+        [Tooltip("수신한 문제 전체를 상세 로그로 출력합니다.")]
+        public bool logQuestionsVerbose = true;
+        [Tooltip("이미지 로드 실패 시 자리표시 이미지를 중앙에 표시합니다.")]
+        public bool showPlaceholderOnImageFail = true;
+
+    [System.Serializable]
+    public enum OptionLabelMode { UnicodeOnly, ValueOnly, UnicodeThenValue, ValueThenUnicode }
 
     [Serializable]
     public class OptionDto
@@ -122,7 +152,56 @@ using UnityEngine.UI;
         authToken = EnvConfig.ResolveAuthToken(authToken);
         if (applyAutoLayout)
             TryApplyAutoLayout();
+        // 가이드 시작 크기는 최초 1회만 적용
+        if (guideImage && guideStartSize.sqrMagnitude > 0)
+            guideImage.sizeDelta = guideStartSize;
+        // 초입에는 메인 이미지와 옵션 영역을 숨깁니다.
+        if (mainImage)
+        {
+            mainImage.enabled = false;
+            mainImage.sprite = null;
+        }
+        if (optionsContainer)
+        {
+            optionsContainer.gameObject.SetActive(false);
+        }
         StartCoroutine(RunStage());
+    }
+
+    private Text EnsureProgressText()
+    {
+        if (progressText) return progressText;
+        var go = GameObject.Find("ProgressText");
+        if (go)
+        {
+            var t = go.GetComponent<Text>();
+            if (t) { progressText = t; return t; }
+        }
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas) return null;
+        var obj = new GameObject("ProgressText", typeof(RectTransform), typeof(Text));
+        obj.layer = canvas.gameObject.layer;
+        var rt = obj.GetComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = new Vector2(0.5f, 1f);
+        rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchoredPosition = new Vector2(0f, -40f);
+        rt.sizeDelta = new Vector2(600f, 120f);
+        var text = obj.GetComponent<Text>();
+        text.alignment = TextAnchor.MiddleCenter;
+        text.fontSize = 64;
+        text.color = Color.white;
+        text.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+        progressText = text;
+        return progressText;
+    }
+
+    private void SetProgressLabel(int index, int total)
+    {
+        var t = EnsureProgressText();
+        if (!t) return;
+        t.text = $"{index} / {total}";
     }
 
     private void TryApplyAutoLayout()
@@ -163,20 +242,34 @@ using UnityEngine.UI;
 
     private IEnumerator RunStage()
     {
+        // 새 실행 시작 시 상태 초기화
+        _guideMoved = false;
+        if (_guideMoveCo != null) { StopCoroutine(_guideMoveCo); _guideMoveCo = null; }
+        if (optionsContainer) optionsContainer.gameObject.SetActive(false);
+        if (mainImage)
+        {
+            mainImage.enabled = false;
+            mainImage.sprite = null;
+        }
         // 0) 시작 효과음
         yield return PlayClip(sfxStart);
 
         // 0-1) 도입 대사 (가이드 이미지는 고정, 이동은 sfxNext 타이밍에 수행)
         yield return RunIntroSequence();
+        if (guideImage && _guideMoveCo == null && (!_guideMoved || !guideMoveOnlyOnce))
+        {
+            Debug.Log("[Stage11] Guide move: trigger after intro");
+            _guideMoveCo = StartCoroutine(MoveGuideAndScaleOverTime(guideMoveDuration));
+            _guideMoved = true;
+        }
 
-        // 0-2) 세션 시작 호출로 sessionId 확보 (없을 때만)
-        if (string.IsNullOrWhiteSpace(sessionId))
+        // 0-2) 세션 시작 호출로 sessionId 확보 (테스트 시 우회 가능)
+        if (!bypassStartRequest && string.IsNullOrWhiteSpace(sessionId))
         {
             yield return StartStageSession();
             if (string.IsNullOrWhiteSpace(sessionId))
             {
-                Debug.LogError("[Stage11] sessionId 발급 실패. 진행을 중단합니다.");
-                yield break;
+                Debug.LogWarning("[Stage11] sessionId 발급 실패. bypassStartRequest=true 이므로 계속 진행합니다.");
             }
         }
 
@@ -200,6 +293,19 @@ using UnityEngine.UI;
                 Debug.LogError($"[Stage11] 응답 파싱 실패 또는 데이터 없음\nRaw={json}");
                 yield break;
             }
+            else
+            {
+                Debug.Log($"[Stage11] 문제 수신: {questions.Count}개");
+                if (logQuestionsVerbose)
+                {
+                    for (int qi = 0; qi < questions.Count; qi++)
+                    {
+                        var qd = questions[qi];
+                        string opts = (qd.options != null) ? string.Join(", ", qd.options.Select(o => o.value)) : "(no options)";
+                        Debug.Log($"[Stage11] Q{qi + 1}: id={qd.id}, qid={qd.questionId}, value={qd.value}, imageUrl={qd.imageUrl}, voiceUrl={qd.voiceUrl}, options=[{opts}]");
+                    }
+                }
+            }
 
             for (int i = 0; i < questions.Count; i++)
             {
@@ -209,9 +315,10 @@ using UnityEngine.UI;
                 if (i < questions.Count - 1)
                 {
                     // sfxNext 재생과 동시에 가이드 이미지 이동/축소(최초 1회)
-                    if (guideImage && (!_guideMoved || !guideMoveOnlyOnce))
+                    if (enableGuideMoveBetweenQuestions && guideImage && _guideMoveCo == null && (!_guideMoved || !guideMoveOnlyOnce))
                     {
-                        StartCoroutine(MoveGuideAndScaleOverTime(guideMoveDuration));
+                        Debug.Log("[Stage11] Guide move: trigger between questions");
+                        _guideMoveCo = StartCoroutine(MoveGuideAndScaleOverTime(guideMoveDuration));
                         _guideMoved = true;
                     }
                     yield return PlayClip(sfxNext);
@@ -221,6 +328,7 @@ using UnityEngine.UI;
 
         // 세션 완료 보고 (best-effort)
         yield return CompleteStageSession();
+        ShowEndModal();
     }
 
     // JsonUtility는 루트에 배열을 직접 파싱하지 못하므로 래퍼 클래스로 우회
@@ -516,6 +624,8 @@ using UnityEngine.UI;
         if (progressText) progressText.text = $"문제 {index}/{total}";
 
         // 이미지 로드 및 표시
+        var pt = EnsureProgressText();
+        if (pt != null) pt.text = $"{index} / {total}";
         yield return LoadAndShowImage(q.imageUrl);
 
         // 1) [1.1.3] 안내 대사
@@ -526,7 +636,10 @@ using UnityEngine.UI;
 
         // 2) [1.1.4] 이제 너 차례야 → 녹음 업로드
         yield return PlayClip(clipYourTurn);
-        yield return RecordAndUpload(q);
+        if (!bypassVoiceUpload)
+            yield return RecordAndUpload(q);
+        else
+            yield return new WaitForSeconds(recordSeconds);
 
         // 3) [1.1.5] 칭찬 대사
         yield return PlayClip(clipGreat);
@@ -560,6 +673,20 @@ using UnityEngine.UI;
             {
                 var body = req.downloadHandler != null ? req.downloadHandler.text : "";
                 Debug.LogWarning($"[Stage11] 이미지 로드 실패: {req.error} (code={req.responseCode})\nURL={imageUrl}\nBody={body}");
+                if (showPlaceholderOnImageFail && mainImage != null)
+                {
+                    var texPh = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+                    var col = new Color(0.2f, 0.6f, 0.9f, 0.25f);
+                    var arr = new Color[64 * 64];
+                    for (int i = 0; i < arr.Length; i++) arr[i] = col;
+                    texPh.SetPixels(arr);
+                    texPh.Apply();
+                    var spr = Sprite.Create(texPh, new Rect(0, 0, texPh.width, texPh.height), new Vector2(0.5f, 0.5f));
+                    mainImage.sprite = spr;
+                    mainImage.preserveAspect = true;
+                    mainImage.enabled = true;
+                    Debug.Log("[Stage11] 자리표시 이미지 표시 (로드 실패)");
+                }
                 yield break;
             }
 
@@ -568,6 +695,7 @@ using UnityEngine.UI;
             mainImage.sprite = sprite;
             mainImage.preserveAspect = true;
             mainImage.enabled = true; // 로드 후 표시
+            Debug.Log($"[Stage11] 이미지 로드 OK: {imageUrl} ({tex.width}x{tex.height})");
         }
     }
 
@@ -655,6 +783,8 @@ using UnityEngine.UI;
         if (!string.IsNullOrWhiteSpace(authToken))
         {
             var tokenTrim = authToken.Trim();
+            if (tokenTrim.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                tokenTrim = tokenTrim.Substring(7).Trim();
             req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
             // 디버그: 토큰 길이만 로깅
             Debug.Log($"[Stage11] Auth header attached (len={tokenTrim.Length})");
@@ -704,16 +834,51 @@ using UnityEngine.UI;
         }
         foreach (Transform child in optionsContainer)
             Destroy(child.gameObject);
+        // Show options container only during selection phase
+        optionsContainer.gameObject.SetActive(true);
+        optionsContainer.SetAsLastSibling();
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
+        optionsContainer.SetAsLastSibling();
 
         bool answered = false;
         bool correct = false;
         int wrongCount = 0;
 
+        string ComposeOptionLabel(OptionDto opt)
+        {
+            string uni = opt != null ? (opt.unicode ?? string.Empty) : string.Empty;
+            string val = opt != null ? (opt.value ?? string.Empty) : string.Empty;
+            switch (optionLabelMode)
+            {
+                case OptionLabelMode.UnicodeOnly:
+                    return string.IsNullOrEmpty(uni) ? val : uni;
+                case OptionLabelMode.ValueOnly:
+                    return string.IsNullOrEmpty(val) ? uni : val;
+                case OptionLabelMode.UnicodeThenValue:
+                    return string.IsNullOrEmpty(uni) ? val : (string.IsNullOrEmpty(val) ? uni : ($"{uni} {val}"));
+                case OptionLabelMode.ValueThenUnicode:
+                default:
+                    return string.IsNullOrEmpty(val) ? uni : (string.IsNullOrEmpty(uni) ? val : ($"{val} {uni}"));
+            }
+        }
+
         void SetupOne(OptionDto opt)
         {
             var btn = Instantiate(optionButtonPrefab, optionsContainer);
             var text = btn.GetComponentInChildren<Text>();
-            if (text) text.text = opt.value;
+            var tmp  = btn.GetComponentInChildren<TMP_Text>();
+            string label = ComposeOptionLabel(opt);
+            if (text)
+            {
+                text.text = label;
+                if (uiFont) text.font = uiFont;
+            }
+            else if (tmp)
+            {
+                tmp.text = label;
+                if (tmpFont) tmp.font = tmpFont;
+            }
             // 버튼 크기 강제 설정 (LayoutElement와 RectTransform 동시 적용)
             var rt = btn.GetComponent<RectTransform>();
             if (rt) rt.sizeDelta = optionButtonPreferredSize;
@@ -724,14 +889,30 @@ using UnityEngine.UI;
                 le.preferredHeight = optionButtonPreferredSize.y;
                 le.layoutPriority = Mathf.Max(le.layoutPriority, 1);
             }
+            btn.gameObject.SetActive(true);
             btn.onClick.AddListener(() =>
             {
                 answered = true;
-                correct = string.Equals(opt.value, q.value, StringComparison.Ordinal);
+                var chosenCandidates = new List<string>();
+                if (!string.IsNullOrEmpty(opt.value)) chosenCandidates.Add(opt.value.Trim());
+                if (!string.IsNullOrEmpty(opt.unicode)) chosenCandidates.Add(opt.unicode.Trim());
+                var answerCandidates = new List<string>();
+                if (!string.IsNullOrEmpty(q.value)) answerCandidates.Add(q.value.Trim());
+                if (!string.IsNullOrEmpty(q.unicode)) answerCandidates.Add(q.unicode.Trim());
+                correct = chosenCandidates.Any(cc => answerCandidates.Any(ac => string.Equals(cc, ac, System.StringComparison.Ordinal)));
             });
         }
 
+        if (q.options == null || q.options.Count == 0)
+        {
+            Debug.LogError("[Stage11] 옵션이 비어 있습니다. 버튼을 표시할 수 없습니다.");
+            optionsContainer.gameObject.SetActive(false);
+            yield break;
+        }
+        Debug.Log($"[Stage11] 옵션 표시: {q.options.Count}개");
         foreach (var opt in q.options) SetupOne(opt);
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
 
         // 선택 대기 → 피드백 → 정답일 때까지 반복
         while (true)
@@ -759,6 +940,122 @@ using UnityEngine.UI;
         // 옵션 정리(선택사항)
         foreach (Transform child in optionsContainer)
             Destroy(child.gameObject);
+        optionsContainer.gameObject.SetActive(false);
+    }
+
+    private void LateUpdate()
+    {
+        if (_guideLocked && guideImage)
+        {
+            guideImage.anchoredPosition = _guideFinalPos;
+            guideImage.sizeDelta = _guideFinalSize;
+        }
+    }
+
+    private void ShowEndModal()
+    {
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas) return;
+
+        // 배경 오버레이
+        var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
+        overlay.layer = canvas.gameObject.layer;
+        var rt = overlay.GetComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero; rt.sizeDelta = Vector2.zero;
+        var bg = overlay.GetComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.6f);
+        bg.raycastTarget = true;
+
+        // 패널
+        var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        panel.layer = canvas.gameObject.layer;
+        var prt = panel.GetComponent<RectTransform>();
+        prt.SetParent(overlay.transform, false);
+        prt.anchorMin = new Vector2(0.5f, 0.5f);
+        prt.anchorMax = new Vector2(0.5f, 0.5f);
+        prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(1200, 900);
+        var pbg = panel.GetComponent<Image>();
+        pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
+
+        // 타이틀 텍스트
+        var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
+        title.layer = canvas.gameObject.layer;
+        var trt = title.GetComponent<RectTransform>();
+        trt.SetParent(panel.transform, false);
+        trt.anchorMin = new Vector2(0.5f, 1f);
+        trt.anchorMax = new Vector2(0.5f, 1f);
+        trt.pivot = new Vector2(0.5f, 1f);
+        trt.anchoredPosition = new Vector2(0f, -80f);
+        trt.sizeDelta = new Vector2(1000, 150);
+        var t = title.GetComponent<Text>();
+        t.text = "학습이 끝났어요!";
+        t.alignment = TextAnchor.MiddleCenter;
+        t.fontSize = 72;
+        t.fontStyle = FontStyle.Bold;
+        t.color = Color.white;
+        t.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+        // 버튼들
+        Vector2 btnSize = optionButtonPreferredSize;
+        float gap = 40f;
+        // 다시 학습하기
+        var btn1 = Instantiate(optionButtonPrefab, panel.transform as RectTransform);
+        var btn1rt = btn1.GetComponent<RectTransform>();
+        btn1rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn1rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn1rt.pivot = new Vector2(1f, 0.5f);
+        btn1rt.sizeDelta = btnSize;
+        btn1rt.anchoredPosition = new Vector2(-gap*0.5f, -100f);
+        var txt1 = btn1.GetComponentInChildren<Text>();
+        var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
+        if (txt1) { txt1.text = "다시 학습하기"; if (uiFont) txt1.font = uiFont; }
+        else if (tmp1) { tmp1.text = "다시 학습하기"; if (tmpFont) tmp1.font = tmpFont; }
+        btn1.onClick.AddListener(() => { Destroy(overlay); RestartStage(); });
+
+        // 로비로 나가기
+        var btn2 = Instantiate(optionButtonPrefab, panel.transform as RectTransform);
+        var btn2rt = btn2.GetComponent<RectTransform>();
+        btn2rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn2rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn2rt.pivot = new Vector2(0f, 0.5f);
+        btn2rt.sizeDelta = btnSize;
+        btn2rt.anchoredPosition = new Vector2(gap*0.5f, -100f);
+        var txt2 = btn2.GetComponentInChildren<Text>();
+        var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
+        if (txt2) { txt2.text = "로비로 나가기"; if (uiFont) txt2.font = uiFont; }
+        else if (tmp2) { tmp2.text = "로비로 나가기"; if (tmpFont) tmp2.font = tmpFont; }
+        btn2.onClick.AddListener(() => { Destroy(overlay); GoToLobby(); });
+    }
+
+    private void RestartStage()
+    {
+        StopAllCoroutines();
+        // 상태 리셋
+        if (optionsContainer)
+        {
+            foreach (Transform child in optionsContainer)
+                Destroy(child.gameObject);
+            optionsContainer.gameObject.SetActive(false);
+        }
+        if (mainImage)
+        {
+            mainImage.enabled = false;
+            mainImage.sprite = null;
+        }
+        _guideLocked = false;
+        _guideMoveCo = null;
+        _guideMoved = false;
+        sessionId = string.Empty;
+        StartCoroutine(RunStage());
+    }
+
+    private void GoToLobby()
+    {
+        if (SceneLoader.Instance != null) SceneLoader.Instance.LoadScene(SceneId.Lobby);
+        else SceneManager.LoadScene(SceneId.Lobby);
     }
 
     // 도입 시퀀스: [1.1.1] + [1.1.2] 오디오만 재생 (이미지 이동은 sfxNext 타이밍)
@@ -784,6 +1081,8 @@ using UnityEngine.UI;
         var startSize = rt.sizeDelta;
         var endSize   = guideEndSize;
 
+        Debug.Log($"[Stage11] Guide move start pos={startPos} size={startSize} -> end pos={endPos} size={endSize} dur={duration}");
+
         float t = 0f;
         while (t < duration)
         {
@@ -797,6 +1096,12 @@ using UnityEngine.UI;
 
         rt.anchoredPosition = endPos;
         rt.sizeDelta = endSize;
+        Debug.Log("[Stage11] Guide move end");
+        _guideMoveCo = null;
+        // 이동 완료 후 위치/크기 고정
+        _guideLocked = true;
+        _guideFinalPos = endPos;
+        _guideFinalSize = endSize;
     }
 
     private static Vector2 ComputeBottomRightAnchoredPosition(RectTransform rt)
