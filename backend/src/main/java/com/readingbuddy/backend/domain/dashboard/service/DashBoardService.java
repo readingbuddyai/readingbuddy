@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 import com.readingbuddy.backend.domain.dashboard.dto.response.DailyAttendResponse;
+import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesTryRankResponse;
 import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.dashboard.repository.AttendanceHistoriesRepository;
 import com.readingbuddy.backend.domain.dashboard.dto.response.AttendanceResponse;
@@ -219,5 +220,21 @@ public class DashBoardService {
                 .collect(Collectors.toList());
 
     }
+
+    /**
+     * 사용자별 시도 횟수가 많음 음소 조회 (내림차순)
+     */
+     public List<PhonemesTryRankResponse> getTryPhonemesRanking(Long userId, int limit) {
+         List<Object[]> results = trainedProblemHistoriesRepository.getTryPhonemesRanking(userId, limit);
+
+         return results.stream()
+                 .map(row -> PhonemesTryRankResponse.builder()
+                         .phonemeId(((Number)row[0]).longValue())
+                         .value((String) row[1])
+                         .category((String) row[2])
+                         .tryCnt(((Number) row[3]).longValue())
+                         .build())
+                 .collect(Collectors.toList());
+     }
 
 }
