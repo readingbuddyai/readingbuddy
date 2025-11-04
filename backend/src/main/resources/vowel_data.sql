@@ -1,6 +1,6 @@
 INSERT INTO phonemes (category, value, unicode, image_url, voice_url) VALUES
 ('vowel', 'ㅏ', 'U+314F', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%8F.png', NULL),
-('vowel', 'ㅐ', 'U+3150', NULL, NULL),
+('vowel', 'ㅐ', 'U+3150', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%90.png', NULL),
 ('vowel', 'ㅑ', 'U+3151', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%91.png', NULL),
 ('vowel', 'ㅒ', 'U+3152', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%92.png', NULL),
 ('vowel', 'ㅓ', 'U+3153', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%93.png', NULL),
@@ -13,7 +13,7 @@ INSERT INTO phonemes (category, value, unicode, image_url, voice_url) VALUES
 ('vowel', 'ㅚ', 'U+315A', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%9A.png', NULL),
 ('vowel', 'ㅛ', 'U+315B', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%9B.png', NULL),
 ('vowel', 'ㅜ', 'U+315C', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%9C.png', NULL),
-('vowel', 'ㅝ', 'U+315D', NULL, NULL),
+('vowel', 'ㅝ', 'U+315D', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%9D.png', NULL),
 ('vowel', 'ㅞ', 'U+315E', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%9E.png', NULL),
 ('vowel', 'ㅟ', 'U+315F', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%9F.png', NULL),
 ('vowel', 'ㅠ', 'U+3160', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/vowelMouthImage/vowel_%E3%85%A0.png', NULL),
