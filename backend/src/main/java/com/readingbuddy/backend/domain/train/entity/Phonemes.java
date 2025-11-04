@@ -27,7 +27,6 @@ public class Phonemes {
     private String voiceUrl;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "letter_kc_map_id")
-    private LetterKcMap letterKcMap;
-
+    @JoinColumn(name = "knowledge_component_id")
+    private KnowledgeComponent knowledgeComponent;
 }

@@ -18,10 +18,10 @@ public class LetterKcMap {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "knowledge_component")
+    @JoinColumn(name = "knowledge_component_id")
     private KnowledgeComponent knowledgeComponent;
 
     @ManyToOne
-    @JoinColumn(name = "letters")
+    @JoinColumn(name = "letters_id")
     private Letters letters;
 }
