@@ -335,7 +335,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMjA0MDAsImV4cCI6MTc2MjIyNDAwMH0.c1dCexLOvqYp1mOWVaLPobM59ArzcfTkt2sTXCVkUjsE6IReV4BOvDGMpinkVeL-
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMjc1NTksImV4cCI6MTc2MjMxMzk1OX0.MSv-06PqFsbjdQV1W4HvV-QeoE5bTDE6HMrnW7YB_NdMSnYfaBRG5zXay5oEwMrp
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -848,6 +848,22 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -969
       objectReference: {fileID: 0}
+    - target: {fileID: 4118582631668375730, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4118582631668375730, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4118582631668375730, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 4118582631668375730, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -1000
+      objectReference: {fileID: 0}
     - target: {fileID: 4834236683208198523, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_fontSize
       value: 80
@@ -894,6 +910,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6548458318717127266, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_RaycastTarget
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6582352066199332784, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6754449320914356513, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
@@ -1000,6 +1020,7 @@ PrefabInstance:
     m_RemovedGameObjects:
     - {fileID: 9212479344401353466, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
     - {fileID: 5211751809758897890, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+    - {fileID: 6582352066199332784, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
