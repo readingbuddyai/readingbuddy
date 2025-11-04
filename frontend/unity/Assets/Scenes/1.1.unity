@@ -335,7 +335,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIxODEwMzAsImV4cCI6MTc2MjE4NDYzMH0.ALcB_QsXdbxO9DacAR99PWuZ9M95Hg26R6fwd7ve4Fy7C3oKRqQJfMOeAcgaIkVt
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMTYyMTQsImV4cCI6MTc2MjIxOTgxNH0.-usQOcJpOPoS56Jndl-mcjEseHuq8RS7SMeUrt9Zhpl5Ju2Vbrco2Juj3b9BwgR0
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -371,14 +371,14 @@ MonoBehaviour:
   imageSideMargin: 80
   imageVerticalMargin: 40
   imageFixedSize: {x: 1500, y: 1500}
-  optionButtonPreferredSize: {x: 1200, y: 600}
+  optionButtonPreferredSize: {x: 1200, y: 1000}
   againButtonPrefab: {fileID: 0}
   lobbyButtonPrefab: {fileID: 0}
   optionSpacing: 20
   optionsPaddingLeft: 20
   optionsPaddingTop: 20
   optionsPaddingRight: 20
-  optionsPaddingBottom: 100
+  optionsPaddingBottom: 400
   bypassStartRequest: 0
   bypassVoiceUpload: 0
   logQuestionsVerbose: 1
@@ -744,8 +744,20 @@ PrefabInstance:
     m_TransformParent: {fileID: 1182211043}
     m_Modifications:
     - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_Spacing
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_ChildAlignment
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_ChildForceExpandWidth
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_ChildForceExpandHeight
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3036217699121029600, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_AnchorMax.y

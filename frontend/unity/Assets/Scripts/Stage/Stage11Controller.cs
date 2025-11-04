@@ -149,6 +149,7 @@ using System.Text;
     {
         public int id;            // fallback: 일부 응답에서 questionId 대신 id 사용 가능
         public int questionId;
+        public int phonemeId;     // 정답 판정용: 옵션의 id와 일치하는 항목이 정답
         public string value;      // 정답 값(예: "ㅏ")
         public string unicode;
         public string voiceUrl;   // 정답 음성 샘플 URL
@@ -209,7 +210,7 @@ using System.Text;
         rt.sizeDelta = new Vector2(600f, 120f);
         var text = obj.GetComponent<Text>();
         text.alignment = TextAnchor.MiddleCenter;
-        text.fontSize = 64;
+        text.fontSize = 120;
         text.color = Color.white;
         text.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
         progressText = text;
@@ -324,7 +325,7 @@ using System.Text;
                     {
                         var qd = questions[qi];
                         string opts = (qd.options != null) ? string.Join(", ", qd.options.Select(o => o.value)) : "(no options)";
-                        Debug.Log($"[Stage11] Q{qi + 1}: id={qd.id}, qid={qd.questionId}, value={qd.value}, imageUrl={qd.imageUrl}, voiceUrl={qd.voiceUrl}, options=[{opts}]");
+                        Debug.Log($"[Stage11] Q{qi + 1}: id={qd.id}, qid={qd.questionId}, phonemeId={qd.phonemeId}, value={qd.value}, imageUrl={qd.imageUrl}, voiceUrl={qd.voiceUrl}, options=[{opts}]");
                     }
                 }
             }
@@ -953,16 +954,26 @@ using System.Text;
             btn.onClick.AddListener(() =>
             {
                 answered = true;
-                var chosenCandidates = new List<string>();
-                if (!string.IsNullOrEmpty(opt.value)) chosenCandidates.Add(NormalizeForCompare(opt.value));
-                if (!string.IsNullOrEmpty(opt.unicode)) chosenCandidates.Add(NormalizeForCompare(opt.unicode));
-                var answerCandidates = new List<string>();
-                if (!string.IsNullOrEmpty(q.value)) answerCandidates.Add(NormalizeForCompare(q.value));
-                if (!string.IsNullOrEmpty(q.unicode)) answerCandidates.Add(NormalizeForCompare(q.unicode));
-                correct = chosenCandidates.Any(cc => answerCandidates.Any(ac => string.Equals(cc, ac, System.StringComparison.Ordinal)));
-                if (!correct)
+                // 1) 우선순위: phonemeId와 옵션 id 일치 여부로 정답 판정
+                if (q.phonemeId != 0)
                 {
-                    Debug.Log($"[Stage11] 비교 불일치 chosen=[{string.Join(",", chosenCandidates)}] answer=[{string.Join(",", answerCandidates)}]");
+                    correct = (opt.id == q.phonemeId);
+                    Debug.Log($"[Stage11] 선택: opt.id={opt.id}, phonemeId={q.phonemeId}, match={correct}");
+                }
+                // 2) 폴백: 값/유니코드 문자열 비교
+                if (!correct && q.phonemeId == 0)
+                {
+                    var chosenCandidates = new List<string>();
+                    if (!string.IsNullOrEmpty(opt.value)) chosenCandidates.Add(NormalizeForCompare(opt.value));
+                    if (!string.IsNullOrEmpty(opt.unicode)) chosenCandidates.Add(NormalizeForCompare(opt.unicode));
+                    var answerCandidates = new List<string>();
+                    if (!string.IsNullOrEmpty(q.value)) answerCandidates.Add(NormalizeForCompare(q.value));
+                    if (!string.IsNullOrEmpty(q.unicode)) answerCandidates.Add(NormalizeForCompare(q.unicode));
+                    correct = chosenCandidates.Any(cc => answerCandidates.Any(ac => string.Equals(cc, ac, System.StringComparison.Ordinal)));
+                    if (!correct)
+                    {
+                        Debug.Log($"[Stage11] 비교 불일치 chosen=[{string.Join(",", chosenCandidates)}] answer=[{string.Join(",", answerCandidates)}]");
+                    }
                 }
             });
         }
@@ -1040,7 +1051,7 @@ using System.Text;
         prt.anchorMin = new Vector2(0.5f, 0.5f);
         prt.anchorMax = new Vector2(0.5f, 0.5f);
         prt.pivot = new Vector2(0.5f, 0.5f);
-        prt.sizeDelta = new Vector2(1500, 1000);
+        prt.sizeDelta = new Vector2(1700, 1500);
         var pbg = panel.GetComponent<Image>();
         pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
 
