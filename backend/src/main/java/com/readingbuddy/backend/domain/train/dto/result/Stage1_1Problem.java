@@ -3,12 +3,13 @@ package com.readingbuddy.backend.domain.train.dto.result;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
 @Getter
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Stage1_1Problem extends ProblemResult {
 
     private final Long phonemeId;
