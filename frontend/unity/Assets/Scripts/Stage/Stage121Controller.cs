@@ -15,7 +15,7 @@ using System.Text;
 // - POST: /api/train/stage/start?stage=2.1&totalProblems=5 (헤더에 토큰 포함)
 // - GET: /api/train/set?stage=1.2.1&count=5
 // - POST: /api/train/check/voice?stageSessionId=&stage=&problemId= (multipart: audio=voice.wav, 헤더에 토큰 포함)
-// - POST: /api/train/stage/complete?sessionId=... (헤더에 토큰 포함)
+// - POST: /api/train/stage/complete?stageSessionId=... (헤더에 토큰 포함)
 // 흐름(문항당):
 //  1) 상단에 "문제 i/5" 표시, 중앙 이미지(imageUrl) 표시
 //  흐름(문항당):
@@ -495,7 +495,7 @@ using System.Text;
     private IEnumerator CompleteStageSession()
     {
         if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
-        string url = ComposeUrl($"/api/train/stage/complete?sessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
+        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
