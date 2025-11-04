@@ -72,17 +72,17 @@ public class PhonemesSeederConfig {
         put("ㅡ", new VowelInfo("U+3161", "U+C73C")); // 으
         put("ㅣ", new VowelInfo("U+3163", "U+C774")); // 이
         // 복합 모음
-//        put("ㅐ", new VowelInfo("U+3150", "U+C560")); // 애
-//        put("ㅒ", new VowelInfo("U+3152", "U+C598")); // 얘
-//        put("ㅔ", new VowelInfo("U+3154", "U+C5D0")); // 에
-//        put("ㅖ", new VowelInfo("U+3156", "U+C608")); // 예
+        put("ㅐ", new VowelInfo("U+3150", "U+C560")); // 애
+        put("ㅒ", new VowelInfo("U+3152", "U+C598")); // 얘
+        put("ㅔ", new VowelInfo("U+3154", "U+C5D0")); // 에
+        put("ㅖ", new VowelInfo("U+3156", "U+C608")); // 예
         put("ㅘ", new VowelInfo("U+3158", "U+C640")); // 와
-//        put("ㅙ", new VowelInfo("U+3159", "U+C65C")); // 왜
-//        put("ㅚ", new VowelInfo("U+315A", "U+C678")); // 외
+        put("ㅙ", new VowelInfo("U+3159", "U+C65C")); // 왜
+        put("ㅚ", new VowelInfo("U+315A", "U+C678")); // 외
         put("ㅝ", new VowelInfo("U+315D", "U+C6CC")); // 워
-//        put("ㅞ", new VowelInfo("U+315E", "U+C6E8")); // 웨
+        put("ㅞ", new VowelInfo("U+315E", "U+C6E8")); // 웨
         put("ㅟ", new VowelInfo("U+315F", "U+C704")); // 위
-//        put("ㅢ", new VowelInfo("U+3162", "U+C758")); // 의
+        put("ㅢ", new VowelInfo("U+3162", "U+C758")); // 의
     }};
 
     // 모음 정보를 담는 내부 클래스
