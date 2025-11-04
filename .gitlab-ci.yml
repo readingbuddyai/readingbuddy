@@ -12,6 +12,7 @@ deploy-ai:
     - if: '$CI_COMMIT_BRANCH =~ /^(ai-dev|master)$/'
       changes:
         - "ai/**"
+        - ".gitlab-ci.yml"
   before_script:
     - apk add --no-cache openssh-client curl
     - eval $(ssh-agent -s)
@@ -55,5 +56,4 @@ deploy-ai:
   environment:
     name: ai
     url: http://$AI_SERVER_IP:8000
-  when: manual
   tags: ["docker"]
