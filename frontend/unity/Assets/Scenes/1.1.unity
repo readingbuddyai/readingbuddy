@@ -335,7 +335,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIxODEwMzAsImV4cCI6MTc2MjE4NDYzMH0.ALcB_QsXdbxO9DacAR99PWuZ9M95Hg26R6fwd7ve4Fy7C3oKRqQJfMOeAcgaIkVt
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMjA0MDAsImV4cCI6MTc2MjIyNDAwMH0.c1dCexLOvqYp1mOWVaLPobM59ArzcfTkt2sTXCVkUjsE6IReV4BOvDGMpinkVeL-
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -345,8 +345,8 @@ MonoBehaviour:
   optionsContainer: {fileID: 211129656}
   optionButtonPrefab: {fileID: 3536607101297841266, guid: e5ad1b1348914c04b9a2fcfb5bcc51f2, type: 3}
   audioSource: {fileID: 8777454411221847077}
-  sfxStart: {fileID: 8300000, guid: fcf036472f5841f48b0e9a92afd900ad, type: 3}
-  sfxNext: {fileID: 8300000, guid: 075a8b91a9271fb40b60536f5b4494df, type: 3}
+  sfxStart: {fileID: 8300000, guid: 3b37cea90cc807b4a8d4cba2a56e0eff, type: 3}
+  sfxNext: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}
   introClip1: {fileID: 8300000, guid: e67a1e39b19509047bfa02c70d2aa1e1, type: 3}
   introClip2: {fileID: 8300000, guid: 8ed62c84e3e862843bade81e59a6d22a, type: 3}
   clipSeeAndChant: {fileID: 8300000, guid: d6ca918202bc96f41a99d97d03d82661, type: 3}
@@ -361,7 +361,7 @@ MonoBehaviour:
   maxWrongAttempts: 2
   guideImage: {fileID: 303755262}
   guideStartSize: {x: 1500, y: 1500}
-  guideEndSize: {x: 800, y: 800}
+  guideEndSize: {x: 900, y: 900}
   guideMoveDuration: 1.5
   guideMoveOnlyOnce: 1
   enableGuideMoveBetweenQuestions: 0
@@ -370,15 +370,16 @@ MonoBehaviour:
   optionsBottomMargin: 40
   imageSideMargin: 80
   imageVerticalMargin: 40
-  imageFixedSize: {x: 1500, y: 1500}
-  optionButtonPreferredSize: {x: 1200, y: 600}
+  imageFixedSize: {x: 1600, y: 1600}
+  optionButtonPreferredSize: {x: 1200, y: 1000}
   againButtonPrefab: {fileID: 0}
   lobbyButtonPrefab: {fileID: 0}
+  endModalButtonSize: {x: 700, y: 700}
   optionSpacing: 20
   optionsPaddingLeft: 20
   optionsPaddingTop: 20
   optionsPaddingRight: 20
-  optionsPaddingBottom: 100
+  optionsPaddingBottom: 400
   bypassStartRequest: 0
   bypassVoiceUpload: 0
   logQuestionsVerbose: 1
@@ -744,8 +745,20 @@ PrefabInstance:
     m_TransformParent: {fileID: 1182211043}
     m_Modifications:
     - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_Spacing
+      value: 20
+      objectReference: {fileID: 0}
+    - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_ChildAlignment
       value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_ChildForceExpandWidth
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_ChildForceExpandHeight
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3036217699121029600, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_AnchorMax.y
