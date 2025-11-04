@@ -3,6 +3,7 @@ stages: [deploy]
 variables:
   AI_IMAGE_NAME: korean-pronunciation-ai
   AI_IMAGE_TAG: latest
+  AI_SERVER_IP: "3.36.239.57"
 
 # 서버에서 직접 빌드 및 배포
 deploy-ai:

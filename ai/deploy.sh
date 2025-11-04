@@ -12,7 +12,7 @@ set -e
 # 설정 (여기를 수정하세요!)
 # ========================================
 EC2_KEY="your-key.pem"
-EC2_IP="your-ec2-ip"
+EC2_IP="3.36.239.57"
 EC2_USER="ubuntu"
 APP_DIR="/home/ubuntu/app/ai"
 

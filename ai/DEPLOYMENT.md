@@ -180,7 +180,7 @@ sudo systemctl start gitlab-runner
 
 | 변수명 | 설명 | 예시 |
 |--------|------|------|
-| `AI_SERVER_IP` | EC2 Public IP | `13.125.123.45` |
+| `AI_SERVER_IP` | EC2 Public IP | `3.36.239.57` |
 | `AI_SERVER_USER` | SSH 사용자명 | `ubuntu` |
 | `AI_SSH_PRIVATE_KEY` | SSH 개인키 | `.pem` 파일 전체 내용 |
 
