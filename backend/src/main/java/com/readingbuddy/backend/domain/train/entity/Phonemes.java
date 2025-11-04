@@ -26,5 +26,8 @@ public class Phonemes {
     @Column(name = "voice_url")
     private String voiceUrl;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "letter_kc_map_id")
+    private LetterKcMap letterKcMap;
 
 }
