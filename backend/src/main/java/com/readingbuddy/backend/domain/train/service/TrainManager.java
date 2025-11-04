@@ -50,22 +50,22 @@ public class TrainManager {
 
         // TODO: S3 저장 후 URL AI server로 전달
 
-        Mono<Object> response = webClient.post()
-                .uri("/judge")
-                .bodyValue(Object.class)
-                .retrieve()
-                .bodyToMono(Object.class);
-
-        response.subscribe(
-                res -> {
-                    Map<Integer, Boolean> map = stageSessionInfo.getIsProblemCorrect();
-                    // TODO: 실제 답변 저장
-                    map.put(problemNumber, Boolean.TRUE);
-                },
-                err -> {
-                    log.error("AI 서버 호출 실패: problemId={}, error={}", problemNumber, err.getMessage(), err);
-                }
-        );
+//        Mono<Object> response = webClient.post()
+//                .uri("/judge")
+//                .bodyValue(Object.class)
+//                .retrieve()
+//                .bodyToMono(Object.class);
+//
+//        response.subscribe(
+//                res -> {
+//                    Map<Integer, Boolean> map = stageSessionInfo.getIsProblemCorrect();
+//                    // TODO: 실제 답변 저장
+//                    map.put(problemNumber, Boolean.TRUE);
+//                },
+//                err -> {
+//                    log.error("AI 서버 호출 실패: problemId={}, error={}", problemNumber, err.getMessage(), err);
+//                }
+//        );
         return null;
     }
 }
