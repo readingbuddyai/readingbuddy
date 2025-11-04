@@ -28,6 +28,7 @@ public class Stage12Controller : MonoBehaviour
 
     [Header("UI 참조")]
     public Text progressText;
+    public TMP_Text progressTextTMP;
     public Image mainImage;
     public RectTransform optionsContainer;
     public Button optionButtonPrefab;
@@ -146,6 +147,7 @@ public class Stage12Controller : MonoBehaviour
         if (applyAutoLayout)
             TryApplyAutoLayout();
 
+        ResetOptionsUI();
         StartCoroutine(RunStage());
     }
 
@@ -182,10 +184,16 @@ public class Stage12Controller : MonoBehaviour
 
     private IEnumerator RunOneQuestion(int index, int total, QuestionDto q)
     {
+        string progressLabel = $"문제 {index}/{total}{(string.IsNullOrWhiteSpace(q.targetPhoneme) ? string.Empty : $" · {q.targetPhoneme}")}";
+
         if (progressText)
+            progressText.text = progressLabel;
+
+        if (progressTextTMP)
         {
-            var suffix = string.IsNullOrWhiteSpace(q.targetPhoneme) ? string.Empty : $" · {q.targetPhoneme}";
-            progressText.text = $"문제 {index}/{total}{suffix}";
+            progressTextTMP.enableAutoSizing = false;
+            progressTextTMP.overflowMode = TextOverflowModes.Overflow;
+            progressTextTMP.text = progressLabel;
         }
 
         yield return LoadAndShowImage(q.imageUrl);
@@ -330,22 +338,14 @@ public class Stage12Controller : MonoBehaviour
             }
         }
 
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
-
-        if (optionWordText)
-            optionWordText.text = string.Empty;
+        ResetOptionsUI(false);
 
         foreach (var opt in q.options ?? Enumerable.Empty<WordOptionDto>())
         {
             yield return ShowSingleOption(opt);
         }
 
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
-
-        if (optionWordText)
-            optionWordText.text = string.Empty;
+        ResetOptionsUI();
     }
 
     private IEnumerator ShowSingleOption(WordOptionDto opt)
@@ -353,27 +353,26 @@ public class Stage12Controller : MonoBehaviour
         if (optionWordText)
         {
             optionWordText.text = opt.word;
-            optionWordText.enableWordWrapping = true;
+            optionWordText.enableWordWrapping = false;
+            optionWordText.alignment = TextAlignmentOptions.Center;
+            optionWordText.overflowMode = TextOverflowModes.Overflow;
             optionWordText.gameObject.SetActive(true);
         }
 
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
+        ClearOptionButtons();
+        optionsContainer.gameObject.SetActive(true);
 
         bool answered = false;
         bool selectionIsCorrect = false;
 
-        CreateChoiceButton(trueButtonLabel, correctOptionSprite, correctTextColor, () =>
+        void OnAnswered(bool isCorrect)
         {
             answered = true;
-            selectionIsCorrect = opt.answer;
-        });
+            selectionIsCorrect = isCorrect;
+        }
 
-        CreateChoiceButton(falseButtonLabel, wrongOptionSprite, wrongTextColor, () =>
-        {
-            answered = true;
-            selectionIsCorrect = !opt.answer;
-        });
+        CreateChoiceButton(trueButtonLabel, correctOptionSprite, correctTextColor, () => OnAnswered(opt.answer));
+        CreateChoiceButton(falseButtonLabel, wrongOptionSprite, wrongTextColor, () => OnAnswered(!opt.answer));
 
         if (optionsContainer.childCount == 0)
         {
@@ -390,15 +389,13 @@ public class Stage12Controller : MonoBehaviour
                 yield return PlayClip(clipCorrect);
                 break;
             }
-            else
-            {
-                yield return PlayClip(clipWrong);
-                answered = false;
-            }
+
+            yield return PlayClip(clipWrong);
+            answered = false;
         }
 
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
+        ClearOptionButtons();
+        optionsContainer.gameObject.SetActive(false);
     }
 
     private void CreateChoiceButton(string label, Sprite sprite, Color textColor, Action onClicked)
@@ -407,6 +404,9 @@ public class Stage12Controller : MonoBehaviour
             return;
 
         var btn = Instantiate(optionButtonPrefab, optionsContainer);
+        btn.gameObject.SetActive(true);
+        Debug.Log($"[Stage12] 버튼 생성 → label={label}, prefab={optionButtonPrefab.name}, parent={optionsContainer.name}");
+
         var tmpText = btn.GetComponentInChildren<TMP_Text>();
         if (tmpText)
         {
@@ -423,6 +423,10 @@ public class Stage12Controller : MonoBehaviour
                 legacyText.color = textColor;
                 Debug.Log($"[Stage12] UI.Text 라벨 적용 → '{label}'");
             }
+            else
+            {
+                Debug.LogWarning("[Stage12] 버튼에 Text 컴포넌트를 찾지 못했습니다.");
+            }
         }
 
         var image = btn.GetComponent<Image>();
@@ -437,6 +441,7 @@ public class Stage12Controller : MonoBehaviour
         {
             rt.sizeDelta = optionButtonPreferredSize;
             rt.localScale = Vector3.one;
+            Debug.Log($"[Stage12] RectTransform → sizeDelta={rt.sizeDelta}, anchoredPos={rt.anchoredPosition}");
         }
 
         var layout = btn.GetComponent<LayoutElement>();
@@ -453,10 +458,31 @@ public class Stage12Controller : MonoBehaviour
             grid.cellSize = optionButtonPreferredSize;
             grid.spacing = gridSpacing;
             LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
+            Debug.Log($"[Stage12] GridLayoutGroup → cellSize={grid.cellSize}, spacing={grid.spacing}");
         }
 
         btn.onClick.RemoveAllListeners();
         btn.onClick.AddListener(() => onClicked?.Invoke());
+    }
+
+    private void ClearOptionButtons()
+    {
+        if (optionsContainer == null)
+            return;
+        foreach (Transform child in optionsContainer)
+            Destroy(child.gameObject);
+    }
+
+    private void ResetOptionsUI(bool clearWord = true)
+    {
+        ClearOptionButtons();
+        if (optionsContainer)
+            optionsContainer.gameObject.SetActive(false);
+        if (clearWord && optionWordText)
+        {
+            optionWordText.text = string.Empty;
+            optionWordText.gameObject.SetActive(false);
+        }
     }
 
     private IEnumerator LoadAndShowImage(string imageUrl)
