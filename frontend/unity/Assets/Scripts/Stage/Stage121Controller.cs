@@ -10,10 +10,10 @@ using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions;
 using System.Text;
 
-// Stage 1.1 진행 컨트롤러
-// - GET: /api/train/set?stage=1.1.1&count=5
-// - POST: /api/train/stage/start?stage=1.1&totalProblems=5 (헤더에 토큰 포함)
-// - GET: /api/train/set?stage=1.1.1&count=5
+// Stage 2.1 진행 컨트롤러
+// - GET: /api/train/set?stage=1.2.1&count=5
+// - POST: /api/train/stage/start?stage=2.1&totalProblems=5 (헤더에 토큰 포함)
+// - GET: /api/train/set?stage=1.2.1&count=5
 // - POST: /api/train/check/voice?stageSessionId=&stage=&problemId= (multipart: audio=voice.wav, 헤더에 토큰 포함)
 // - POST: /api/train/stage/complete?sessionId=... (헤더에 토큰 포함)
 // 흐름(문항당):
@@ -25,11 +25,13 @@ using System.Text;
 //  - 사용자 음성 발신(POST) - 3초간 녹음
 //  - [1.1.5] 우와~ 정말 멋지게 외웠는걸!
 //  4) 정답이면 "최고야" 재생 후 다음 문항, 오답이면 "다시 한번 골라볼까?" 재생 후 재선택 대기
-    public class Stage11Controller : MonoBehaviour
+    public class Stage121Controller : MonoBehaviour
     {
         [Header("API 설정")]
         public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
-        public string stage = "1.1.1";
+        public string stage = "1.2.1";          // set API에 사용
+        [Tooltip("start/voice/attempt 등에 사용할 2단계 stage 값 (예: 2.1)")]
+        public string stageTwoPart = "2.1";
         public int count = 5;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰
@@ -449,13 +451,8 @@ using System.Text;
     // 세션 시작: /api/train/stage/start
     private IEnumerator StartStageSession()
     {
-        // Use query parameters (e.g., /api/train/stage/start?stage=1.1&totalProblems=5)
-        string stageForStart = stage;
-        if (!string.IsNullOrEmpty(stage))
-        {
-            var parts = stage.Split('.');
-            if (parts.Length >= 2) stageForStart = parts[0] + "." + parts[1];
-        }
+        // Use query parameters (e.g., /api/train/stage/start?stage=2.1&totalProblems=5)
+        string stageForStart = string.IsNullOrEmpty(stageTwoPart) ? stage : stageTwoPart;
         string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageForStart)}&totalProblems={count}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
@@ -794,7 +791,7 @@ using System.Text;
         string url = ComposeUrl("/api/train/attempt");
         // JSON 수동 작성 (nullable 필드 포함을 위해)
         string ssid = stageSessionId ?? string.Empty;
-        string stg = stage ?? string.Empty;
+        string stg = string.IsNullOrEmpty(stageTwoPart) ? (stage ?? string.Empty) : stageTwoPart;
         string ph = phonemes ?? string.Empty;
         string sel = selectedAnswer ?? string.Empty;
         string wd = word; // null 허용
@@ -847,13 +844,8 @@ using System.Text;
         {
             Debug.LogWarning("[Stage11] stageSessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 stageSessionId를 발급받으세요.");
         }
-        // stage는 1.1.1 형태에서 앞의 두 자리만 요구됨(예: 1.1)
-        string stageForUpload = stage;
-        if (!string.IsNullOrEmpty(stage))
-        {
-            var parts = stage.Split('.');
-            if (parts.Length >= 2) stageForUpload = parts[0] + "." + parts[1];
-        }
+        // voice 업로드에는 2단계 stage 사용(예: 2.1)
+        string stageForUpload = string.IsNullOrEmpty(stageTwoPart) ? stage : stageTwoPart;
         int problemNumber = Mathf.Max(1, _currentProblemNumber);
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
