@@ -49,7 +49,7 @@ deploy-ai:
         sleep 15
 
         echo "Health check..."
-        curl -fsS http://localhost:8000/health
+        curl -fsS http://localhost:8000/health/
 
         echo "AI server deployed successfully!"
       EOF
