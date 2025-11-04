@@ -201,12 +201,13 @@ public class TrainController {
     @PostMapping("/stage/complete")
     public ResponseEntity<ApiResponse<StageCompleteResponse>> completeStage(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
-            @RequestParam("sessionId") String sessionId) {
+            @RequestParam("stageSessionId") String stageSessionId) {
 
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            StageCompleteResponse response = trainedStageService.completeStage(sessionId);
+
+            StageCompleteResponse response = trainedStageService.completeStage(stageSessionId);
             return ResponseEntity.ok(ApiResponse.success("스테이지가 완료되었습니다.", response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
