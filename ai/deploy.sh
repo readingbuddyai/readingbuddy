@@ -163,7 +163,7 @@ if [ "$DEPLOY_TYPE" == "full" ] || [ "$DEPLOY_TYPE" == "code" ] || [ "$DEPLOY_TY
         sleep 15
 
         echo "🔍 헬스체크 중..."
-        if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+        if curl -f http://localhost:8000/health/ > /dev/null 2>&1; then
             echo "✅ 서버가 정상적으로 실행되었습니다!"
         else
             echo "⚠️  헬스체크 실패. 로그를 확인하세요."
@@ -183,7 +183,7 @@ echo "========================================="
 echo -e "${GREEN}🎉 배포가 완료되었습니다!${NC}"
 echo "========================================="
 echo "서버 주소: http://$EC2_IP:8000"
-echo "헬스체크: http://$EC2_IP:8000/health"
+echo "헬스체크: http://$EC2_IP:8000/health/"
 echo ""
 echo "로그 확인: ssh -i $EC2_KEY $EC2_USER@$EC2_IP 'cd $APP_DIR && docker-compose logs -f'"
 echo "========================================="

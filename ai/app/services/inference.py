@@ -80,10 +80,12 @@ try:
             except Exception:
                 break
 
-    # 백그라운드 스레드로 GPU keep-alive 시작
-    keepalive_thread = threading.Thread(target=gpu_keepalive, daemon=True)
-    keepalive_thread.start()
-    logger.info("GPU keep-alive 스레드 시작 (3초 간격)")
+    if DEVICE == "cuda":
+        keepalive_thread = threading.Thread(target=gpu_keepalive, daemon=True)
+        keepalive_thread.start()
+        logger.info("GPU keep-alive 스레드 시작 (3초 간격)")
+    else:
+        logger.info("CPU 모드로 실행 중 - GPU keep-alive 비활성화")
 
 except Exception as e:
     raise RuntimeError(f"모델 로드 실패: {e}")

@@ -111,7 +111,7 @@ async def check_word(file: UploadFile, target: str = Form(...)):
     decoded_tokens = model_output.split()
 
     # 비교 (띄어쓰기 무시하고 비교)
-    target_no_space = target_jamo.replace(" ", "")
+    target_no_space = target_jamo.replace("|", "").replace(" ", "").strip()
     model_no_space = model_output.replace("|", "").replace(" ", "").strip()
     is_correct = (target_no_space == model_no_space)
 

@@ -69,6 +69,13 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
         else:
             file_content = file_obj
 
+    max_size_bytes = int(settings.MAX_FILE_SIZE_MB * 1024 * 1024)
+    if file_content and len(file_content) > max_size_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail=f"오디오 파일이 너무 큽니다 (최대 {settings.MAX_FILE_SIZE_MB}MB)."
+        )
+
     # 매직 바이트로 오디오 포맷 감지
     detected_format = detect_audio_format(file_content) if file_content else "unknown"
     is_webm = detected_format in ["webm", "ogg"]

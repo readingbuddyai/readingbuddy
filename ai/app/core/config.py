@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     # 서버 설정
     HOST: str = "0.0.0.0"
     PORT: int = 8000
+    RELOAD: bool = False
 
     # 오디오 처리 설정
     MAX_AUDIO_LENGTH_SECONDS: int = 30
