@@ -25,9 +25,4 @@ public interface TrainedStageHistoriesRepository extends JpaRepository<TrainedSt
      */
     List<TrainedStageHistories> findByUserIdAndStage(Long userId, String stage);
 
-
-    /**
-     * 세션 키로
-     */
-    Optional<TrainedStageHistories> findBySessionKey(String sessionKey);
 }
