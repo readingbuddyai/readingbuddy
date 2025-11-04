@@ -335,7 +335,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMTYyMTQsImV4cCI6MTc2MjIxOTgxNH0.-usQOcJpOPoS56Jndl-mcjEseHuq8RS7SMeUrt9Zhpl5Ju2Vbrco2Juj3b9BwgR0
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMjA0MDAsImV4cCI6MTc2MjIyNDAwMH0.c1dCexLOvqYp1mOWVaLPobM59ArzcfTkt2sTXCVkUjsE6IReV4BOvDGMpinkVeL-
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -361,7 +361,7 @@ MonoBehaviour:
   maxWrongAttempts: 2
   guideImage: {fileID: 303755262}
   guideStartSize: {x: 1500, y: 1500}
-  guideEndSize: {x: 800, y: 800}
+  guideEndSize: {x: 900, y: 900}
   guideMoveDuration: 1.5
   guideMoveOnlyOnce: 1
   enableGuideMoveBetweenQuestions: 0
@@ -370,10 +370,11 @@ MonoBehaviour:
   optionsBottomMargin: 40
   imageSideMargin: 80
   imageVerticalMargin: 40
-  imageFixedSize: {x: 1500, y: 1500}
+  imageFixedSize: {x: 1600, y: 1600}
   optionButtonPreferredSize: {x: 1200, y: 1000}
   againButtonPrefab: {fileID: 0}
   lobbyButtonPrefab: {fileID: 0}
+  endModalButtonSize: {x: 700, y: 700}
   optionSpacing: 20
   optionsPaddingLeft: 20
   optionsPaddingTop: 20

@@ -112,6 +112,8 @@ using System.Text;
         public Button againButtonPrefab;
         [Tooltip("끝 모달 '로비로 나가기' 버튼 프리팹")]
         public Button lobbyButtonPrefab;
+        [Tooltip("끝 모달 버튼 크기(px). 0이면 옵션 버튼 크기 사용")]
+        public Vector2 endModalButtonSize = new Vector2(600f, 300f);
 
         [Header("Options Layout")]
         [Tooltip("옵션 버튼 간 간격(px)")]
@@ -1129,7 +1131,7 @@ using System.Text;
         prt.anchorMin = new Vector2(0.5f, 0.5f);
         prt.anchorMax = new Vector2(0.5f, 0.5f);
         prt.pivot = new Vector2(0.5f, 0.5f);
-        prt.sizeDelta = new Vector2(1700, 1500);
+        prt.sizeDelta = new Vector2(2200, 1500);
         var pbg = panel.GetComponent<Image>();
         pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
 
@@ -1146,13 +1148,13 @@ using System.Text;
         var t = title.GetComponent<Text>();
         t.text = "학습이 끝났어요!";
         t.alignment = TextAnchor.MiddleCenter;
-        t.fontSize = 90;
+        t.fontSize = 100;
         t.fontStyle = FontStyle.Bold;
         t.color = Color.white;
         t.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
 
         // 버튼들
-        Vector2 btnSize = optionButtonPreferredSize;
+        Vector2 btnSize = (endModalButtonSize.sqrMagnitude > 0f) ? endModalButtonSize : optionButtonPreferredSize;
         float gap = 40f;
 
         Button ResolveButton(Button preferred, string[] resourcePaths, out bool isCustom)
