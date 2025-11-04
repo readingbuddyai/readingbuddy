@@ -49,6 +49,9 @@ using System.Text;
     public Image mainImage;              // 중앙 큰 이미지
     public RectTransform optionsContainer; // 하단 옵션 버튼 부모
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
+    [Header("Mic Indicator")]
+    [Tooltip("[1.1.4] 종료 직후부터 녹음 3초 동안 표시될 마이크 아이콘 오브젝트")]
+    public GameObject micIndicator;
 
     [Header("오디오 재생")]
     public AudioSource audioSource;      // 안내/피드백/효과음 재생용
@@ -188,6 +191,10 @@ using System.Text;
         if (optionsContainer)
         {
             optionsContainer.gameObject.SetActive(false);
+        }
+        if (micIndicator)
+        {
+            micIndicator.SetActive(false);
         }
         StartCoroutine(RunStage());
     }
@@ -604,9 +611,17 @@ using System.Text;
         // 2) [1.1.4] 이제 너 차례야 → 녹음 업로드
         yield return PlayClip(clipYourTurn);
         if (!bypassVoiceUpload)
+        {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return RecordAndUpload(q);
+            if (micIndicator) micIndicator.SetActive(false);
+        }
         else
+        {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return new WaitForSeconds(recordSeconds);
+            if (micIndicator) micIndicator.SetActive(false);
+        }
 
         // 3) [1.1.5] 칭찬 대사
         yield return PlayClip(clipGreat);
