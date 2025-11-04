@@ -89,6 +89,7 @@ using System.Text;
         private bool _guideLocked;
         private Vector2 _guideFinalPos;
         private Vector2 _guideFinalSize;
+        private int _currentProblemNumber = 0; // 현재 문제 번호 (attempt 로깅용)
 
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
@@ -150,6 +151,7 @@ using System.Text;
         public int id;            // fallback: 일부 응답에서 questionId 대신 id 사용 가능
         public int questionId;
         public int phonemeId;     // 정답 판정용: 옵션의 id와 일치하는 항목이 정답
+        public string problemWord;
         public string value;      // 정답 값(예: "ㅏ")
         public string unicode;
         public string voiceUrl;   // 정답 음성 샘플 URL
@@ -581,6 +583,8 @@ using System.Text;
 
     private IEnumerator RunOneQuestion(int index, int total, QuestionDto q)
     {
+        // 현재 문제 번호 저장 (attempt 로깅용)
+        _currentProblemNumber = index;
         // 진행도 표시
         if (progressText) progressText.text = $"문제 {index}/{total}";
 
@@ -767,6 +771,52 @@ using System.Text;
         return AudioType.UNKNOWN;
     }
 
+    // /api/train/attempt 로깅
+    private IEnumerator SendAttemptLog(int problemNumber, int attemptNumber, string phonemes, string selectedAnswer, bool isCorrect, string word)
+    {
+        string url = ComposeUrl("/api/train/attempt");
+        // JSON 수동 작성 (nullable 필드 포함을 위해)
+        string ssid = stageSessionId ?? string.Empty;
+        string stg = stage ?? string.Empty;
+        string ph = phonemes ?? string.Empty;
+        string sel = selectedAnswer ?? string.Empty;
+        string wd = word; // null 허용
+        string json = "{" +
+                      "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
+                      "\"problemNumber\":" + problemNumber + "," +
+                      "\"stage\":\"" + JsonEscape(stg) + "\"," +
+                      "\"attemptNumber\":" + attemptNumber + "," +
+                      "\"phonemes\":\"" + JsonEscape(ph) + "\"," +
+                      "\"selectedAnswer\":\"" + JsonEscape(sel) + "\"," +
+                      "\"word\":" + (wd == null ? "null" : ("\"" + JsonEscape(wd) + "\"")) + "," +
+                      "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
+                      "\"isReplyCorrect\":null,\"audioUrl\":null}";
+
+        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        {
+            byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
+            req.uploadHandler = new UploadHandlerRaw(body);
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            ApplyCommonHeaders(req); // Authorization, Accept
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning($"[Stage11] attempt 로깅 실패: {req.error} (code={req.responseCode})\\nURL={url}\\nBody={json}\\nResp={req.downloadHandler.text}");
+            }
+            else
+            {
+                Debug.Log($"[Stage11] attempt 로깅 OK: problem={problemNumber}, attempt={attemptNumber}, correct={isCorrect}");
+            }
+        }
+    }
+
+    private static string JsonEscape(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s ?? string.Empty;
+        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
     private IEnumerator RecordAndUpload(QuestionDto q)
     {
         // 마이크 녹음
@@ -775,13 +825,20 @@ using System.Text;
         var wav = WavUtility.FromAudioClip(clip);
 
         // 업로드 (Swagger)
-        // POST /api/train/check/voice?stageSessionId=&stage=&problemId=
-        int qid = q.questionId != 0 ? q.questionId : q.id;
+        // POST /api/train/check/voice?stageSessionId=&stage=&problemNumber=
         if (string.IsNullOrWhiteSpace(stageSessionId))
         {
             Debug.LogWarning("[Stage11] stageSessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 stageSessionId를 발급받으세요.");
         }
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stage ?? string.Empty)}&problemId={UnityWebRequest.EscapeURL(qid.ToString())}";
+        // stage는 1.1.1 형태에서 앞의 두 자리만 요구됨(예: 1.1)
+        string stageForUpload = stage;
+        if (!string.IsNullOrEmpty(stage))
+        {
+            var parts = stage.Split('.');
+            if (parts.Length >= 2) stageForUpload = parts[0] + "." + parts[1];
+        }
+        int problemNumber = Mathf.Max(1, _currentProblemNumber);
+        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         var form = new WWWForm();
         // multipart 필드명은 audio
@@ -871,6 +928,17 @@ using System.Text;
         bool answered = false;
         bool correct = false;
         int wrongCount = 0;
+        int attemptCount = 0;
+        OptionDto lastSelected = null;
+
+        // 정답 값(표시/로깅용): phonemeId와 일치하는 옵션의 value를 우선 사용, 없으면 q.value
+        string correctPhonemeValue = null;
+        if (q != null && q.options != null)
+        {
+            var match = q.options.FirstOrDefault(o => o.id == q.phonemeId);
+            if (match != null) correctPhonemeValue = NormalizeField(match.value);
+        }
+        if (string.IsNullOrEmpty(correctPhonemeValue)) correctPhonemeValue = NormalizeField(q.value);
 
         // 서버가 보낸 문자열이 "U+XXXX" 또는 "\uXXXX" 형태일 수 있으므로
         // 표시 및 비교 전에 실제 문자로 정규화한다.
@@ -954,6 +1022,8 @@ using System.Text;
             btn.onClick.AddListener(() =>
             {
                 answered = true;
+                attemptCount++;
+                lastSelected = opt;
                 // 1) 우선순위: phonemeId와 옵션 id 일치 여부로 정답 판정
                 if (q.phonemeId != 0)
                 {
@@ -993,6 +1063,14 @@ using System.Text;
         while (true)
         {
             yield return new WaitUntil(() => answered);
+
+            // 선택 시도 로깅: /api/train/attempt
+            if (lastSelected != null)
+            {
+                string selectedVal = NormalizeField(lastSelected.value);
+                int attemptNumber = attemptCount; // 1부터 증가
+                yield return SendAttemptLog(_currentProblemNumber, attemptNumber, correctPhonemeValue, selectedVal, correct, q != null ? q.problemWord : null);
+            }
 
             if (correct)
             {
