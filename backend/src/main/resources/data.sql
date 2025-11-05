@@ -1,11 +1,11 @@
 -- KnowledgeComponent 테이블 데이터
 INSERT INTO knowledge_component (id, category, stage) VALUES
-(1, 'LABIAL_1', '1.2'),
-(2, 'VELAR_1', '1.2'),
-(3, 'ALVEOLAR_1', '1.2'),
-(4, 'PALATAL_1', '1.2'),
-(5, 'ALVEOLAR_FRICATIVE_1', '1.2'),
-(6, 'GLOTTAL_AND_ALVEOLAR_1', '1.2'),
+(1, 'LABIAL_1', '1.2.1'),
+(2, 'VELAR_1', '1.2.1'),
+(3, 'ALVEOLAR_1', '1.2.1'),
+(4, 'PALATAL_1', '1.2.1'),
+(5, 'ALVEOLAR_FRICATIVE_1', '1.2.1'),
+(6, 'GLOTTAL_AND_ALVEOLAR_1', '1.2.1'),
 (7, 'LABIAL_ONSET', '4'),
 (8, 'VELAR_ONSET', '4'),
 (9, 'ALVEOLAR_ONSET', '4'),
@@ -18,18 +18,20 @@ INSERT INTO knowledge_component (id, category, stage) VALUES
 (16, 'PALATAL_CODA', '4'),
 (17, 'ALVEOLAR_FRICATIVE_CODA', '4'),
 (18, 'GLOTTAL_AND_ALVEOLAR_CODA', '4'),
-(19, 'MONOPHTHONG', '1.1'),
-(20, 'DIPHTHONG', '1.1'),
+(19, 'MONOPHTHONG_1', '1.1.1'),
+(20, 'DIPHTHONG_1', '1.1.1'),
 (21, 'MONOPHTHONG_NUCLEUS', '4'),
 (22, 'DIPHTHONG_NUCLEUS', '4'),
 (23, 'CLOSED_SYLLABLE', '3'),
 (24, 'OPEN_SYLLABLE', '3'),
-(25, 'LABIAL_2', '1.2'),
-(26, 'VELAR_2', '1.2'),
-(27, 'ALVEOLAR_2', '1.2'),
-(28, 'PALATAL_2', '1.2'),
-(29, 'ALVEOLAR_FRICATIVE_2', '1.2'),
-(30, 'GLOTTAL_AND_ALVEOLAR_2', '1.2')
+(25, 'LABIAL_2', '1.2.2'),
+(26, 'VELAR_2', '1.2.2'),
+(27, 'ALVEOLAR_2', '1.2.2'),
+(28, 'PALATAL_2', '1.2.2'),
+(29, 'ALVEOLAR_FRICATIVE_2', '1.2.2'),
+(30, 'GLOTTAL_AND_ALVEOLAR_2', '1.2.2'),
+(31, 'MONOPHTHONG_2', '1.1.2'),
+(32, 'DIPHTHONG_2', '1.1.2')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO words (id, word, voice_url) VALUES
