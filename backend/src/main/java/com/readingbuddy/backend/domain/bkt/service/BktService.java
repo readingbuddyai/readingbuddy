@@ -1,6 +1,11 @@
 package com.readingbuddy.backend.domain.bkt.service;
 
 import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
+import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
+import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
+import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
+import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
+import com.readingbuddy.backend.domain.train.dto.result.KcWithCorrectRate;
 import com.readingbuddy.backend.domain.bkt.entity.PhonemesKcMap;
 import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
@@ -10,10 +15,16 @@ import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
 import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -66,6 +77,31 @@ public class BktService {
                 .build();
 
         userKcMasteryRepository.save(updatedKcMastery);
+    }
+
+    /**
+     * userId, stage에서 정답률이 낮은 KC 순으로 반환
+     */
+    public List<KcWithCorrectRate> getLowestCorrectRateKcsByStage(Long userId, String stage) {
+        // stage에 속하는 모든 KC 조회
+        List<KnowledgeComponent> kcs = knowledgeComponentRepository.findByStage(stage);
+
+        // 각 KC에 대한 정답률 계산 및 DTO 생성
+        List<KcWithCorrectRate> kcWithRates = new ArrayList<>();
+        for (KnowledgeComponent kc : kcs) {
+            try {
+                Float correctRate = getCorrectAnswerRate(userId, kc.getId());
+                kcWithRates.add(new KcWithCorrectRate(kc, correctRate));
+            } catch (Exception e) {
+                // UserKcMastery가 없는 경우, 정답률을 0으로 간주 (가장 낮은 우선순위)
+                kcWithRates.add(new KcWithCorrectRate(kc, 0.0f));
+            }
+        }
+
+        // 정답률이 낮은 순으로 정렬
+        return kcWithRates.stream()
+                .sorted(Comparator.comparing(KcWithCorrectRate::getCorrectRate))
+                .collect(Collectors.toList());
     }
 
     /**
