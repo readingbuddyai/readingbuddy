@@ -1,9 +1,5 @@
 import io
 import numpy as np
-import soundfile as sf
-import noisereduce as nr
-import librosa
-from pydub import AudioSegment
 from fastapi import HTTPException, UploadFile
 from app.core.config import settings
 import tempfile
@@ -45,6 +41,10 @@ def detect_audio_format(file_content: bytes) -> str:
 
 def load_audio_to_mono_16k(file_obj) -> np.ndarray:
     """UploadFile → 16kHz mono numpy 변환 (WebM 포맷 지원)"""
+    # Lazy import - 필요할 때만 로드
+    import soundfile as sf
+    from pydub import AudioSegment
+    import librosa
 
     # UploadFile 객체인 경우 파일명과 내용 가져오기
     filename = None

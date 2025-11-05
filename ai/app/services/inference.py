@@ -66,6 +66,16 @@ try:
             _ = model(**warmup_inputs).logits
     logger.info("웜업 추론 완료 - 모델 준비됨")
 
+    # librosa 리샘플러 웜업 (콜드 스타트 제거)
+    logger.info("librosa 리샘플러 초기화 중...")
+    try:
+        import librosa
+        dummy_audio_warmup = np.random.randn(44100).astype(np.float32)  # 44100Hz 더미 오디오
+        _ = librosa.resample(dummy_audio_warmup, orig_sr=44100, target_sr=16000)
+        logger.info("librosa 리샘플러 준비 완료")
+    except Exception as e:
+        logger.warning(f"librosa 웜업 중 오류 (무시됨): {e}")
+
     # GPU Keep-Alive: 백그라운드에서 주기적으로 더미 추론 실행 (GPU 절전 방지)
     def gpu_keepalive():
         """GPU가 절전 모드로 들어가지 않도록 주기적으로 더미 추론 실행"""
