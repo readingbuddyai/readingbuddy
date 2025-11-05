@@ -15,6 +15,7 @@ import reactor.core.publisher.Mono;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -105,16 +106,18 @@ public class TrainManager {
             if (response instanceof Map) {
                 Map<String, Object> responseMap = (Map<String, Object>) response;
                 Boolean isCorrect = (Boolean) responseMap.get("is_correct");
+                List<String> decomposed = (List<String>) responseMap.get("decomposed");
 
                 // 세션 정보에 결과 저장
                 if (stageSessionInfo != null) {
-                    Map<Integer, Boolean> map = stageSessionInfo.getIsProblemCorrect();
-                    map.put(problemNumber, isCorrect != null ? isCorrect : false);
+                    Map<Integer, Boolean> isProblemCorrect = stageSessionInfo.getIsProblemCorrect();
+                    isProblemCorrect.put(problemNumber, isCorrect != null ? isCorrect : false);
                     log.info("문제 {}번 결과 저장: {}", problemNumber, isCorrect);
                 }
 
                 return VoiceCheckResponse.builder()
                         .isReplyCorrect(isCorrect)
+                        .reply(decomposed)
                         .build();
             } else {
                 log.error("예상하지 못한 응답 형식: {}", response.getClass().getName());

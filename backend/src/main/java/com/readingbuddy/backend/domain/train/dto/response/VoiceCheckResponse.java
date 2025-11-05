@@ -5,14 +5,14 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class VoiceCheckResponse {
 
-    private String reply;
+    private List<String> reply;
     private Boolean isReplyCorrect;
-    private Double accuracy;
-    private String audioUrl;
 }
