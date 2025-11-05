@@ -1,5 +1,6 @@
-package com.readingbuddy.backend.domain.train.entity;
+package com.readingbuddy.backend.domain.bkt.entity;
 
+import com.readingbuddy.backend.domain.train.entity.Letters;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -10,27 +11,27 @@ import java.io.Serializable;
 
 @Entity
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor
-public class PhonemesKcMap {
+@AllArgsConstructor
+public class LettersKcMap {
 
     @EmbeddedId
-    private PhonemesKcMap.phonemesKcMapId id;
+    private LettersKcMapId id;
 
-    @MapsId("phonemesId")
+    @MapsId("lettersId")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "phonemes_id")
-    private Phonemes phonemes;
+    @JoinColumn(name = "letters_id")
+    private Letters letters;
 
     @MapsId("knowledgeComponentId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "knowledge_component_id")
     private KnowledgeComponent knowledgeComponent;
 
-    public PhonemesKcMap(Phonemes phonemes, KnowledgeComponent kc) {
-        this.phonemes = phonemes;
+    public LettersKcMap(Letters letters, KnowledgeComponent kc) {
+        this.letters = letters;
         this.knowledgeComponent = kc;
-        this.id = new PhonemesKcMap.phonemesKcMapId(phonemes.getId(), kc.getId());
+        this.id = new LettersKcMapId(letters.getId(), kc.getId());
     }
 
     // 👇 엔티티 안에 복합키 클래스를 중첩으로 정의
@@ -38,12 +39,12 @@ public class PhonemesKcMap {
     @Getter
     @NoArgsConstructor
     @EqualsAndHashCode
-    public static class phonemesKcMapId implements Serializable {
-        private Long phonemesId;
+    public static class LettersKcMapId implements Serializable {
+        private String lettersId;
         private Long knowledgeComponentId;
 
-        public phonemesKcMapId(Long phonemesId, Long knowledgeComponentId) {
-            this.phonemesId = phonemesId;
+        public LettersKcMapId(String lettersId, Long knowledgeComponentId) {
+            this.lettersId = lettersId;
             this.knowledgeComponentId = knowledgeComponentId;
         }
     }

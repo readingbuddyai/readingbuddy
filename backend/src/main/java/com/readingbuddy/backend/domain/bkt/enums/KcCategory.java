@@ -1,4 +1,4 @@
-package com.readingbuddy.backend.domain.train.enums;
+package com.readingbuddy.backend.domain.bkt.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

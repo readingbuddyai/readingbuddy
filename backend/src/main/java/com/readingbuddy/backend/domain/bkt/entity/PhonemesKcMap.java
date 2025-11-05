@@ -1,5 +1,6 @@
-package com.readingbuddy.backend.domain.train.entity;
+package com.readingbuddy.backend.domain.bkt.entity;
 
+import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -10,27 +11,27 @@ import java.io.Serializable;
 
 @Entity
 @Getter
-@NoArgsConstructor
 @AllArgsConstructor
-public class LettersKcMap {
+@NoArgsConstructor
+public class PhonemesKcMap {
 
     @EmbeddedId
-    private LettersKcMapId id;
+    private PhonemesKcMap.phonemesKcMapId id;
 
-    @MapsId("lettersId")
+    @MapsId("phonemesId")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "letters_id")
-    private Letters letters;
+    @JoinColumn(name = "phonemes_id")
+    private Phonemes phonemes;
 
     @MapsId("knowledgeComponentId")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "knowledge_component_id")
     private KnowledgeComponent knowledgeComponent;
 
-    public LettersKcMap(Letters letters, KnowledgeComponent kc) {
-        this.letters = letters;
+    public PhonemesKcMap(Phonemes phonemes, KnowledgeComponent kc) {
+        this.phonemes = phonemes;
         this.knowledgeComponent = kc;
-        this.id = new LettersKcMapId(letters.getId(), kc.getId());
+        this.id = new PhonemesKcMap.phonemesKcMapId(phonemes.getId(), kc.getId());
     }
 
     // 👇 엔티티 안에 복합키 클래스를 중첩으로 정의
@@ -38,12 +39,12 @@ public class LettersKcMap {
     @Getter
     @NoArgsConstructor
     @EqualsAndHashCode
-    public static class LettersKcMapId implements Serializable {
-        private String lettersId;
+    public static class phonemesKcMapId implements Serializable {
+        private Long phonemesId;
         private Long knowledgeComponentId;
 
-        public LettersKcMapId(String lettersId, Long knowledgeComponentId) {
-            this.lettersId = lettersId;
+        public phonemesKcMapId(Long phonemesId, Long knowledgeComponentId) {
+            this.phonemesId = phonemesId;
             this.knowledgeComponentId = knowledgeComponentId;
         }
     }
