@@ -137,26 +137,26 @@ INSERT INTO words (id, word, voice_url) VALUES
                                             (100, '힘', '')
     ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO phonemes (category, value, unicode, image_url, voice_url, knowledge_component_id) VALUES
+INSERT INTO phonemes (category, value, unicode, image_url, voice_url) VALUES
 -- 기본 자음 (14개)
-('consonant', 'ㄱ', 'U+3131', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B1.png', NULL, 2),   -- VELAR
-('consonant', 'ㄴ', 'U+3134', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B4.png', NULL, 3),   -- ALVEOLAR
-('consonant', 'ㄷ', 'U+3137', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B7.png', NULL, 3),   -- ALVEOLAR
-('consonant', 'ㄹ', 'U+3139', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B9.png', NULL, 6),   -- GLOTTAL_AND_ALVEOLAR
-('consonant', 'ㅁ', 'U+3141', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%81.png', NULL, 1),   -- LABIAL
-('consonant', 'ㅂ', 'U+3142', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%82.png', NULL, 1),   -- LABIAL
-('consonant', 'ㅅ', 'U+3145', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%85.png', NULL, 5),   -- ALVEOLAR_FRICATIVE
-('consonant', 'ㅇ', 'U+3147', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%87.png', NULL, 2),   -- VELAR
-('consonant', 'ㅈ', 'U+3148', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%88.png', NULL, 4),   -- PALATAL
-('consonant', 'ㅊ', 'U+314A', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8A.png', NULL, 4),   -- PALATAL
-('consonant', 'ㅋ', 'U+314B', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8B.png', NULL, 2),   -- VELAR
-('consonant', 'ㅌ', 'U+314C', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8C.png', NULL, 3),   -- ALVEOLAR
-('consonant', 'ㅍ', 'U+314D', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8D.png', NULL, 1),   -- LABIAL
-('consonant', 'ㅎ', 'U+314E', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8E.png', NULL, 6),   -- GLOTTAL_AND_ALVEOLAR
+('consonant', 'ㄱ', 'U+3131', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B1.png', NULL),   -- VELAR
+('consonant', 'ㄴ', 'U+3134', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B4.png', NULL),   -- ALVEOLAR
+('consonant', 'ㄷ', 'U+3137', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B7.png', NULL),   -- ALVEOLAR
+('consonant', 'ㄹ', 'U+3139', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B9.png', NULL),   -- GLOTTAL_AND_ALVEOLAR
+('consonant', 'ㅁ', 'U+3141', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%81.png', NULL),   -- LABIAL
+('consonant', 'ㅂ', 'U+3142', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%82.png', NULL),   -- LABIAL
+('consonant', 'ㅅ', 'U+3145', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%85.png', NULL),   -- ALVEOLAR_FRICATIVE
+('consonant', 'ㅇ', 'U+3147', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%87.png', NULL),   -- VELAR
+('consonant', 'ㅈ', 'U+3148', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%88.png', NULL),   -- PALATAL
+('consonant', 'ㅊ', 'U+314A', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8A.png', NULL),   -- PALATAL
+('consonant', 'ㅋ', 'U+314B', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8B.png', NULL),   -- VELAR
+('consonant', 'ㅌ', 'U+314C', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8C.png', NULL),   -- ALVEOLAR
+('consonant', 'ㅍ', 'U+314D', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8D.png', NULL),   -- LABIAL
+('consonant', 'ㅎ', 'U+314E', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%8E.png', NULL),   -- GLOTTAL_AND_ALVEOLAR
 -- 쌍자음 (5개)
-('consonant', 'ㄲ', 'U+3132', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B2.png', NULL, 2),   -- VELAR
-('consonant', 'ㄸ', 'U+3138', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B8.png', NULL, 3),   -- ALVEOLAR
-('consonant', 'ㅃ', 'U+3143', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%83.png', NULL, 1),   -- LABIAL
-('consonant', 'ㅆ', 'U+3146', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%86.png', NULL, 5),   -- ALVEOLAR_FRICATIVE
-('consonant', 'ㅉ', 'U+3149', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%89.png', NULL, 4)    -- PALATAL
+('consonant', 'ㄲ', 'U+3132', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B2.png', NULL),   -- VELAR
+('consonant', 'ㄸ', 'U+3138', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%84%B8.png', NULL),   -- ALVEOLAR
+('consonant', 'ㅃ', 'U+3143', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%83.png', NULL),   -- LABIAL
+('consonant', 'ㅆ', 'U+3146', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%86.png', NULL),   -- ALVEOLAR_FRICATIVE
+('consonant', 'ㅉ', 'U+3149', 'https://final-a206.s3.ap-northeast-2.amazonaws.com/consonantMouseImage/consonant_%E3%85%89.png', NULL)    -- PALATAL
 ON CONFLICT (value) DO NOTHING;
