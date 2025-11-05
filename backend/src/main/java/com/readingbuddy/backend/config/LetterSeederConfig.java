@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -35,6 +36,7 @@ public class LetterSeederConfig {
     );
 
     @Bean
+    @Order(0)
     ApplicationRunner seedLettersRunner() {
         return args -> {
             // 재실행해도 중복은 자동 스킵(ON CONFLICT DO NOTHING)

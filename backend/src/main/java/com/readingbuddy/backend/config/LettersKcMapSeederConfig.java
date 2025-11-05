@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
+import org.springframework.core.annotation.Order;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -16,7 +16,6 @@ import java.util.*;
 @Configuration
 @RequiredArgsConstructor
 @Slf4j
-@DependsOn("letterSeederConfig")
 public class LettersKcMapSeederConfig {
 
     private final DataSource dataSource;
@@ -93,6 +92,7 @@ public class LettersKcMapSeederConfig {
     }};
 
     @Bean
+    @Order(100)
     ApplicationRunner seedLettersKcMapRunner() {
         return args -> {
             log.info("LettersKcMapSeeder 시작...");
