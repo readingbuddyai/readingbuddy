@@ -18,19 +18,13 @@ public class AttemptRequest {
     @JsonProperty("answer")
     private Object answer;  // 정답
 
-    @JsonProperty("reply")
-    private Object reply;  // 사용자 응답
-
+    private String audioUrl;  // 사용자 응답
     private Boolean isCorrect;
     private Boolean isReplyCorrect;
     private Integer attemptNumber;
-    private String audioUrl;
+
 
     public String getAnswer() {
         return answer != null ? String.valueOf(answer) : null;
-    }
-
-    public String getReply() {
-        return reply != null ? String.valueOf(reply) : null;
     }
 }

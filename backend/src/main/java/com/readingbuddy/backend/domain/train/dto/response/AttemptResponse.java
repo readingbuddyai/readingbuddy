@@ -18,9 +18,8 @@ public class AttemptResponse {
     private String stage;  // 스테이지
     private String problem;  // 문제
     private String answer;  // 정답
-    private String reply;  // 사용자 응답
+    private String audioUrl;  // 사용자 응답
     private Boolean isCorrect;
     private Boolean isReplyCorrect;
     private Integer attemptNumber;
-    private String audioUrl;
 }

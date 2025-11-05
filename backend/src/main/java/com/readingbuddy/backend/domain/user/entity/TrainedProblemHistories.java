@@ -36,19 +36,16 @@ public class TrainedProblemHistories {
     private String answer;  // 정답 (개수, 음소, 음절)
 
     @Column(nullable = false)
-    private String reply;  // 응답 (개수, 음소, 음절)
-
-    @Column
     private Boolean isCorrect;  // 문제 정답 여부
 
     @Column
     private Boolean isReplyCorrect;  // 발읍 정답 여부
 
-    @Column
+    @Column(nullable = false)
     private Integer attemptNumber;  // 문제 시도 횟수
 
     @Column
-    private String audioUrl;  // S3 Url
+    private String audioUrl;  // 응답 (개수, 음소, 음절)
 
     @Column(nullable = false)
     private LocalDateTime solvedAt;  // 문제 푼 시간
