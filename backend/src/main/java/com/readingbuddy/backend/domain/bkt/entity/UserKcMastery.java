@@ -2,10 +2,7 @@ package com.readingbuddy.backend.domain.bkt.entity;
 
 import com.readingbuddy.backend.domain.user.entity.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 
@@ -17,6 +14,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder(toBuilder = true)
 public class UserKcMastery {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,6 +28,10 @@ public class UserKcMastery {
     @JoinColumn(name = "knowledge_component")
     private KnowledgeComponent knowledgeComponent;
 
+    /**
+     * TODO: 확률 네이밍 풀네임으로 변경
+     * ex) p_l -> learnedProbability
+      */
     // 현재 숙달 확률
     @Column(nullable = false)
     private Float p_l;
