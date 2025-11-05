@@ -10,20 +10,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import com.readingbuddy.backend.domain.dashboard.dto.response.DailyAttendResponse;
 import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesTryRankResponse;
 import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.dashboard.repository.AttendanceHistoriesRepository;
 import com.readingbuddy.backend.domain.dashboard.dto.response.AttendanceResponse;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.AttendHistories;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -180,7 +174,6 @@ public class DashBoardService {
                     .wrongCount(0)
                     .totalProblems(0)
                     .completedAt(null)
-                    .sessionKey(null)
                     .build();
         }
 
@@ -204,7 +197,6 @@ public class DashBoardService {
                 .wrongCount(wrongCount)
                 .totalProblems(totalProblems)
                 .completedAt(history.getCompletedAt())
-                .sessionKey(history.getSessionKey())
                 .build();
     }
 

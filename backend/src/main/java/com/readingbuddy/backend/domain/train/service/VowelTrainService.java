@@ -28,6 +28,7 @@ public class VowelTrainService {
      * 모음 기초 단계 문제 생성 (Stage 1.1)
      */
     public ProblemResult getBasicProblem() {
+        // TODO: random 조회가 아닌 kc에 대한 mastery값 바탕으로 문제 생성
         // 정답 모음 1개 조회
         Phonemes answerVowel = phonemesRepository.findOneRandomVowelForQuestion();
 
@@ -64,6 +65,7 @@ public class VowelTrainService {
      * 모음 심화 단계 문제 생성 (Stage 1.2)
      */
     public ProblemResult getAdvancedProblem() {
+        // TODO: random 조회가 아닌 kc에 대한 mastery값 바탕으로 문제 생성
         Phonemes targetPhoneme = phonemesRepository.findOneRandomVowelForQuestion();
         char targetVowel = targetPhoneme.getValue().charAt(0);
 

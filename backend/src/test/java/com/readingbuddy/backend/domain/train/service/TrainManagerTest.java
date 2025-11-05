@@ -54,7 +54,8 @@ class TrainManagerTest {
     @DisplayName("문제 세션 생성 성공")
     void generateQuestionSession_Success() {
         // when
-        String stageSessionId = trainManager.generateQuestionSession();
+        Long trainedHistoryId = 100L;
+        String stageSessionId = trainManager.generateQuestionSession(trainedHistoryId);
 
         // then
         assertNotNull(stageSessionId);
@@ -107,8 +108,9 @@ class TrainManagerTest {
     @DisplayName("세션 생성 후 조회 - 정확도 맵 초기화 확인")
     void generateQuestionSession_InitializedAccuracyMap() {
         // when
-        String problemId = trainManager.generateQuestionSession();
-        StageSessionInfo stageSessionInfo = trainManager.getStageSession(problemId);
+        Long trainedHistoryId = 100L;
+        String stageSessionId = trainManager.generateQuestionSession(trainedHistoryId);
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
 
         // then
         assertNotNull(stageSessionInfo);
@@ -124,7 +126,8 @@ class TrainManagerTest {
     @DisplayName("AI 서버에 음성 전송 - 성공 응답")
     void sendVoiceToAI_Success() throws InterruptedException {
         // given
-        String sessionId = trainManager.generateQuestionSession();
+        Long trainedHistoryId = 100L;
+        String stageSessionId = trainManager.generateQuestionSession(trainedHistoryId);
         String stage = "1.1.1";
         int problemId = 1;
         MockMultipartFile audioFile = new MockMultipartFile(
@@ -141,13 +144,13 @@ class TrainManagerTest {
                 .addHeader("Content-Type", "application/json"));
 
         // when
-        trainManager.sendVoiceToAI(sessionId, audioFile, stage, problemId);
+        trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemId);
 
         // 비동기 처리 대기
         Thread.sleep(500);
 
         // then
-        StageSessionInfo stageSessionInfo = trainManager.getStageSession(sessionId);
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
         assertNotNull(stageSessionInfo);
         assertNotNull(stageSessionInfo.getIsProblemCorrect());
         
