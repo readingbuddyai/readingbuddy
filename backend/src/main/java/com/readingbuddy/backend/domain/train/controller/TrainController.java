@@ -137,14 +137,7 @@ public class TrainController {
             // AI 서버로 음성 전송하고 응답 받기 (동기)
             VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemNumber, target);
 
-            VoiceCheckResponse response = VoiceCheckResponse.builder()
-                    .reply("")
-                    .isReplyCorrect(aiResponse.getIsReplyCorrect())
-                    .accuracy(0D)
-                    .audioUrl("")
-                    .build();
-
-            return ResponseEntity.ok(ApiResponse.success("음성 인식이 완료되었습니다.", response));
+            return ResponseEntity.ok(ApiResponse.success("음성 인식이 완료되었습니다.", aiResponse));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
