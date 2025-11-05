@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Stage 1.2 진행 컨트롤러
@@ -21,10 +22,15 @@ public class Stage12Controller : MonoBehaviour
 {
     [Header("API 설정")]
     public string baseUrl = "";
-    public string stage = "1.1.2";
+    public string stage = "1.1.2"; // set API에 사용
+    [Tooltip("start/voice/attempt/complete 등에 사용할 2단계 stage 값 (예: 1.2)")]
+    public string stageTwoPart = "1.2";
     public int count = 5;
     [Tooltip("Authorization: Bearer {token}")]
     public string authToken = "";
+    [Header("세션")]
+    [Tooltip("/api/train/stage/start 응답의 stageSessionId")]
+    public string stageSessionId = "";
 
     [Header("UI 참조")]
     public Text progressText;
@@ -32,6 +38,13 @@ public class Stage12Controller : MonoBehaviour
     public Image mainImage;
     public RectTransform optionsContainer;
     public Button optionButtonPrefab;
+    
+    [Header("Mic Indicator")]
+    [Tooltip("사용자 녹음 3초 동안 표시될 마이크 아이콘 오브젝트")]
+    public GameObject micIndicator;
+    
+    [Header("Fonts")]
+    public Font uiFont; // UGUI Text용 폰트(없으면 Arial 기본 사용)
 
     [Header("Option 시각 리소스")]
     public Sprite correctOptionSprite;
@@ -40,8 +53,8 @@ public class Stage12Controller : MonoBehaviour
     public Color wrongTextColor = Color.white;
     [Tooltip("단어를 표시할 Text (선택)")]
     public TMP_Text optionWordText;
-    public string trueButtonLabel = "O";
-    public string falseButtonLabel = "X";
+    public string trueButtonLabel = "";
+    public string falseButtonLabel = "";
 
     [Header("오디오 재생")]
     public AudioSource audioSource;
@@ -74,6 +87,14 @@ public class Stage12Controller : MonoBehaviour
     public Vector2 imageFixedSize = new Vector2(1500f, 1500f);
     public Vector2 optionButtonPreferredSize = new Vector2(800f, 400f);
     public Vector2 gridSpacing = new Vector2(40f, 40f);
+    private int _currentProblemNumber = 0; // 현재 문제 번호 (voice 업로드용)
+
+    [Header("진단/로그")]
+    [Tooltip("문제/옵션/버튼 등 상세 로그를 출력합니다.")]
+    public bool logQuestionsVerbose = true;
+
+    [Header("개발용 우회")]
+    public bool bypassStartRequest = true;
 
     [Serializable]
     public class WordOptionDto
@@ -99,6 +120,9 @@ public class Stage12Controller : MonoBehaviour
     [Serializable]
     public class QuestionData
     {
+        // 서버가 stageSessionId 키를 반환하는 경우를 우선 사용
+        public string stageSessionId;
+        // 하위 호환: 예전 응답에서 sessionId로 내려오는 경우 대응
         public string sessionId;
         public List<QuestionDto> problems;
     }
@@ -148,6 +172,8 @@ public class Stage12Controller : MonoBehaviour
             TryApplyAutoLayout();
 
         ResetOptionsUI();
+        if (micIndicator)
+            micIndicator.SetActive(false);
         StartCoroutine(RunStage());
     }
 
@@ -155,6 +181,12 @@ public class Stage12Controller : MonoBehaviour
     {
         yield return PlayClip(sfxStart);
         yield return RunIntroSequence();
+
+        // 세션 시작 (stageTwoPart 사용)
+        if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
+        {
+            yield return StartStageSession();
+        }
 
         List<QuestionDto> questions = null;
         yield return StartCoroutine(FetchQuestions(result => questions = result));
@@ -172,7 +204,13 @@ public class Stage12Controller : MonoBehaviour
             yield return ProcessAccumulatedFeedback();
         }
 
+        // 세션 완료 보고 (best-effort)
+        if (!string.IsNullOrWhiteSpace(stageSessionId))
+            yield return CompleteStageSession();
+
         yield return PlayClip(clipNextLesson);
+        // 학습 완료 모달 표시
+        ShowEndModal();
     }
 
     private IEnumerator RunIntroSequence()
@@ -184,16 +222,14 @@ public class Stage12Controller : MonoBehaviour
 
     private IEnumerator RunOneQuestion(int index, int total, QuestionDto q)
     {
-        string progressLabel = $"문제 {index}/{total}{(string.IsNullOrWhiteSpace(q.targetPhoneme) ? string.Empty : $" · {q.targetPhoneme}")}";
-
-        if (progressText)
-            progressText.text = progressLabel;
-
+        _currentProblemNumber = index;
+        // Stage 1.1 스타일로 상단 진행도 표시: "i / total"
+        SetProgressLabel(index, total);
         if (progressTextTMP)
         {
             progressTextTMP.enableAutoSizing = false;
             progressTextTMP.overflowMode = TextOverflowModes.Overflow;
-            progressTextTMP.text = progressLabel;
+            progressTextTMP.text = $"{index} / {total}";
         }
 
         yield return LoadAndShowImage(q.imageUrl);
@@ -206,7 +242,9 @@ public class Stage12Controller : MonoBehaviour
         yield return PlayVoiceUrl(q.voiceUrl);
 
         yield return PlayClip(clipPromptRepeat);
+        if (micIndicator) micIndicator.SetActive(true);
         yield return RecordAndUpload(q);
+        if (micIndicator) micIndicator.SetActive(false);
 
         yield return PlayClip(clipPowerUp);
         yield return PlayClip(clipMatchPrompt);
@@ -215,6 +253,43 @@ public class Stage12Controller : MonoBehaviour
 
         if (mainImage != null)
             mainImage.raycastTarget = false;
+    }
+
+    // Stage 1.1 스타일 진행도 텍스트 생성/설정
+    private Text EnsureProgressText()
+    {
+        if (progressText) return progressText;
+        var go = GameObject.Find("ProgressText");
+        if (go)
+        {
+            var t = go.GetComponent<Text>();
+            if (t) { progressText = t; return t; }
+        }
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas) return null;
+        var obj = new GameObject("ProgressText", typeof(RectTransform), typeof(Text));
+        obj.layer = canvas.gameObject.layer;
+        var rt = obj.GetComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = new Vector2(0.5f, 1f);
+        rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchoredPosition = new Vector2(0f, -40f);
+        rt.sizeDelta = new Vector2(600f, 120f);
+        var text = obj.GetComponent<Text>();
+        text.alignment = TextAnchor.MiddleCenter;
+        text.fontSize = 100;
+        text.color = Color.white;
+        text.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+        progressText = text;
+        return progressText;
+    }
+
+    private void SetProgressLabel(int index, int total)
+    {
+        var t = EnsureProgressText();
+        if (!t) return;
+        t.text = $"{index} / {total}";
     }
 
     private void TryApplyAutoLayout()
@@ -277,7 +352,8 @@ public class Stage12Controller : MonoBehaviour
             try
             {
                 parsed = JsonUtility.FromJson<QuestionListResponse>(json);
-                Debug.Log($"[Stage12] 질문 응답 JSON: {json}");
+                if (logQuestionsVerbose)
+                    Debug.Log($"[Stage12] 질문 응답 JSON: {json}");
             }
             catch (Exception ex)
             {
@@ -290,26 +366,49 @@ public class Stage12Controller : MonoBehaviour
                 yield break;
             }
 
-            if (!string.IsNullOrEmpty(parsed.data.sessionId))
+            // 우선 stageSessionId를 사용하고, 없으면 sessionId로 폴백
+            if (!string.IsNullOrEmpty(parsed.data.stageSessionId))
             {
-                Debug.Log($"[Stage12] 세션 ID 수신: {parsed.data.sessionId}");
+                stageSessionId = parsed.data.stageSessionId;
+                Debug.Log($"[Stage12] stageSessionId 수신: {stageSessionId}");
                 foreach (var problem in parsed.data.problems)
-                    problem.sessionId = parsed.data.sessionId;
+                    problem.sessionId = stageSessionId;
+            }
+            else if (!string.IsNullOrEmpty(parsed.data.sessionId))
+            {
+                stageSessionId = parsed.data.sessionId;
+                Debug.Log($"[Stage12] sessionId 수신(폴백 사용): {stageSessionId}");
+                foreach (var problem in parsed.data.problems)
+                    problem.sessionId = stageSessionId;
             }
             else
             {
-                Debug.LogWarning("[Stage12] 응답에 sessionId가 없습니다.");
+                // set 응답에 세션 키가 없는 서버도 있음 → 기존 stageSessionId가 있으면 재사용
+                if (!string.IsNullOrWhiteSpace(stageSessionId))
+                {
+                    if (logQuestionsVerbose)
+                        Debug.Log("[Stage12] set 응답에 stageSessionId/sessionId 없음 → 기존 stageSessionId 재사용");
+                    foreach (var problem in parsed.data.problems)
+                        problem.sessionId = stageSessionId;
+                }
+                else
+                {
+                    Debug.LogWarning("[Stage12] 응답에 stageSessionId/sessionId가 없습니다.");
+                }
             }
 
-            for (int i = 0; i < parsed.data.problems.Count; i++)
+            if (logQuestionsVerbose)
             {
-                var problem = parsed.data.problems[i];
-                var optionSummary = problem.options == null
-                    ? "<no options>"
-                    : string.Join(", ", problem.options.Select(o => $"{o.word}:{o.answer}"));
-                Debug.Log(
-                    $"[Stage12] Problem {i + 1}/{parsed.data.problems.Count} → questionId={problem.questionId}, targetPhoneme={problem.targetPhoneme}, problemWord={problem.problemWord}, options=[{optionSummary}]"
-                );
+                for (int i = 0; i < parsed.data.problems.Count; i++)
+                {
+                    var problem = parsed.data.problems[i];
+                    var optionSummary = problem.options == null
+                        ? "<no options>"
+                        : string.Join(", ", problem.options.Select(o => $"{o.word}:{o.answer}"));
+                    Debug.Log(
+                        $"[Stage12] Problem {i + 1}/{parsed.data.problems.Count} → questionId={problem.questionId}, targetPhoneme={problem.targetPhoneme}, problemWord={problem.problemWord}, options=[{optionSummary}]"
+                    );
+                }
             }
 
             onCompleted?.Invoke(parsed.data.problems);
@@ -342,13 +441,13 @@ public class Stage12Controller : MonoBehaviour
 
         foreach (var opt in q.options ?? Enumerable.Empty<WordOptionDto>())
         {
-            yield return ShowSingleOption(opt);
+            yield return ShowSingleOption(opt, q.targetPhoneme);
         }
 
         ResetOptionsUI();
     }
 
-    private IEnumerator ShowSingleOption(WordOptionDto opt)
+    private IEnumerator ShowSingleOption(WordOptionDto opt, string targetPhoneme)
     {
         if (optionWordText)
         {
@@ -364,10 +463,12 @@ public class Stage12Controller : MonoBehaviour
 
         bool answered = false;
         bool selectionIsCorrect = false;
+        int attemptCount = 0;
 
         void OnAnswered(bool isCorrect)
         {
             answered = true;
+            attemptCount++;
             selectionIsCorrect = isCorrect;
         }
 
@@ -383,6 +484,13 @@ public class Stage12Controller : MonoBehaviour
         while (true)
         {
             yield return new WaitUntil(() => answered);
+
+            // attempt 로깅 (Stage11 규격)
+            // - phonemes: 해당 문제의 targetPhoneme
+            // - selectedAnswer: 현재 단어(opt.word)
+            string phonemes = targetPhoneme ?? string.Empty;
+            string selected = opt.word ?? string.Empty;
+            yield return SendAttemptLog(_currentProblemNumber, attemptCount, phonemes, selected, selectionIsCorrect, opt.word);
 
             if (selectionIsCorrect)
             {
@@ -405,14 +513,16 @@ public class Stage12Controller : MonoBehaviour
 
         var btn = Instantiate(optionButtonPrefab, optionsContainer);
         btn.gameObject.SetActive(true);
-        Debug.Log($"[Stage12] 버튼 생성 → label={label}, prefab={optionButtonPrefab.name}, parent={optionsContainer.name}");
+        if (logQuestionsVerbose)
+            Debug.Log($"[Stage12] 버튼 생성 → label={label}, prefab={optionButtonPrefab.name}, parent={optionsContainer.name}");
 
         var tmpText = btn.GetComponentInChildren<TMP_Text>();
         if (tmpText)
         {
             tmpText.text = label;
             tmpText.color = textColor;
-            Debug.Log($"[Stage12] TMP 라벨 적용 → '{label}', font={tmpText.font?.name}");
+            if (logQuestionsVerbose)
+                Debug.Log($"[Stage12] TMP 라벨 적용 → '{label}', font={tmpText.font?.name}");
         }
         else
         {
@@ -421,7 +531,8 @@ public class Stage12Controller : MonoBehaviour
             {
                 legacyText.text = label;
                 legacyText.color = textColor;
-                Debug.Log($"[Stage12] UI.Text 라벨 적용 → '{label}'");
+                if (logQuestionsVerbose)
+                    Debug.Log($"[Stage12] UI.Text 라벨 적용 → '{label}'");
             }
             else
             {
@@ -441,7 +552,6 @@ public class Stage12Controller : MonoBehaviour
         {
             rt.sizeDelta = optionButtonPreferredSize;
             rt.localScale = Vector3.one;
-            Debug.Log($"[Stage12] RectTransform → sizeDelta={rt.sizeDelta}, anchoredPos={rt.anchoredPosition}");
         }
 
         var layout = btn.GetComponent<LayoutElement>();
@@ -458,7 +568,6 @@ public class Stage12Controller : MonoBehaviour
             grid.cellSize = optionButtonPreferredSize;
             grid.spacing = gridSpacing;
             LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
-            Debug.Log($"[Stage12] GridLayoutGroup → cellSize={grid.cellSize}, spacing={grid.spacing}");
         }
 
         btn.onClick.RemoveAllListeners();
@@ -545,7 +654,8 @@ public class Stage12Controller : MonoBehaviour
             }
 
             var clip = DownloadHandlerAudioClip.GetContent(req);
-            Debug.Log($"[Stage12] 음성 로드 성공 → length={clip.length:F2}s, samples={clip.samples}");
+            if (logQuestionsVerbose)
+                Debug.Log($"[Stage12] 음성 로드 성공 → length={clip.length:F2}s, samples={clip.samples}");
             audioSource.Stop();
             audioSource.clip = clip;
             audioSource.Play();
@@ -581,29 +691,273 @@ public class Stage12Controller : MonoBehaviour
         Microphone.End(null);
         var wav = WavUtility.FromAudioClip(clip);
 
-        string url = ComposeUrl("/api/train/check/voice");
-        var form = new WWWForm();
-        form.AddField("sessionId", q.sessionId ?? string.Empty);
-        form.AddField("stage", stage ?? string.Empty);
-        form.AddField("problemId", q.questionId);
-        form.AddBinaryData("file", wav, "voice.wav", "audio/wav");
+        // Stage11과 동일한 규약: query에 stageSessionId, stage(두 자리), problemNumber 사용
+        // stage는 stageTwoPart를 사용(예: 1.2)
+        string stageForUpload = string.IsNullOrEmpty(stageTwoPart) ? stage : stageTwoPart;
+        int problemNumber = Mathf.Max(1, _currentProblemNumber);
+        string sessionForUpload = !string.IsNullOrWhiteSpace(stageSessionId) ? stageSessionId : (q.sessionId ?? string.Empty);
+        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(sessionForUpload)}&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}";
+        string url = ComposeUrl($"/api/train/check/voice?{qs}");
 
-        Debug.Log($"[Stage12] 업로드 파라미터 → sessionId={q.sessionId ?? "<null>"}, stage={stage}, problemId={q.questionId}");
+        var form = new WWWForm();
+        // multipart 필드명은 audio (Stage11과 동일)
+        form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
+
+        Debug.Log($"[Stage12] 업로드 파라미터 → stageSessionId={q.sessionId ?? "<null>"}, stage={stageForUpload}, problemNumber={problemNumber}");
 
         using (var req = UnityWebRequest.Post(url, form))
         {
             ApplyCommonHeaders(req);
+            req.chunkedTransfer = false;
             yield return req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[Stage12] 음성 업로드 실패: {req.error}");
+                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.LogWarning($"[Stage12] 음성 업로드 실패: {req.error} (code={req.responseCode})\\nURL={url}\\nBody={body}");
             }
             else
             {
                 CollectFeedback(req.downloadHandler.text);
             }
         }
+    }
+
+    // ===== Start/Attempt/Complete (Stage11 스타일) =====
+    [Serializable]
+    private class StartStageData { public string stageSessionId; public string stage; public int totalProblems; public string startAt; }
+    [Serializable]
+    private class StartStageResponse { public bool success; public string message; public StartStageData data; }
+
+    private IEnumerator StartStageSession()
+    {
+        string stageForStart = string.IsNullOrEmpty(stageTwoPart) ? stage : stageTwoPart;
+        string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageForStart)}&totalProblems={count}");
+        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        {
+            ApplyCommonHeaders(req);
+            req.uploadHandler = null;
+            req.downloadHandler = new DownloadHandlerBuffer();
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning($"[Stage12] stage/start 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={req.downloadHandler.text}");
+                yield break;
+            }
+            var respJson = req.downloadHandler.text;
+            try
+            {
+                var resp = JsonUtility.FromJson<StartStageResponse>(respJson);
+                if (resp != null && resp.data != null && !string.IsNullOrWhiteSpace(resp.data.stageSessionId))
+                {
+                    stageSessionId = resp.data.stageSessionId;
+                    Debug.Log($"[Stage12] stageSessionId 발급: {stageSessionId}");
+                }
+                else
+                {
+                    Debug.LogWarning($"[Stage12] stage/start 응답 파싱 실패\nRaw={respJson}");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[Stage12] stage/start 파싱 예외: {e.Message}\nRaw={respJson}");
+            }
+        }
+    }
+
+    private IEnumerator CompleteStageSession()
+    {
+        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
+        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        {
+            ApplyCommonHeaders(req);
+            req.uploadHandler = null;
+            req.downloadHandler = new DownloadHandlerBuffer();
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning($"[Stage12] stage/complete 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={req.downloadHandler.text}");
+                yield break;
+            }
+            Debug.Log("[Stage12] stage/complete OK");
+        }
+    }
+
+    private IEnumerator SendAttemptLog(int problemNumber, int attemptNumber, string phonemes, string selectedAnswer, bool isCorrect, string word)
+    {
+        string url = ComposeUrl("/api/train/attempt");
+        string stg = string.IsNullOrEmpty(stageTwoPart) ? (stage ?? string.Empty) : stageTwoPart;
+        string ssid = stageSessionId ?? string.Empty;
+        string ph = phonemes ?? string.Empty;
+        string sel = selectedAnswer ?? string.Empty;
+        string wd = word; // null 허용
+        string json = "{" +
+                      "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
+                      "\"problemNumber\":" + problemNumber + "," +
+                      "\"stage\":\"" + JsonEscape(stg) + "\"," +
+                      "\"attemptNumber\":" + attemptNumber + "," +
+                      "\"phonemes\":\"" + JsonEscape(ph) + "\"," +
+                      "\"selectedAnswer\":\"" + JsonEscape(sel) + "\"," +
+                      "\"word\":" + (wd == null ? "null" : ("\"" + JsonEscape(wd) + "\"")) + "," +
+                      "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
+                      "\"isReplyCorrect\":null,\"audioUrl\":null}";
+
+        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        {
+            byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
+            req.uploadHandler = new UploadHandlerRaw(body);
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            ApplyCommonHeaders(req);
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                Debug.LogWarning($"[Stage12] attempt 로깅 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={json}\nResp={req.downloadHandler.text}");
+            }
+            else
+            {
+                Debug.Log($"[Stage12] attempt 로깅 OK: problem={problemNumber}, attempt={attemptNumber}, correct={isCorrect}");
+            }
+        }
+    }
+
+    private static string JsonEscape(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return s ?? string.Empty;
+        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+    }
+
+    // ===== End Modal (again/lobby) =====
+    [Header("End Modal Buttons")]
+    [Tooltip("끝 모달 '다시 학습하기' 버튼 프리팹")]
+    public Button againButtonPrefab;
+    [Tooltip("끝 모달 '로비로 나가기' 버튼 프리팹")]
+    public Button lobbyButtonPrefab;
+    [Tooltip("끝 모달 버튼 크기(px). 0이면 옵션 버튼 크기 사용")]
+    public Vector2 endModalButtonSize = new Vector2(600f, 300f);
+
+    private void ShowEndModal()
+    {
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas) return;
+
+        // 배경 오버레이
+        var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
+        overlay.layer = canvas.gameObject.layer;
+        var rt = overlay.GetComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero; rt.sizeDelta = Vector2.zero;
+        var bg = overlay.GetComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.6f);
+        bg.raycastTarget = true;
+
+        // 패널
+        var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        panel.layer = canvas.gameObject.layer;
+        var prt = panel.GetComponent<RectTransform>();
+        prt.SetParent(overlay.transform, false);
+        prt.anchorMin = new Vector2(0.5f, 0.5f);
+        prt.anchorMax = new Vector2(0.5f, 0.5f);
+        prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(2200, 1500);
+        var pbg = panel.GetComponent<Image>();
+        pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
+
+        // 타이틀 텍스트
+        var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
+        title.layer = canvas.gameObject.layer;
+        var trt = title.GetComponent<RectTransform>();
+        trt.SetParent(panel.transform, false);
+        trt.anchorMin = new Vector2(0.5f, 1f);
+        trt.anchorMax = new Vector2(0.5f, 1f);
+        trt.pivot = new Vector2(0.5f, 1f);
+        trt.anchoredPosition = new Vector2(0f, -80f);
+        trt.sizeDelta = new Vector2(1000, 150);
+        var t = title.GetComponent<Text>();
+        t.text = "학습이 끝났어요!";
+        t.alignment = TextAnchor.MiddleCenter;
+        t.fontSize = 100;
+        t.fontStyle = FontStyle.Bold;
+        t.color = Color.white;
+        t.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+        // 버튼들
+        Vector2 btnSize = (endModalButtonSize.sqrMagnitude > 0f) ? endModalButtonSize : optionButtonPreferredSize;
+        float gap = 40f;
+
+        Button ResolveButton(Button preferred, string[] resourcePaths, out bool isCustom)
+        {
+            if (preferred) { isCustom = true; return preferred; }
+            foreach (var path in resourcePaths)
+            {
+                var loaded = Resources.Load<Button>(path);
+                if (loaded) { isCustom = true; return loaded; }
+                var go = Resources.Load<GameObject>(path);
+                if (go)
+                {
+                    var childBtn = go.GetComponentInChildren<Button>(true) ?? go.GetComponent<Button>();
+                    if (childBtn) { isCustom = true; return childBtn; }
+                }
+            }
+            isCustom = false;
+            return optionButtonPrefab;
+        }
+
+        // 다시 학습하기
+        bool againCustom;
+        var btn1 = Instantiate(ResolveButton(againButtonPrefab, new[]{"againbutton","UI/againbutton","Images/againbutton"}, out againCustom), panel.transform as RectTransform);
+        var btn1rt = btn1.GetComponent<RectTransform>();
+        btn1rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn1rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn1rt.pivot = new Vector2(1f, 0.5f);
+        btn1rt.sizeDelta = btnSize;
+        btn1rt.anchoredPosition = new Vector2(-gap*0.5f, -100f);
+        if (!againCustom)
+        {
+            var txt1 = btn1.GetComponentInChildren<Text>();
+            var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
+            if (txt1) { txt1.text = "다시 학습하기"; if (uiFont) txt1.font = uiFont; }
+            else if (tmp1) { tmp1.text = "다시 학습하기"; }
+        }
+        btn1.onClick.AddListener(() => { Destroy(overlay); RestartStage(); });
+
+        // 로비로 나가기
+        bool lobbyCustom;
+        var btn2 = Instantiate(ResolveButton(lobbyButtonPrefab, new[]{"lobbybutton","UI/lobbybutton","Images/lobbybutton"}, out lobbyCustom), panel.transform as RectTransform);
+        var btn2rt = btn2.GetComponent<RectTransform>();
+        btn2rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn2rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn2rt.pivot = new Vector2(0f, 0.5f);
+        btn2rt.sizeDelta = btnSize;
+        btn2rt.anchoredPosition = new Vector2(gap*0.5f, -100f);
+        if (!lobbyCustom)
+        {
+            var txt2 = btn2.GetComponentInChildren<Text>();
+            var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
+            if (txt2) { txt2.text = "로비로 나가기"; if (uiFont) txt2.font = uiFont; }
+            else if (tmp2) { tmp2.text = "로비로 나가기"; }
+        }
+        btn2.onClick.AddListener(() => { Destroy(overlay); GoToLobby(); });
+    }
+
+    private void RestartStage()
+    {
+        StopAllCoroutines();
+        ResetOptionsUI();
+        if (mainImage)
+        {
+            mainImage.enabled = false;
+            mainImage.sprite = null;
+        }
+        stageSessionId = string.Empty;
+        StartCoroutine(RunStage());
+    }
+
+    private void GoToLobby()
+    {
+        if (SceneLoader.Instance != null) SceneLoader.Instance.LoadScene(SceneId.Lobby);
+        else SceneManager.LoadScene(SceneId.Lobby);
     }
 
     private void CollectFeedback(string json)
@@ -695,9 +1049,12 @@ public class Stage12Controller : MonoBehaviour
     {
         if (!string.IsNullOrWhiteSpace(authToken))
         {
-            var headerValue = $"Bearer {authToken}";
-            Debug.Log($"[Stage12] Authorization 헤더 설정: {headerValue}");
-            req.SetRequestHeader("Authorization", $"Bearer {authToken}");
+            var tokenTrim = authToken.Trim();
+            if (tokenTrim.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                tokenTrim = tokenTrim.Substring(7).Trim();
+            req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
+            if (logQuestionsVerbose)
+                Debug.Log($"[Stage12] Auth header attached (len={tokenTrim.Length})");
         }
         req.SetRequestHeader("Accept", "application/json");
     }
