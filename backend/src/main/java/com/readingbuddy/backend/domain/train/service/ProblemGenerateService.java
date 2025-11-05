@@ -31,7 +31,8 @@ public class ProblemGenerateService {
 
     public List<ProblemResult> extractLetters(String stage, Integer cnt) {
         List<ProblemResult> results = null;
-
+        
+        // TODO: 문제 뽑는 건 각각의 generateStage 안으로 삽입
         List<Integer> unicodePoints = lettersRepository.findRandomLetters(cnt);
 
         if (stage.equals("3")) {
@@ -45,6 +46,9 @@ public class ProblemGenerateService {
     public List<ProblemResult> generateStage3(List<Integer> unicodePoints) {
         List<ProblemResult> results = new ArrayList<>();
 
+        // TODO: userId와 stage로 해당 stage에서 부족한 KC를 뽑는다.
+
+        // TODO: 해당 kc를 토대로 문제 구성
         for (Integer unicodePoint : unicodePoints) {
             Letters letter = lettersRepository.findByUnicodePoint(unicodePoint)
                     .orElseThrow(() -> new IllegalStateException("Letter not found for unicode point: " + unicodePoint));
@@ -61,6 +65,10 @@ public class ProblemGenerateService {
 
     public List<ProblemResult> generateStage4(List<Integer> unicodePoints) {
         List<ProblemResult> results = new ArrayList<>();
+
+        // TODO: userId와 stage로 해당 stage에서 부족한 KC를 뽑는다.
+
+        // TODO: 해당 kc를 토대로 문제 구성
 
         for (Integer unicodePoint : unicodePoints) {
             Letters letter = lettersRepository.findByUnicodePoint(unicodePoint)
