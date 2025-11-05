@@ -1,13 +1,11 @@
-package com.readingbuddy.backend.domain.train.entity;
+package com.readingbuddy.backend.domain.bkt.entity;
 
 import com.readingbuddy.backend.domain.user.entity.User;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 

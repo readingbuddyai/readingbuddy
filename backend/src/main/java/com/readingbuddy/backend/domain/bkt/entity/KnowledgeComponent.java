@@ -1,6 +1,6 @@
-package com.readingbuddy.backend.domain.train.entity;
+package com.readingbuddy.backend.domain.bkt.entity;
 
-import com.readingbuddy.backend.domain.train.enums.KcCategory;
+import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;

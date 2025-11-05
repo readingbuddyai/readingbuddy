@@ -100,6 +100,7 @@ public class TrainedStageService {
                 .solvedAt(LocalDateTime.now())
                 .build();
 
+        // TODO: 이때 mastery 값 업데이트 시키기 bkt service 호출
         // 문제 하나씩 저장
         attempt = trainedProblemHistoriesRepository.save(attempt);
 

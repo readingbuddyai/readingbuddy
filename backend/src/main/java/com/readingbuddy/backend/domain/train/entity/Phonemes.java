@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.entity;
 
+import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -25,8 +26,4 @@ public class Phonemes {
 
     @Column(name = "voice_url")
     private String voiceUrl;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "knowledge_component_id")
-    private KnowledgeComponent knowledgeComponent;
 }
