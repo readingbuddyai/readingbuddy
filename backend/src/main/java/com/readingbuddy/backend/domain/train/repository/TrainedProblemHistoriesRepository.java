@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TrainedProblemHistoriesRepository extends JpaRepository<TrainedProblemHistories, Long> {
 
@@ -15,6 +16,13 @@ public interface TrainedProblemHistoriesRepository extends JpaRepository<Trained
      * 세션 완료 시 통계 집계용
      */
     List<TrainedProblemHistories> findByTrainedStageHistories(TrainedStageHistories session);
+
+    /**
+     * 특정 user의 특정 stage에 대한 최신 문제 이력 조회 (candidateList 확인용)
+     * Spring Data JPA 메서드 네이밍 규칙 사용 (First = 최신 1개)
+     */
+    Optional<TrainedProblemHistories> findFirstByTrainedStageHistories_User_IdAndTrainedStageHistories_StageOrderBySolvedAtDesc(
+            Long userId, String stage);
 
 
     /**

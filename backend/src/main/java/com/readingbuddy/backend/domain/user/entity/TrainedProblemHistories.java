@@ -56,4 +56,7 @@ public class TrainedProblemHistories {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trained_stage_id")  // FK 실제 위치
     private TrainedStageHistories trainedStageHistories;
+
+    @Column(nullable = false)
+    private Integer candidateList;
 }

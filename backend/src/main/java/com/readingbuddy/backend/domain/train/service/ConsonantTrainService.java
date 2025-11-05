@@ -1,6 +1,10 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.common.util.function.PhonemeCounter;
+import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
+import com.readingbuddy.backend.domain.bkt.entity.PhonemesKcMap;
+import com.readingbuddy.backend.domain.bkt.repository.PhonemesKcMapRepository;
+import com.readingbuddy.backend.domain.bkt.service.BktService;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_1Problem;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_2Problem;
@@ -10,12 +14,13 @@ import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.WordsRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -23,16 +28,29 @@ public class ConsonantTrainService {
 
     private final PhonemesRepository phonemesRepository;
     private final WordsRepository wordsRepository;
+    private final BktService bktService;
+    private final PhonemesKcMapRepository phonemesKcMapRepository;
 
     /**
      * 자음 기초 단계 문제 생성 (Stage 1.2.1)
      */
-    public ProblemResult getBasicProblem() {
-        // TODO: random 조회가 아닌 kc에 대한 mastery값 바탕으로 문제 생성
-        // 정답 자음 1개 조회
-        Phonemes answerConsonant = phonemesRepository.findOneRandomConsonantForQuestion();
+    public ProblemResult getBasicProblem(Long userId) {
+        final String STAGE = "1.2.1";
 
-        // 정답을 제외한 오답 자음 1개 조회
+        // 1. BKT 기반으로 KC 선택 (mastery 기반, p_l이 가장 높은 KC 제외)
+        KnowledgeComponent selectedKc = bktService.selectKnowledgeComponent(userId, STAGE);
+        // 2. 비트마스킹을 사용하여 아직 출제되지 않은 Phoneme 선택
+        Phonemes answerConsonant = bktService.selectPhonemeUsingBitMask(selectedKc, userId, STAGE);
+        if (answerConsonant == null) {
+            // candidateList에서 사용 가능한 Phoneme이 없으면 KC의 Phoneme 중 랜덤 선택
+            List<Phonemes> kcPhonemes = phonemesKcMapRepository.findByKnowledgeComponent_Id(selectedKc.getId())
+                    .stream()
+                    .map(PhonemesKcMap::getPhonemes)
+                    .toList();
+            answerConsonant = kcPhonemes.get(new Random().nextInt(kcPhonemes.size()));
+            log.warn("candidateList에서 사용 가능한 Phoneme이 없어 랜덤 선택: {}", answerConsonant.getValue());
+        }
+
         Phonemes wrongConsonant = phonemesRepository.findRandomConsonant(answerConsonant.getId());
 
         // 선택지 리스트 생성
