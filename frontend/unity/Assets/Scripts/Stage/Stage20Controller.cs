@@ -250,18 +250,28 @@ public class Stage20Controller : MonoBehaviour
     {
         if (!waitingForStoneCount) return;
         pendingStoneCount = count;
+        if (verboseLogging)
+            Debug.Log($"[Stage20] ReportStoneCount → pending={pendingStoneCount} (waiting={waitingForStoneCount})");
     }
 
     public void ConfirmStoneCount()
     {
+        Debug.Log("[Stage20] ConfirmStoneCount() 호출 시도");
         if (!waitingForStoneCount)
+        {
+            if (verboseLogging)
+                Debug.Log("[Stage20] ConfirmStoneCount → waitingForStoneCount=false, 호출 무시");
             return;
+        }
 
         if (!pendingStoneCount.HasValue)
         {
             Debug.LogWarning("[Stage20] 아직 보고된 Stone 개수가 없습니다. 드롭 후 버튼을 눌러 주세요.");
             return;
         }
+
+        if (verboseLogging)
+            Debug.Log($"[Stage20] ConfirmStoneCount → 제출 예정 개수 = {pendingStoneCount.Value}");
 
         waitingForStoneCount = false;
     }
