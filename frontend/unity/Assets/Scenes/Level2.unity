@@ -167,7 +167,7 @@ GameObject:
   - component: {fileID: 369194039}
   - component: {fileID: 369194041}
   m_Layer: 0
-  m_Name: Slot 2
+  m_Name: Slot_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -717,7 +717,7 @@ GameObject:
   - component: {fileID: 872943396}
   - component: {fileID: 872943395}
   m_Layer: 0
-  m_Name: Stone 5
+  m_Name: Stone_5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -806,6 +806,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragRoot: {fileID: 2058831486}
+  dragSensitivity: 1
 --- !u!225 &872943396
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -833,7 +834,7 @@ GameObject:
   - component: {fileID: 902873986}
   - component: {fileID: 902873985}
   m_Layer: 0
-  m_Name: Stone 7
+  m_Name: Stone_7
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -922,6 +923,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragRoot: {fileID: 2058831486}
+  dragSensitivity: 1
 --- !u!225 &902873986
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1014,7 +1016,7 @@ GameObject:
   - component: {fileID: 933961202}
   - component: {fileID: 933961204}
   m_Layer: 0
-  m_Name: Slot 7
+  m_Name: Slot_7
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1108,7 +1110,7 @@ GameObject:
   - component: {fileID: 934743102}
   - component: {fileID: 934743101}
   m_Layer: 0
-  m_Name: Stone 2
+  m_Name: Stone_2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1197,6 +1199,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragRoot: {fileID: 2058831486}
+  dragSensitivity: 1
 --- !u!225 &934743102
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1222,7 +1225,7 @@ GameObject:
   - component: {fileID: 955384307}
   - component: {fileID: 955384309}
   m_Layer: 0
-  m_Name: Slot 6
+  m_Name: Slot_6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1314,7 +1317,7 @@ GameObject:
   - component: {fileID: 1054082969}
   - component: {fileID: 1054082971}
   m_Layer: 0
-  m_Name: Slot 3
+  m_Name: Slot_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1408,7 +1411,7 @@ GameObject:
   - component: {fileID: 1135838517}
   - component: {fileID: 1135838516}
   m_Layer: 0
-  m_Name: Stone 1
+  m_Name: Stone_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1497,6 +1500,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragRoot: {fileID: 2058831486}
+  dragSensitivity: 1
 --- !u!225 &1135838517
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1640,7 +1644,7 @@ GameObject:
   - component: {fileID: 1256444243}
   - component: {fileID: 1256444245}
   m_Layer: 0
-  m_Name: Slot 1
+  m_Name: Slot_1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1734,7 +1738,7 @@ GameObject:
   - component: {fileID: 1371563817}
   - component: {fileID: 1371563816}
   m_Layer: 0
-  m_Name: Stone 6
+  m_Name: Stone_6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1823,6 +1827,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragRoot: {fileID: 2058831486}
+  dragSensitivity: 1
 --- !u!225 &1371563817
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -1848,7 +1853,7 @@ GameObject:
   - component: {fileID: 1375720647}
   - component: {fileID: 1375720649}
   m_Layer: 0
-  m_Name: Slot 4
+  m_Name: Slot_4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1942,7 +1947,7 @@ GameObject:
   - component: {fileID: 1457812570}
   - component: {fileID: 1457812569}
   m_Layer: 0
-  m_Name: Stone 4
+  m_Name: Stone_4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2031,6 +2036,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragRoot: {fileID: 2058831486}
+  dragSensitivity: 1
 --- !u!225 &1457812570
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -2079,8 +2085,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 120}
-  m_SizeDelta: {x: 300, y: 120}
+  m_AnchoredPosition: {x: 0, y: -1000}
+  m_SizeDelta: {x: 600, y: 400}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &1498910556
 MonoBehaviour:
@@ -2135,7 +2141,7 @@ MonoBehaviour:
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
           m_IntArgument: 0
           m_FloatArgument: 0
-          m_StringArgument: ReportStoneCount
+          m_StringArgument: ConfirmStoneCount
           m_BoolArgument: 0
         m_CallState: 2
 --- !u!114 &1498910557
@@ -2462,7 +2468,7 @@ GameObject:
   - component: {fileID: 1704761053}
   - component: {fileID: 1704761052}
   m_Layer: 0
-  m_Name: Stone 3
+  m_Name: Stone_3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2551,6 +2557,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   dragRoot: {fileID: 2058831486}
+  dragSensitivity: 1
 --- !u!225 &1704761053
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -2576,7 +2583,7 @@ GameObject:
   - component: {fileID: 1740075327}
   - component: {fileID: 1740075329}
   m_Layer: 0
-  m_Name: Slot 5
+  m_Name: Slot_5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2739,8 +2746,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 24
-  m_fontSizeBase: 24
+  m_fontSize: 120
+  m_fontSizeBase: 120
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -2931,6 +2938,10 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: authToken
+      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoiamluIiwiaWF0IjoxNzYyMzM0MzQzLCJleHAiOjE3NjI0MjA3NDN9.Nuha9q4SWchrsT5gTj9ZB-r3kJJjaRoRb1ddfK5cQD_13xqRqKzAFjFhfHx29S6y
+      objectReference: {fileID: 0}
+    - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
@@ -2968,7 +2979,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 2
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7KeETWF0ZSIsImlhdCI6MTc2MjI1NTAzOSwiZXhwIjoxNzYyMzQxNDM5fQ.tpCGttWtlTfJp5MKyQKkbcMC-ZgUSYsASQKKtfKNEBBbl14VNkuqwtVkCGM0x1bv
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoiamluIiwiaWF0IjoxNzYyMzM0MzQzLCJleHAiOjE3NjI0MjA3NDN9.Nuha9q4SWchrsT5gTj9ZB-r3kJJjaRoRb1ddfK5cQD_13xqRqKzAFjFhfHx29S6y
   bypassStageStart: 0
   verboseLogging: 1
   progressText: {fileID: 0}

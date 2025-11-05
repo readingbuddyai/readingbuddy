@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using System.Text.RegularExpressions;
 
 public class StoneDropZone : MonoBehaviour, IDropHandler
@@ -42,153 +43,159 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
 
     public void OnDrop(PointerEventData eventData)
     {
-        if (eventData.pointerDrag == null)
+        if (eventData?.pointerDrag == null)
             return;
 
-        var draggable = eventData.pointerDrag.GetComponent<StoneDraggable>();
-        if (draggable == null)
+        GameObject stone = eventData.pointerDrag;
+        if (stone.GetComponent<StoneDraggable>() == null)
             return;
 
-        // Stone의 번호 추출 (예: "Stone_1" -> 1)
-        int stoneNumber = ExtractNumberFromName(eventData.pointerDrag.name);
-        
-        // CountDisplay에서 드롭된 경우 (slotNumber == 0)
+        int stoneNumber = ExtractNumberFromName(stone.name);
+
         if (slotNumber == 0)
         {
-            // 해당 번호에 맞는 Slot을 찾아서 그 위치에 배치
-            PlaceStoneAtMatchingSlot(eventData.pointerDrag, stoneNumber);
+            PlaceStoneAtMatchingSlot(stone, stoneNumber);
         }
         else
         {
-            // 개별 Slot에 드롭된 경우: 숫자가 일치하는지 확인
             if (stoneNumber != slotNumber)
             {
                 Debug.LogWarning($"[StoneDropZone] 번호 불일치: Stone_{stoneNumber}을 Slot_{slotNumber}에 드롭할 수 없습니다.");
-                return; // 드롭 거부
+                return;
             }
-            
-            // CountDisplay로 이동
-            Transform targetParent = slotParent != null ? slotParent : transform;
-            eventData.pointerDrag.transform.SetParent(targetParent, false);
 
-            if (eventData.pointerDrag.TryGetComponent(out RectTransform rt))
-            {
-                // 이 Slot의 위치에 Stone을 배치
-                RectTransform slotRT = GetComponent<RectTransform>();
-                if (slotRT != null)
-                {
-                    rt.anchoredPosition = slotRT.anchoredPosition;
-                }
-                else
-                {
-                    rt.anchoredPosition = Vector2.zero;
-                }
-            }
+            SnapStoneToSlot(stone, this);
         }
 
-        // 드롭된 Stone 개수를 세어서 Stage20Controller에 알림
         CountStonesAndReport();
     }
 
     private void PlaceStoneAtMatchingSlot(GameObject stone, int stoneNumber)
     {
-        // CountDisplay로 이동
-        Transform targetParent = slotParent != null ? slotParent : transform;
-        stone.transform.SetParent(targetParent, false);
-
-        // 해당 번호에 맞는 Slot 찾기
         StoneDropZone matchingSlot = FindSlotByNumber(stoneNumber);
-        
+        SnapStoneToSlot(stone, matchingSlot);
+
         if (matchingSlot != null)
         {
-            RectTransform slotRT = matchingSlot.GetComponent<RectTransform>();
-            RectTransform stoneRT = stone.GetComponent<RectTransform>();
-            
-            if (slotRT != null && stoneRT != null)
-            {
-                // Slot의 위치에 Stone 배치 (CountDisplay 기준)
-                stoneRT.anchoredPosition = slotRT.anchoredPosition;
-                Debug.Log($"[StoneDropZone] Stone_{stoneNumber}을 Slot_{stoneNumber} 위치에 배치");
-            }
-            else
-            {
-                stoneRT.anchoredPosition = Vector2.zero;
-            }
+            Debug.Log($"[StoneDropZone] Stone_{stoneNumber}을 Slot_{stoneNumber} 위치에 배치");
         }
         else
         {
             Debug.LogWarning($"[StoneDropZone] Slot_{stoneNumber}을 찾을 수 없습니다.");
-            if (stone.TryGetComponent(out RectTransform rt))
-                rt.anchoredPosition = Vector2.zero;
+        }
+    }
+
+    private void SnapStoneToSlot(GameObject stone, StoneDropZone targetSlot)
+    {
+        if (stone == null)
+            return;
+
+        Transform container = slotParent != null ? slotParent : transform;
+
+        if (container == null)
+        {
+            Debug.LogWarning("[StoneDropZone] 유효한 부모 컨테이너를 찾지 못했습니다.");
+            return;
+        }
+
+        stone.transform.SetParent(container, false);
+        stone.transform.SetAsLastSibling();
+
+        if (container.TryGetComponent(out LayoutGroup layoutGroup) && layoutGroup != null)
+        {
+            if (stone.TryGetComponent(out LayoutElement layoutElement))
+            {
+                layoutElement.ignoreLayout = true;
+            }
+            else
+            {
+                layoutElement = stone.AddComponent<LayoutElement>();
+                layoutElement.ignoreLayout = true;
+            }
+        }
+
+        RectTransform referenceSlot = targetSlot != null ? targetSlot.GetComponent<RectTransform>() : null;
+
+        if (stone.TryGetComponent(out RectTransform stoneRT))
+        {
+            stoneRT.anchorMin = new Vector2(0.5f, 0.5f);
+            stoneRT.anchorMax = new Vector2(0.5f, 0.5f);
+            stoneRT.anchoredPosition = Vector2.zero;
+            stoneRT.localScale = Vector3.one;
+
+            if (referenceSlot != null)
+            {
+                stoneRT.position = referenceSlot.position;
+                stoneRT.rotation = referenceSlot.rotation;
+            }
+            else
+            {
+                stoneRT.localRotation = Quaternion.identity;
+            }
+        }
+
+        if (stone.TryGetComponent(out CanvasGroup cg))
+        {
+            cg.blocksRaycasts = true;
+            cg.alpha = 1f;
         }
     }
 
     private StoneDropZone FindSlotByNumber(int number)
     {
-        // stoneSlotsParent에서 모든 Slot 찾기
-        Transform searchParent = stoneSlotsParent != null ? stoneSlotsParent : transform.parent;
-        if (searchParent == null)
+        if (number <= 0)
             return null;
 
-        // 모든 자식 중에서 StoneDropZone 컴포넌트를 가진 것 찾기
-        StoneDropZone[] allSlots = searchParent.GetComponentsInChildren<StoneDropZone>();
-        
-        foreach (var slot in allSlots)
-        {
-            // CountDisplay는 제외 (slotNumber가 0이 아닌 것만)
-            if (slot.slotNumber == number && slot != this)
-            {
-                return slot;
-            }
-        }
+        StoneDropZone[] candidates = GetSearchableSlots();
+        if (candidates == null || candidates.Length == 0)
+            return null;
 
-        // slotNumber가 0이면 이름에서도 확인
-        foreach (var slot in allSlots)
+        foreach (var slot in candidates)
         {
-            if (slot == this) continue; // 자기 자신 제외
-            
+            if (slot == null || slot == this)
+                continue;
+
             int slotNum = slot.slotNumber;
             if (slotNum == 0)
             {
                 slotNum = ExtractNumberFromName(slot.gameObject.name);
             }
-            
+
             if (slotNum == number)
-            {
                 return slot;
-            }
         }
 
         return null;
     }
 
+    private StoneDropZone[] GetSearchableSlots()
+    {
+        Transform searchRoot = stoneSlotsParent;
+
+        if (searchRoot == null && slotParent != null)
+            searchRoot = slotParent;
+
+        if (searchRoot == null && stageController != null && stageController.stoneBoard != null)
+            searchRoot = stageController.stoneBoard.transform;
+
+        if (searchRoot != null)
+            return searchRoot.GetComponentsInChildren<StoneDropZone>(true);
+
+        return FindObjectsOfType<StoneDropZone>(true);
+    }
+
     private void CountStonesAndReport()
     {
-        // CountDisplay의 자식 중 StoneDraggable만 카운트 (Slot 제외)
         Transform targetParent = slotParent != null ? slotParent : transform;
-        
+
         if (targetParent == null)
         {
             Debug.LogWarning("[StoneDropZone] slotParent(CountDisplay)가 설정되지 않았습니다.");
             return;
         }
 
-        int stoneCount = 0;
+        int stoneCount = CountStoneDraggablesRecursive(targetParent);
 
-        // targetParent(CountDisplay)의 자식 중 StoneDraggable 컴포넌트를 가진 것만 카운트
-        // StoneDropZone(Slot)은 제외
-        for (int i = 0; i < targetParent.childCount; i++)
-        {
-            var child = targetParent.GetChild(i);
-            // StoneDraggable이 있고, StoneDropZone이 아닌 것만 카운트
-            if (child.GetComponent<StoneDraggable>() != null && 
-                child.GetComponent<StoneDropZone>() == null)
-            {
-                stoneCount++;
-            }
-        }
-
-        // Stage20Controller에 개수 알림
         if (stageController != null)
         {
             stageController.ReportStoneCount(stoneCount);
@@ -198,6 +205,27 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
         {
             Debug.LogWarning("[StoneDropZone] Stage20Controller를 찾을 수 없습니다.");
         }
+    }
+
+    private int CountStoneDraggablesRecursive(Transform root)
+    {
+        int count = 0;
+
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var child = root.GetChild(i);
+
+            if (child.GetComponent<StoneDraggable>() != null &&
+                child.GetComponent<StoneDropZone>() == null)
+            {
+                count++;
+            }
+
+            if (child.childCount > 0)
+                count += CountStoneDraggablesRecursive(child);
+        }
+
+        return count;
     }
 
     /// <summary>

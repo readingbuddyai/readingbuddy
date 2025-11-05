@@ -145,6 +145,7 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator RunOneProblem(int index, int total, QuestionDto problem)
     {
+        ResetStoneUI();
         _currentProblemNumber = index;
         UpdateProgress(index, total, problem);
 
@@ -200,6 +201,7 @@ public class Stage20Controller : MonoBehaviour
 
         while (attempts < maxStoneAttempts && !solved)
         {
+            ResetStonePositions();
             pendingStoneCount = null;
             waitingForStoneCount = true;
 
@@ -207,37 +209,19 @@ public class Stage20Controller : MonoBehaviour
                 stoneBoard.SetActive(true);
             if (countdownText)
             {
-                countdownText.gameObject.SetActive(true);
-                countdownText.text = Mathf.CeilToInt(countdownSeconds).ToString();
+                countdownText.text = string.Empty;
+                countdownText.gameObject.SetActive(false);
             }
 
             onStoneRoundBegin?.Invoke(expectedCount);
 
-            float remaining = countdownSeconds;
-            while (remaining > 0f && waitingForStoneCount)
+            while (waitingForStoneCount)
             {
-                if (countdownText)
-                    countdownText.text = Mathf.CeilToInt(remaining).ToString();
-
-                if (pendingStoneCount.HasValue)
-                {
-                    waitingForStoneCount = false;
-                    break;
-                }
-
-                remaining -= Time.deltaTime;
                 yield return null;
             }
 
-            waitingForStoneCount = false;
-            int submitted = pendingStoneCount ?? -1;
+            int submitted = pendingStoneCount ?? 0;
             pendingStoneCount = null;
-
-            if (countdownText)
-            {
-                countdownText.text = string.Empty;
-                countdownText.gameObject.SetActive(false);
-            }
 
             if (stoneBoard)
                 stoneBoard.SetActive(false);
@@ -266,12 +250,29 @@ public class Stage20Controller : MonoBehaviour
     {
         if (!waitingForStoneCount) return;
         pendingStoneCount = count;
+    }
+
+    public void ConfirmStoneCount()
+    {
+        if (!waitingForStoneCount)
+            return;
+
+        if (!pendingStoneCount.HasValue)
+        {
+            Debug.LogWarning("[Stage20] 아직 보고된 Stone 개수가 없습니다. 드롭 후 버튼을 눌러 주세요.");
+            return;
+        }
+
         waitingForStoneCount = false;
     }
 
     private IEnumerator FetchQuestions(Action<List<QuestionDto>> onCompleted)
     {
-        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}");
+        string sessionQuery = string.IsNullOrWhiteSpace(stageSessionId)
+            ? string.Empty
+            : $"&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}";
+
+        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}{sessionQuery}");
 
         using (var req = UnityWebRequest.Get(url))
         {
@@ -280,7 +281,8 @@ public class Stage20Controller : MonoBehaviour
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"[Stage20] 문제 요청 실패: {req.error}\nURL={url}");
+                string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
+                Debug.LogError($"[Stage20] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
                 yield break;
             }
 
@@ -297,18 +299,34 @@ public class Stage20Controller : MonoBehaviour
                 Debug.LogError($"[Stage20] 문제 파싱 실패: {ex.Message}\nJSON={json}");
             }
 
-            if (parsed == null || parsed.data == null || parsed.data.problems == null || parsed.data.problems.Count == 0)
+            if (parsed == null || parsed.data == null)
+            {
+                Debug.LogError("[Stage20] 문제 데이터가 비어 있습니다 (data=null)." );
+                yield break;
+            }
+
+            string sessionFromResponse = !string.IsNullOrEmpty(parsed.data.stageSessionId)
+                ? parsed.data.stageSessionId
+                : parsed.data.sessionId;
+
+            if (!string.IsNullOrEmpty(sessionFromResponse))
+            {
+                stageSessionId = sessionFromResponse;
+                if (verboseLogging)
+                    Debug.Log($"[Stage20] stageSessionId 수신: {stageSessionId}");
+            }
+
+            if (parsed.data.problems == null || parsed.data.problems.Count == 0)
             {
                 Debug.LogError("[Stage20] 문제 데이터가 비어 있습니다.");
                 yield break;
             }
 
-            if (!string.IsNullOrEmpty(parsed.data.sessionId) && string.IsNullOrEmpty(stageSessionId))
-                {
-                stageSessionId = parsed.data.sessionId;
+            if (!string.IsNullOrWhiteSpace(stageSessionId))
+            {
                 foreach (var problem in parsed.data.problems)
-                    problem.sessionId = parsed.data.sessionId;
-                }
+                    problem.sessionId = stageSessionId;
+            }
 
             onCompleted?.Invoke(parsed.data.problems);
         }
@@ -528,6 +546,7 @@ public class Stage20Controller : MonoBehaviour
     {
         waitingForStoneCount = false;
         pendingStoneCount = null;
+        ResetStonePositions();
         if (stoneBoard) stoneBoard.SetActive(false);
         if (countdownText)
         {
@@ -538,6 +557,22 @@ public class Stage20Controller : MonoBehaviour
         {
             wordLabel.text = string.Empty;
             wordLabel.gameObject.SetActive(false);
+        }
+    }
+
+    private void ResetStonePositions()
+    {
+        if (!stoneBoard)
+            return;
+
+        var stones = stoneBoard.GetComponentsInChildren<StoneDraggable>(true);
+        if (stones == null || stones.Length == 0)
+            return;
+
+        foreach (var stone in stones)
+        {
+            if (stone != null)
+                stone.ResetToInitialState();
         }
     }
 
@@ -673,6 +708,7 @@ public class Stage20Controller : MonoBehaviour
     [Serializable]
     private class ProblemData
     {
+        public string stageSessionId;
         public string sessionId;
         public List<QuestionDto> problems;
     }
