@@ -23,7 +23,7 @@ INSERT INTO knowledge_component (id, category, stage) VALUES
 (21, 'MONOPHTHONG_NUCLEUS', '4'),
 (22, 'DIPHTHONG_NUCLEUS', '4'),
 (23, 'CLOSED_SYLLABLE', '3'),
-(24, 'OPEN_SYLLABLE', '3'),
+(24, 'OPEN_SYLLABLE', '3')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO words (id, word, voice_url) VALUES

@@ -19,6 +19,7 @@ public class KnowledgeComponent {
     private Long id;
 
     @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
     private KcCategory category;
 
     @Column(nullable = false)
