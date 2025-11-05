@@ -32,6 +32,10 @@ public class UserKcMastery {
     @JoinColumn(name = "knowledge_component")
     private KnowledgeComponent knowledgeComponent;
 
+    // 현재 숙달 확률
+    @Column(nullable = false)
+    private Float p_l;
+
     // 학습 확률
     @Column(nullable = false)
     private Float p_t;

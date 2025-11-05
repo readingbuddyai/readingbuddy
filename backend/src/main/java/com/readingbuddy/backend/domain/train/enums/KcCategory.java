@@ -11,12 +11,12 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum KcCategory {
     // 1-6: 자음 조음 위치 분류
-    LABIAL("양순음", "ㅂ, ㅃ, ㅍ, ㅁ"),
-    VELAR("연구개음", "ㄱ, ㄲ, ㅋ, ㅇ"),
-    ALVEOLAR("치조음", "ㄷ, ㄸ, ㅌ, ㄴ"),
-    PALATAL("경구개음", "ㅈ, ㅉ, ㅊ"),
-    ALVEOLAR_FRICATIVE("치조음/치경음", "ㅅ, ㅆ"),
-    GLOTTAL_AND_ALVEOLAR("혀뿌리음/성문음 + 치조음", "ㅎ, ㄹ"),
+    LABIAL_1("양순음_1", "ㅂ, ㅃ, ㅍ, ㅁ"),
+    VELAR_1("연구개음_1", "ㄱ, ㄲ, ㅋ, ㅇ"),
+    ALVEOLAR_1("치조음_1", "ㄷ, ㄸ, ㅌ, ㄴ"),
+    PALATAL_1("경구개음_1", "ㅈ, ㅉ, ㅊ"),
+    ALVEOLAR_FRICATIVE_1("치조음/치경음_1", "ㅅ, ㅆ"),
+    GLOTTAL_AND_ALVEOLAR_1("혀뿌리음/성문음 + 치조음_1", "ㅎ, ㄹ"),
 
     // 7-12: 초성 음절 자음 (Onset)
     LABIAL_ONSET("양순음 초성", "ㅂ, ㅃ, ㅍ, ㅁ 초성"),
@@ -44,7 +44,16 @@ public enum KcCategory {
 
     // 23-24: 음절 구조
     CLOSED_SYLLABLE("받침 있는 음절", "종성이 있는 음절"),
-    OPEN_SYLLABLE("받침 없는 음절", "종성이 없는 음절");
+    OPEN_SYLLABLE("받침 없는 음절", "종성이 없는 음절"),
+
+
+    // 1-6: 자음 조음 위치 분류
+    LABIAL_2("양순음_2", "ㅂ, ㅃ, ㅍ, ㅁ"),
+    VELAR_2("연구개음_2", "ㄱ, ㄲ, ㅋ, ㅇ"),
+    ALVEOLAR_2("치조음_2", "ㄷ, ㄸ, ㅌ, ㄴ"),
+    PALATAL_2("경구개음_2", "ㅈ, ㅉ, ㅊ"),
+    ALVEOLAR_FRICATIVE_2("치조음/치경음_2", "ㅅ, ㅆ"),
+    GLOTTAL_AND_ALVEOLAR_2("혀뿌리음/성문음 + 치조음_2", "ㅎ, ㄹ");
 
     private final String description;
     private final String examples;
