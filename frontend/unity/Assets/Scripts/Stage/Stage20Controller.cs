@@ -594,7 +594,8 @@ public class Stage20Controller : MonoBehaviour
         string url = ComposeUrl("/api/train/attempt");
         string ssid = stageSessionId ?? string.Empty;
         string stg = stage ?? string.Empty;
-        string expected = expectedCount >= 0 ? expectedCount.ToString() : string.Empty;
+        // Stage20은 phoneme을 사용하지 않으므로 빈 문자열로 보냄 (다른 Stage와 동일하게)
+        // selectedAnswer는 Stone 개수를 문자열로 변환
         string submitted = submittedCount >= 0 ? submittedCount.ToString() : string.Empty;
         string wd = word;
 
@@ -603,7 +604,7 @@ public class Stage20Controller : MonoBehaviour
                       "\"problemNumber\":" + problemNumber + "," +
                       "\"stage\":\"" + JsonEscape(stg) + "\"," +
                       "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"phonemes\":\"" + JsonEscape(expected) + "\"," +
+                      "\"phonemes\":\"" + JsonEscape(string.Empty) + "\"," +
                       "\"selectedAnswer\":\"" + JsonEscape(submitted) + "\"," +
                       "\"word\":" + (wd == null ? "null" : "\"" + JsonEscape(wd) + "\"") + "," +
                       "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
@@ -640,7 +641,7 @@ public class Stage20Controller : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
 
-        string url = ComposeUrl($"/api/train/stage/complete?snity/mergeessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
+        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
