@@ -15,13 +15,14 @@ public class PhonemeSlotUI : MonoBehaviour, IDropHandler
         if (drag == null) return;
         var symbol = drag.symbol ?? string.Empty;
 
-        // 컨트롤러에 위임하여 정답/오답 판정과 연출, 로깅 처리
+        // 컨트롤러???�임?�여 ?�답/?�답 ?�정�??�출, 로깅 처리
         if (controller != null)
         {
             controller.OnUserDrop(slotIndex, symbol);
         }
 
-        // 슬롯 텍스트는 컨트롤러가 결정(정답 시 채움)
+        // ?�롯 ?�스?�는 컨트롤러가 결정(?�답 ??채�?)
     }
 }
+
 

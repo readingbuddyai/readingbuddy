@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -85,9 +85,9 @@ public class Stage41Controller : MonoBehaviour
     public int recordSampleRate = 44100;
 
     [Header("박스 포커스/점멸")]
-    [Range(0f,1f)] public float dimAlpha = 0.4f;
-    [Range(0f,1f)] public float blinkAlphaMin = 0.4f;
-    [Range(0f,1f)] public float blinkAlphaMax = 1.0f;
+    [Range(0f, 1f)] public float dimAlpha = 0.4f;
+    [Range(0f, 1f)] public float blinkAlphaMin = 0.4f;
+    [Range(0f, 1f)] public float blinkAlphaMax = 1.0f;
     public float blinkPeriod = 0.6f; // sec per cycle
 
     [Header("개발/우회")]
@@ -113,7 +113,7 @@ public class Stage41Controller : MonoBehaviour
     {
         public int questionId;          // 선택
         public string problemWord;
-        public string slowVoiceUrl;     // 듣기용
+        public string voiceUrl;     // 듣기용
         public int answerCnt;           // 2 또는 3
         public string imageUrl;         // 선택
         public List<string> phonemes;   // index 0=초,1=중,2=종
@@ -164,7 +164,7 @@ public class Stage41Controller : MonoBehaviour
         if (wordText) wordText.text = string.Empty;
         if (choseongText) choseongText.text = string.Empty;
         if (jungseongText) jungseongText.text = string.Empty;
-        if (jongseongText)  jongseongText.text  = string.Empty;
+        if (jongseongText) jongseongText.text = string.Empty;
         if (micIndicator) micIndicator.SetActive(false);
         if (choicesContainer) choicesContainer.SetActive(false);
         if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
@@ -184,6 +184,8 @@ public class Stage41Controller : MonoBehaviour
 
         List<QuestionDto> questions = null;
         yield return StartCoroutine(FetchQuestions(result => questions = result));
+        if (logVerbose)
+            Debug.Log($"[Stage41] set 완료 → count={(questions != null ? questions.Count : 0)}");
         if (questions == null || questions.Count == 0)
         {
             Debug.LogWarning("[Stage41] 문제 세트를 불러오지 못했습니다.");
@@ -210,23 +212,51 @@ public class Stage41Controller : MonoBehaviour
 
             // [4.1.3] 집중 안내 + 듣기
             yield return PlayClip(clipFocusListen);
-            yield return PlayVoiceUrl(q.slowVoiceUrl);
+            if (logVerbose)
+                Debug.Log($"[Stage41] 문제 {_currentProblemNumber}: word='{q.problemWord}', voiceUrl='{q.voiceUrl}', answerCnt={_expectedSegmentCount}, phonemes='{(q.phonemes != null ? string.Join("", q.phonemes) : "<null>")}'");
+            yield return PlayVoiceUrl(q.voiceUrl);
 
             // 초성
             FocusBox(choseongBox);
             yield return PlayClip(clipPromptFirstPiece); // [4.1.4]
-            yield return RecordAndUploadPhonemeSegment(0);
-            yield return PlayClip(clipGreat);            // [4.1.5]
+            bool seg0Ok = false;
+            yield return RecordAndUploadPhonemeSegment(0, (ok, reply) => seg0Ok = ok);
             UpdatePhonemeBoxTexts();
+            if (seg0Ok)
+            {
+                yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+            }
+            else
+            {
+                yield return PlayClip(clipTryAgain);     // [4.1.12]
+                yield return PlayVoiceUrl(q.voiceUrl);
+                yield return PlayClip(clipPromptFirstPiece); // [4.1.4]
+                yield return RecordAndUploadPhonemeSegment(0, (ok, reply) => seg0Ok = ok);
+                UpdatePhonemeBoxTexts();
+                yield return PlayClip(clipGreat);         // [4.1.5]
+            }
 
             // 중성
             if (_expectedSegmentCount >= 2)
             {
                 FocusBox(jungseongBox);
                 yield return PlayClip(clipPromptSecondPiece); // [4.1.6]
-                yield return RecordAndUploadPhonemeSegment(1);
-                yield return PlayClip(clipGreat);             // [4.1.5]
+                bool seg1Ok = false;
+                yield return RecordAndUploadPhonemeSegment(1, (ok, reply) => seg1Ok = ok);
                 UpdatePhonemeBoxTexts();
+                if (seg1Ok)
+                {
+                    yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+                }
+                else
+                {
+                    yield return PlayClip(clipTryAgain);     // [4.1.12]
+                    yield return PlayVoiceUrl(q.voiceUrl);
+                    yield return PlayClip(clipPromptSecondPiece); // [4.1.6]
+                    yield return RecordAndUploadPhonemeSegment(1, (ok, reply) => seg1Ok = ok);
+                    UpdatePhonemeBoxTexts();
+                    yield return PlayClip(clipGreat);         // [4.1.5]
+                }
             }
 
             // 종성
@@ -234,9 +264,22 @@ public class Stage41Controller : MonoBehaviour
             {
                 FocusBox(jongseongBox);
                 yield return PlayClip(clipPromptFinalPiece); // [4.1.7]
-                yield return RecordAndUploadPhonemeSegment(2);
-                yield return PlayClip(clipGreat);            // [4.1.5]
+                bool seg2Ok = false;
+                yield return RecordAndUploadPhonemeSegment(2, (ok, reply) => seg2Ok = ok);
                 UpdatePhonemeBoxTexts();
+                if (seg2Ok)
+                {
+                    yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+                }
+                else
+                {
+                    yield return PlayClip(clipTryAgain);     // [4.1.12]
+                    yield return PlayVoiceUrl(q.voiceUrl);
+                    yield return PlayClip(clipPromptFinalPiece); // [4.1.7]
+                    yield return RecordAndUploadPhonemeSegment(2, (ok, reply) => seg2Ok = ok);
+                    UpdatePhonemeBoxTexts();
+                    yield return PlayClip(clipGreat);         // [4.1.5]
+                }
             }
 
             FocusBox(null);
@@ -317,7 +360,7 @@ public class Stage41Controller : MonoBehaviour
     {
         if (choseongText) choseongText.text = string.Empty;
         if (jungseongText) jungseongText.text = string.Empty;
-        if (jongseongText)  jongseongText.text  = string.Empty;
+        if (jongseongText) jongseongText.text = string.Empty;
         SetAllBoxAlpha(dimAlpha);
     }
 
@@ -325,7 +368,7 @@ public class Stage41Controller : MonoBehaviour
     {
         if (choseongText) choseongText.text = _segmentReplies.Count >= 1 ? _segmentReplies[0] : "";
         if (jungseongText) jungseongText.text = _segmentReplies.Count >= 2 ? _segmentReplies[1] : "";
-        if (jongseongText)  jongseongText.text  = _segmentReplies.Count >= 3 ? _segmentReplies[2] : "";
+        if (jongseongText) jongseongText.text = _segmentReplies.Count >= 3 ? _segmentReplies[2] : "";
     }
 
     // 부분 정답 반영: 맞은 슬롯은 텍스트/밝기, 틀린 슬롯은 비움/희미
@@ -450,6 +493,34 @@ public class Stage41Controller : MonoBehaviour
         }
     }
 
+    // '+'가 경로에 포함될 때 안전하게 인코딩
+    private static string EncodePlusInPath(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return url ?? string.Empty;
+        try
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                string path = uri.GetComponents(UriComponents.Path, UriFormat.Unescaped);
+                path = path.Replace("+", "%2B");
+                var builder = new UriBuilder(uri) { Path = path };
+                return builder.Uri.ToString();
+            }
+        }
+        catch { }
+        return url.Replace("+", "%2B");
+    }
+
+    // URL 확장자로 AudioType 추정
+    private static AudioType GuessAudioType(string url)
+    {
+        string u = (url ?? string.Empty).ToLowerInvariant();
+        if (u.Contains(".wav")) return AudioType.WAV;
+        if (u.Contains(".mp3")) return AudioType.MPEG;
+        if (u.Contains(".ogg")) return AudioType.OGGVORBIS;
+        return AudioType.MPEG;
+    }
+
     private IEnumerator FetchQuestions(Action<List<QuestionDto>> onDone)
     {
         string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stageSet)}&count={count}");
@@ -459,10 +530,13 @@ public class Stage41Controller : MonoBehaviour
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
+                if (logVerbose)
+                    Debug.LogWarning($"[Stage41] set 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={req.downloadHandler.text}");
                 onDone?.Invoke(null);
                 yield break;
             }
             var json = req.downloadHandler.text;
+            if (logVerbose) Debug.Log($"[Stage41] set 응답: {json}");
             List<QuestionDto> list = null;
             try
             {
@@ -478,6 +552,7 @@ public class Stage41Controller : MonoBehaviour
     private IEnumerator StartStageSession()
     {
         string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageTwoPart)}&totalProblems={count}");
+        if (logVerbose) Debug.Log($"[Stage41] POST {url}");
         using (var req = UnityWebRequest.PostWwwForm(url, ""))
         {
             ApplyCommonHeaders(req);
@@ -487,7 +562,14 @@ public class Stage41Controller : MonoBehaviour
             {
                 var resp = JsonUtility.FromJson<StartStageResp>(req.downloadHandler.text);
                 if (resp != null && resp.data != null && !string.IsNullOrWhiteSpace(resp.data.stageSessionId))
+                {
                     stageSessionId = resp.data.stageSessionId;
+                    if (logVerbose) Debug.Log($"[Stage41] stage/start OK → stageSessionId={stageSessionId}");
+                }
+                else if (logVerbose)
+                {
+                    Debug.LogWarning($"[Stage41] stage/start 응답 파싱 실패 또는 stageSessionId 없음: {req.downloadHandler.text}");
+                }
             }
             catch { }
         }
@@ -497,10 +579,12 @@ public class Stage41Controller : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
         string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
+        if (logVerbose) Debug.Log($"[Stage41] POST {url}");
         using (var req = UnityWebRequest.PostWwwForm(url, ""))
         {
             ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
+            if (logVerbose) Debug.Log($"[Stage41] stage/complete 응답: code={req.responseCode} body={req.downloadHandler.text}");
         }
     }
 
@@ -519,8 +603,9 @@ public class Stage41Controller : MonoBehaviour
         if (micIndicator) micIndicator.SetActive(false);
 
         var wav = WavUtility.FromAudioClip(clip);
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1,_currentProblemNumber).ToString())}";
+        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
+        if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
 
@@ -529,9 +614,14 @@ public class Stage41Controller : MonoBehaviour
             ApplyCommonHeaders(req);
             req.chunkedTransfer = false;
             yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success) yield break;
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                if (logVerbose) Debug.LogWarning($"[Stage41] check/voice 실패: {req.error} (code={req.responseCode})\\nURL={url}\\nBody={req.downloadHandler.text}");
+                yield break;
+            }
 
             var respText = req.downloadHandler.text;
+            if (logVerbose) Debug.Log($"[Stage41] check/voice 응답: {respText}");
             try
             {
                 var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
@@ -542,6 +632,67 @@ public class Stage41Controller : MonoBehaviour
                 if (logVerbose) Debug.Log($"[Stage41] segment {segmentIndex} → reply='{reply}', correct={ok}");
             }
             catch { }
+        }
+    }
+
+    // 콜백을 통해 인식 결과와 정오를 반환하는 오버로드
+    private IEnumerator RecordAndUploadPhonemeSegment(int segmentIndex, System.Action<bool, string> onDone)
+    {
+        if (bypassVoiceUpload)
+        {
+            while (_segmentReplies.Count <= segmentIndex) _segmentReplies.Add(string.Empty);
+            while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
+            _segmentReplies[segmentIndex] = "*";
+            _segmentCorrects[segmentIndex] = true;
+            onDone?.Invoke(true, "*");
+            yield break;
+        }
+
+        if (micIndicator) micIndicator.SetActive(true);
+        var clip = StartMic(recordSeconds, recordSampleRate);
+        yield return new WaitForSeconds(recordSeconds);
+        if (micIndicator) micIndicator.SetActive(false);
+
+        var wav = WavUtility.FromAudioClip(clip);
+        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}";
+        string url = ComposeUrl($"/api/train/check/voice?{qs}");
+        if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
+        var form = new WWWForm();
+        form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
+
+        using (var req = UnityWebRequest.Post(url, form))
+        {
+            ApplyCommonHeaders(req);
+            req.chunkedTransfer = false;
+            yield return req.SendWebRequest();
+            if (req.result != UnityWebRequest.Result.Success)
+            {
+                if (logVerbose) Debug.LogWarning($"[Stage41] check/voice 실패: {req.error} (code={req.responseCode})\\nURL={url}\\nBody={req.downloadHandler.text}");
+                onDone?.Invoke(false, string.Empty);
+                yield break;
+            }
+
+            var respText = req.downloadHandler.text;
+            if (logVerbose) Debug.Log($"[Stage41] check/voice 응답: {respText}");
+            try
+            {
+                var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
+                string reply = parsed?.data?.reply ?? string.Empty;
+                bool ok = parsed?.data?.isReplyCorrect ?? false;
+                while (_segmentReplies.Count <= segmentIndex) _segmentReplies.Add(string.Empty);
+                while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
+                _segmentReplies[segmentIndex] = (reply ?? string.Empty).Trim();
+                _segmentCorrects[segmentIndex] = ok;
+
+                // attempt 요청 (음성 시도)
+                _attemptCountForProblem++;
+                string phonemeStr = string.Join("", _expectedPhonemes ?? new List<string>());
+                StartCoroutine(SendAttemptLog(_currentProblemNumber, _attemptCountForProblem, phonemeStr, reply, ok, wordText ? wordText.text : null));
+
+                if (logVerbose) Debug.Log($"[Stage41] segment {segmentIndex} reply='{reply}', correct={ok}");
+                onDone?.Invoke(ok, reply);
+            }
+            catch { onDone?.Invoke(false, string.Empty); }
         }
     }
 
@@ -561,6 +712,7 @@ public class Stage41Controller : MonoBehaviour
                       "\"word\":\"" + JsonEscape(word ?? "") + "\"" +
                       "}";
 
+        if (logVerbose) Debug.Log($"[Stage41] POST {url}\nBody={json}");
         var bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
         using (var req = new UnityWebRequest(url, "POST"))
         {
@@ -569,6 +721,7 @@ public class Stage41Controller : MonoBehaviour
             ApplyCommonHeaders(req);
             req.SetRequestHeader("Content-Type", "application/json");
             yield return req.SendWebRequest();
+            if (logVerbose) Debug.Log($"[Stage41] attempt 응답: code={req.responseCode} body={req.downloadHandler.text}");
         }
     }
 
@@ -615,11 +768,91 @@ public class Stage41Controller : MonoBehaviour
         if (a.Count != b.Count) return false;
         for (int i = 0; i < a.Count; i++)
         {
-            var aa = (a[i] ?? string.Empty).Trim();
-            var bb = (b[i] ?? string.Empty).Trim();
+            var aa = NormalizePhoneme((a[i] ?? string.Empty).Trim());
+            var bb = NormalizePhoneme((b[i] ?? string.Empty).Trim());
             if (!string.Equals(aa, bb, StringComparison.Ordinal)) return false;
         }
         return true;
+    }
+
+    // 외부(UI)에서 슬롯 정오 확인에 사용할 수 있게 공개 메서드 제공
+    public bool IsCorrectForSlot(int slotIndex, string symbol)
+    {
+        if (_expectedPhonemes == null || slotIndex < 0 || slotIndex >= _expectedPhonemes.Count)
+            return false;
+        var expected = _expectedPhonemes[slotIndex] ?? string.Empty;
+        return string.Equals(NormalizePhoneme(symbol ?? string.Empty).Trim(), NormalizePhoneme(expected).Trim(), StringComparison.Ordinal);
+    }
+
+    // 서로 다른 자모 코드포인트(초성/중성/종성)과 호환 자모를 동일하게 비교하도록 정규화
+    private static string NormalizePhoneme(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        var sb = new System.Text.StringBuilder(s.Length);
+        foreach (var ch in s)
+            sb.Append(NormalizePhonemeChar(ch));
+        // Merge common compound vowels/consonants so both 'ㅗㅏ' and 'ㅘ' normalize the same
+        var comp = sb.ToString();
+        comp = MergeCompoundJamo(comp);
+        return comp;
+    }
+
+    private static char NormalizePhonemeChar(char ch)
+    {
+        switch (ch)
+        {
+            // 초성 ᄀ..ᄒ → 호환 자모 ㄱ..ㅎ
+            case '\u1100': return '\u3131'; case '\u1101': return '\u3132'; case '\u1102': return '\u3134';
+            case '\u1103': return '\u3137'; case '\u1104': return '\u3138'; case '\u1105': return '\u3139';
+            case '\u1106': return '\u3141'; case '\u1107': return '\u3142'; case '\u1108': return '\u3143';
+            case '\u1109': return '\u3145'; case '\u110A': return '\u3146'; case '\u110B': return '\u3147';
+            case '\u110C': return '\u3148'; case '\u110D': return '\u3149'; case '\u110E': return '\u314A';
+            case '\u110F': return '\u314B'; case '\u1110': return '\u314C'; case '\u1111': return '\u314D'; case '\u1112': return '\u314E';
+            // 중성 ᅡ..ᅵ → ㅏ..ㅣ
+            case '\u1161': return '\u314F'; case '\u1162': return '\u3150'; case '\u1163': return '\u3151'; case '\u1164': return '\u3152';
+            case '\u1165': return '\u3153'; case '\u1166': return '\u3154'; case '\u1167': return '\u3155'; case '\u1168': return '\u3156';
+            case '\u1169': return '\u3157'; case '\u116A': return '\u3158'; case '\u116B': return '\u3159'; case '\u116C': return '\u315A';
+            case '\u116D': return '\u315B'; case '\u116E': return '\u315C'; case '\u116F': return '\u315D'; case '\u1170': return '\u315E';
+            case '\u1171': return '\u315F'; case '\u1172': return '\u3160'; case '\u1173': return '\u3161'; case '\u1174': return '\u3162'; case '\u1175': return '\u3163';
+            // 종성 ᆨ..ᇂ → 호환 자모
+            case '\u11A8': return '\u3131'; case '\u11A9': return '\u3132'; case '\u11AA': return '\u3133';
+            case '\u11AB': return '\u3134'; case '\u11AC': return '\u3135'; case '\u11AD': return '\u3136';
+            case '\u11AE': return '\u3137'; case '\u11AF': return '\u3139'; case '\u11B0': return '\u313A'; case '\u11B1': return '\u313B';
+            case '\u11B2': return '\u313C'; case '\u11B3': return '\u313D'; case '\u11B4': return '\u313E'; case '\u11B5': return '\u313F'; case '\u11B6': return '\u3140';
+            case '\u11B7': return '\u3141'; case '\u11B8': return '\u3142'; case '\u11B9': return '\u3144'; case '\u11BA': return '\u3145'; case '\u11BB': return '\u3146';
+            case '\u11BC': return '\u3147'; case '\u11BD': return '\u3148'; case '\u11BE': return '\u314A'; case '\u11BF': return '\u314B'; case '\u11C0': return '\u314C';
+            case '\u11C1': return '\u314D'; case '\u11C2': return '\u314E';
+        }
+        return ch;
+    }
+
+    // Normalize sequences like 'ㅗㅏ' → 'ㅘ', 'ㄱㅅ' → 'ㄳ', etc.
+    private static string MergeCompoundJamo(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        // Vowel compounds
+        s = s.Replace("ㅗㅏ", "ㅘ"); // 3158
+        s = s.Replace("ㅗㅐ", "ㅙ"); // 3159
+        s = s.Replace("ㅗㅣ", "ㅚ"); // 315A
+        s = s.Replace("ㅜㅓ", "ㅝ"); // 315D
+        s = s.Replace("ㅜㅔ", "ㅞ"); // 315E
+        s = s.Replace("ㅜㅣ", "ㅟ"); // 315F
+        s = s.Replace("ㅡㅣ", "ㅢ"); // 3162
+
+        // Final consonant compounds (batchim)
+        s = s.Replace("ㄱㅅ", "ㄳ"); // 3133
+        s = s.Replace("ㄴㅈ", "ㄵ"); // 3135
+        s = s.Replace("ㄴㅎ", "ㄶ"); // 3136
+        s = s.Replace("ㄹㄱ", "ㄺ"); // 313A
+        s = s.Replace("ㄹㅁ", "ㄻ"); // 313B
+        s = s.Replace("ㄹㅂ", "ㄼ"); // 313C
+        s = s.Replace("ㄹㅅ", "ㄽ"); // 313D
+        s = s.Replace("ㄹㅌ", "ㄾ"); // 313E
+        s = s.Replace("ㄹㅍ", "ㄿ"); // 313F
+        s = s.Replace("ㄹㅎ", "ㅀ"); // 3140
+        s = s.Replace("ㅂㅅ", "ㅄ"); // 3144
+
+        return s;
     }
 
     private bool EvaluateCorrectness()
@@ -639,12 +872,31 @@ public class Stage41Controller : MonoBehaviour
         bool wrongMedial  = (_expectedSegmentCount >= 2) && !(_segmentCorrects.Count >= 2 && _segmentCorrects[1]);
         bool wrongFinal   = (_expectedSegmentCount >= 3) && !(_segmentCorrects.Count >= 3 && _segmentCorrects[2]);
 
-        if (consonantChoicesContainer)
-            consonantChoicesContainer.SetActive(wrongInitial || wrongFinal);
-        if (vowelChoicesContainer)
-            vowelChoicesContainer.SetActive(wrongMedial);
+        bool showConsonants = wrongInitial || wrongFinal;
+        bool showVowels = wrongMedial;
+        bool showAny = showConsonants || showVowels;
+
+        if (logVerbose)
+            Debug.Log($"[Stage41] ShowChoicePanels: wrongInit={wrongInitial}, wrongMedial={wrongMedial}, wrongFinal={wrongFinal}, any={showAny}");
+
         if (choicesContainer)
-            choicesContainer.SetActive((wrongInitial || wrongFinal) || wrongMedial);
+        {
+            choicesContainer.SetActive(showAny);
+            var rt = choicesContainer.GetComponent<RectTransform>();
+            if (rt) LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+        }
+        if (consonantChoicesContainer)
+        {
+            consonantChoicesContainer.SetActive(showConsonants);
+            var rtC = consonantChoicesContainer.GetComponent<RectTransform>();
+            if (rtC) LayoutRebuilder.ForceRebuildLayoutImmediate(rtC);
+        }
+        if (vowelChoicesContainer)
+        {
+            vowelChoicesContainer.SetActive(showVowels);
+            var rtV = vowelChoicesContainer.GetComponent<RectTransform>();
+            if (rtV) LayoutRebuilder.ForceRebuildLayoutImmediate(rtV);
+        }
     }
 
     // 드래그 타일이 슬롯에 떨어졌을 때 호출 (PhonemeSlotUI에서 연결)
@@ -655,7 +907,7 @@ public class Stage41Controller : MonoBehaviour
         if (slotIndex < 0 || slotIndex >= 3) return;
         if (_expectedPhonemes == null || slotIndex >= _expectedPhonemes.Count) return;
         string expected = _expectedPhonemes[slotIndex];
-        bool correct = string.Equals((symbol ?? string.Empty).Trim(), (expected ?? string.Empty).Trim(), StringComparison.Ordinal);
+        bool correct = string.Equals(NormalizePhoneme((symbol ?? string.Empty).Trim()), NormalizePhoneme((expected ?? string.Empty).Trim()), StringComparison.Ordinal);
 
         // attempt 로깅 (슬롯 단위 시도)
         _attemptCountForProblem++;
@@ -669,45 +921,11 @@ public class Stage41Controller : MonoBehaviour
         }
 
         // 정답일 때 해당 슬롯 채우고 빛나게
-        SetSlotText(slotIndex, expected);
+        SetSlotText(slotIndex, NormalizePhoneme(expected));
         SetSlotAlpha(slotIndex, 1f);
         _finalizedSlots[slotIndex] = true;
         StartCoroutine(PlayClip(clipGoodThatsIt)); // [4.1.11]
 
-        // 모두 채워졌는지 확인
-        bool done = true;
-        for (int i = 0; i < _expectedSegmentCount; i++)
-            if (!_finalizedSlots[i]) { done = false; break; }
-
-        if (done)
-        {
-            StartCoroutine(PlayClip(clipAllShine)); // [4.1.8]
-            SetAllBoxAlpha(1f);
-            _awaitingUserArrangement = false; // 루프 종료
-        }
-    }
-
-    private static string EncodePlusInPath(string url)
-    {
-        if (string.IsNullOrEmpty(url)) return url;
-        try
-        {
-            var uri = new System.Uri(url);
-            var path = uri.AbsolutePath.Replace("+", "%2B");
-            var rebuilt = uri.Scheme + "://" + uri.Host + (uri.IsDefaultPort ? "" : ":" + uri.Port) + path + uri.Query;
-            return rebuilt;
-        }
-        catch { return url.Replace("+", "%2B"); }
-    }
-
-    private static AudioType GuessAudioType(string url)
-    {
-        if (string.IsNullOrEmpty(url)) return AudioType.WAV;
-        var lower = url.ToLowerInvariant();
-        if (lower.Contains(".mp3")) return AudioType.MPEG;
-        if (lower.Contains(".ogg")) return AudioType.OGGVORBIS;
-        if (lower.Contains(".wav")) return AudioType.WAV;
-        return AudioType.WAV;
-    }
+    } 
     #endregion
 }
