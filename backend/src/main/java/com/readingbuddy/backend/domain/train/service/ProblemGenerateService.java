@@ -1,10 +1,10 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.common.util.function.PhonemeCounter;
-import com.readingbuddy.backend.domain.train.dto.result.Stage2Problem;
-import com.readingbuddy.backend.domain.train.dto.result.Stage4Problem;
-import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
-import com.readingbuddy.backend.domain.train.dto.result.Stage3Problem;
+import com.readingbuddy.backend.domain.bkt.entity.LettersKcMap;
+import com.readingbuddy.backend.domain.bkt.repository.LettersKcMapRepository;
+import com.readingbuddy.backend.domain.bkt.service.BktService;
+import com.readingbuddy.backend.domain.train.dto.result.*;
 import com.readingbuddy.backend.domain.train.entity.Letters;
 import com.readingbuddy.backend.domain.train.entity.Words;
 import com.readingbuddy.backend.domain.train.repository.LettersRepository;
@@ -22,6 +22,8 @@ public class ProblemGenerateService {
 
     private final LettersRepository lettersRepository;
     private final WordsRepository wordsRepository;
+    private final BktService bktService;
+    private final LettersKcMapRepository lettersKcMapRepository;
 
     private static final int START = 0xAC00; // '가'
     private static final int END   = 0xD7A3; // '힣'
@@ -29,37 +31,46 @@ public class ProblemGenerateService {
 
     private final Random random = new Random();
 
-    public List<ProblemResult> extractLetters(String stage, Integer cnt) {
+    public List<ProblemResult> extractLetters(String stage, Integer cnt, Long userId) {
         List<ProblemResult> results = null;
         
         // TODO: 문제 뽑는 건 각각의 generateStage 안으로 삽입
         List<Integer> unicodePoints = lettersRepository.findRandomLetters(cnt);
 
         if (stage.equals("3")) {
-            results = generateStage3(unicodePoints);
+            results = generateStage3(userId);
         } else if (stage.equals("4")) {
             results = generateStage4(unicodePoints);
         }
         return results;
     }
 
-    public List<ProblemResult> generateStage3(List<Integer> unicodePoints) {
+    public List<ProblemResult> generateStage3(Long userId) {
         List<ProblemResult> results = new ArrayList<>();
 
-        // TODO: userId와 stage로 해당 stage에서 부족한 KC를 뽑는다.
+        List<KcWithCorrectRate> kcList = bktService.getLowestCorrectRateKcsByStage(userId, "3");
 
-        // TODO: 해당 kc를 토대로 문제 구성
-        for (Integer unicodePoint : unicodePoints) {
-            Letters letter = lettersRepository.findByUnicodePoint(unicodePoint)
-                    .orElseThrow(() -> new IllegalStateException("Letter not found for unicode point: " + unicodePoint));
+        // 해당 kc를 토대로 문제 구성
+        for (KcWithCorrectRate kcWithRate : kcList) {
+            Long kcId = kcWithRate.getKnowledgeComponent().getId();
 
-            // unicodePoint를 실제 한글 문자로 변환
-            String koreanChar = String.valueOf((char) unicodePoint.intValue());
+            // 해당 KC에 매핑된 Letters 조회
+            List<LettersKcMap> lettersKcMaps = lettersKcMapRepository.findByKnowledgeComponentId(kcId);
 
-            results.add(
-                    new Stage3Problem(koreanChar, letter.getVoiceUrl(), letter.getCount())
-            );
+            if (!lettersKcMaps.isEmpty()) {
+                // 매핑된 Letters 중 랜덤으로 하나 선택
+                LettersKcMap selectedMap = lettersKcMaps.get(random.nextInt(lettersKcMaps.size()));
+                Letters letter = selectedMap.getLetters();
+
+                // unicodePoint를 실제 한글 문자로 변환
+                String koreanChar = String.valueOf((char) letter.getUnicodePoint().intValue());
+
+                results.add(
+                        new Stage3Problem(koreanChar, letter.getVoiceUrl(), letter.getCount())
+                );
+            }
         }
+
         return results;
     }
 

@@ -38,6 +38,7 @@ public class TrainController {
      */
     @GetMapping(value = "/set")
     public ResponseEntity<ApiResponse<?>> generateTrainSet(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam String stage,
             @RequestParam(defaultValue = "5") Integer count) {
 
@@ -45,7 +46,8 @@ public class TrainController {
             ProblemSetResponse problemSetResponse;
             List<ProblemResult> problems = new ArrayList<>();
             String message = "";
-            // TODO stage 별로 문제 생성
+            Long userId = customUserDetails.getId();
+
             switch (stage) {
                 case "1.1.1","1.1.2":
                     for (int i = 0; i < count; i++) {
@@ -96,7 +98,7 @@ public class TrainController {
                             .body(ApiResponse.success("음절 개수 세기 문제가 생성되었습니다.", problemSetResponse));
                 case "3", "4":
                     problemSetResponse = ProblemSetResponse.builder()
-                            .problems(problemGenerateService.extractLetters(stage, count))
+                            .problems(problemGenerateService.extractLetters(stage, count, userId))
                             .build();
 
                     return ResponseEntity.status(HttpStatus.CREATED)
