@@ -24,9 +24,6 @@ public class TrainedStageHistories {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false)
-    private String sessionKey;  // UUID
-
     @Column(nullable = false)
     private String stage;
 

@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,11 +21,12 @@ public class TrainManager {
     private final Map<String, StageSessionInfo> stageSessions = new ConcurrentHashMap<>();
     private final WebClient webClient;
 
-    public String generateQuestionSession() {
+    public String generateQuestionSession(Long id) {
         String stageSessionId = UUID.randomUUID().toString();
 
         StageSessionInfo stageSessionInfo = StageSessionInfo.builder()
                 .isProblemCorrect(new HashMap<>())
+                .trainedStageHistoriesId(id)
                 .build();
 
         this.stageSessions.put(stageSessionId, stageSessionInfo);

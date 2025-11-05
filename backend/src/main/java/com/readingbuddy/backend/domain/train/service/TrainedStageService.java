@@ -31,14 +31,6 @@ public class TrainedStageService {
     private final PhonemesRepository phonemesRepository;
     private final TrainManager trainManager;
 
-    /**
-     * stageSessionId로 userId 조회
-     */
-    public Long getUserIdByStageSessionId(String stageSessionId) {
-        TrainedStageHistories session = trainedStageHistoriesRepository.findBySessionKey(stageSessionId)
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
-        return session.getUser().getId();
-    }
 
     /**
      * Stage 시작 - 새로운 훈련 세션 생성
@@ -49,13 +41,9 @@ public class TrainedStageService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다: " + userId));
 
-        // TrainManager에서 sessionKey 생성 (메모리에 세션도 자동 생성됨)
-        String sessionKey = trainManager.generateQuestionSession();
-
         // 새 세션 생성
         TrainedStageHistories createStage = TrainedStageHistories.builder()
                 .user(user)
-                .sessionKey(sessionKey)
                 .stage(stage)
                 .problemCount(totalProblems)
                 .correctCount(0)
@@ -65,8 +53,11 @@ public class TrainedStageService {
 
         createStage = trainedStageHistoriesRepository.save(createStage);
 
+        // TrainManager에서 stageSessionId 생성 (메모리에 세션도 자동 생성됨)
+        String stageSessionId = trainManager.generateQuestionSession(createStage.getId());
+
         return StageStartResponse.builder()
-                .stageSessionId(createStage.getSessionKey())
+                .stageSessionId(stageSessionId)
                 .stage(createStage.getStage())
                 .totalProblems(createStage.getProblemCount())
                 .startAt(createStage.getStartedAt())
@@ -79,8 +70,15 @@ public class TrainedStageService {
      */
     public AttemptResponse submitAttempt(AttemptRequest request) {
         // 세션 조회
-        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(request.getStageSessionId())
-                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + request.getStageSessionId()));
+        String stageSessionId = request.getStageSessionId();
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
+
+        if(stageSessionInfo==null){
+            throw new IllegalArgumentException("세션을 찾을 수 없습니다."+stageSessionId);
+        }
+
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findById(stageSessionInfo.getTrainedStageHistoriesId())
+                .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
         // phonemes 문자열로 Phonemes 엔티티 조회
         Phonemes phoneme = phonemesRepository.findByValue(request.getPhonemes()).orElse(null);
@@ -110,9 +108,8 @@ public class TrainedStageService {
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
-                .stageSessionId(stage.getSessionKey())
                 .problemNumber(attempt.getProblemNumber())
-                .stageSessionId(stage.getSessionKey())
+                .stageSessionId(stageSessionId)
                 .problemNumber(attempt.getProblemNumber())
                 .phonemeId(phoneme.getId())
                 .phonemes(attempt.getPhonemes())
@@ -129,10 +126,16 @@ public class TrainedStageService {
      * Stage 완료 - 부족한 음성 리스트 전달
      */
     public StageCompleteResponse completeStage(String stageSessionId) {
-        TrainedStageHistories stage = trainedStageHistoriesRepository.findBySessionKey(stageSessionId)
+        // 세션 조회
+        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
+
+        if(stageSessionInfo==null){
+            throw new IllegalArgumentException("세션을 찾을 수 없습니다."+stageSessionId);
+        }
+
+        TrainedStageHistories stage = trainedStageHistoriesRepository.findById(stageSessionInfo.getTrainedStageHistoriesId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
-        StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
         stage.updateWrongCount();
 
         Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
