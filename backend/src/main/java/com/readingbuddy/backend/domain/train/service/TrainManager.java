@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -43,29 +44,29 @@ public class TrainManager {
     }
 
     // TODO : Object -> Dto로 변경
+    // TODO: 정답 포함,
     public VoiceCheckResponse sendVoiceToAI(
             String stageSessionId, MultipartFile audioFile, String stage, Integer problemNumber
     ) {
         StageSessionInfo stageSessionInfo = stageSessions.get(stageSessionId);
 
         // TODO: S3 저장 후 URL AI server로 전달
+        Mono<Object> response = webClient.post()
+                .uri("/check")
+                .bodyValue(Object.class)
+                .retrieve()
+                .bodyToMono(Object.class);
 
-//        Mono<Object> response = webClient.post()
-//                .uri("/judge")
-//                .bodyValue(Object.class)
-//                .retrieve()
-//                .bodyToMono(Object.class);
-//
-//        response.subscribe(
-//                res -> {
-//                    Map<Integer, Boolean> map = stageSessionInfo.getIsProblemCorrect();
-//                    // TODO: 실제 답변 저장
-//                    map.put(problemNumber, Boolean.TRUE);
-//                },
-//                err -> {
-//                    log.error("AI 서버 호출 실패: problemId={}, error={}", problemNumber, err.getMessage(), err);
-//                }
-//        );
+        response.subscribe(
+                res -> {
+                    Map<Integer, Boolean> map = stageSessionInfo.getIsProblemCorrect();
+                    // TODO: 실제 답변 저장
+                    map.put(problemNumber, Boolean.TRUE);
+                },
+                err -> {
+                    log.error("AI 서버 호출 실패: problemId={}, error={}", problemNumber, err.getMessage(), err);
+                }
+        );
         return null;
     }
 }
