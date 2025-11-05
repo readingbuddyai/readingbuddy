@@ -1,42 +1,28 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
 
 /// <summary>
-/// Stage 4.1 진행 컨트롤러 (분절 마법)
-/// 흐름 개요:
-/// - start 요청 (stage=4, totalProblems=count)
-/// - set 요청   (stage=4, count)
-/// - 문제별 반복:
-///   - 시작 효과음, 가이드 이미지 중앙 표시 → 안내 멘트 [4.1.1][4.1.2]
-///   - 가이드 이미지 축소/이동
-///   - [4.1.3] 집중 안내 → 문제 음성(voiceUrl) 재생
-///   - 초성 상자 포커스 → [4.1.4] → 3초 녹음 업로드 → [4.1.5]
-///   - 중성 상자 포커스 → [4.1.6] → 3초 녹음 업로드 → [4.1.5]
-///   - (받침 있을 때) 종성 상자 포커스 → [4.1.7] → 3초 녹음 업로드 → [4.1.5]
-///   - 받아온 음소를 칸에 채움 → 모두 정답 [4.1.8] / 아니면 [4.1.9][4.1.10]
-///   - 드래그로 수정 시도 → attempt 요청 → 정답 [4.1.11]/오답 [4.1.12] → 전부 맞추면 [4.1.8]
-/// - 완료 후 [4.1.13]
-///
-/// 서버 규약(기본 가정: Stage11/12와 동일 패턴)
-/// - POST /api/train/stage/start?stage=4&totalProblems={count}
-/// - GET  /api/train/set?stage=4&count={count}
-/// - POST /api/train/check/voice?stageSessionId=&stage=4&problemNumber= (multipart: audio=voice.wav)
-/// - POST /api/train/attempt (JSON: stageSessionId, stage, problemNumber, attemptNumber, phonemes, selectedAnswer, isCorrect, word)
+/// Stage 4.1 컨트롤러 (모든 stage=4 규격)
+/// - GET  /api/train/set?stage=4&count=N
+/// - POST /api/train/stage/start?stage=4&totalProblems=N
+/// - POST /api/train/check/voice?stageSessionId=&stage=4&problemNumber=
+///   (multipart: audio=voice.wav)
+/// - POST /api/train/attempt (drag 보정 시 시도 기록)
 /// - POST /api/train/stage/complete?stageSessionId=
+/// 게임 흐름은 사용자 제공 4.1 시나리오에 따름.
 /// </summary>
 public class Stage41Controller : MonoBehaviour
 {
     [Header("API 설정")]
-    public string baseUrl = "https://readingbuddyai.co.kr/";
-    [Tooltip("set에 사용할 스테이지 (세 부분: 4)")]
+    public string baseUrl = "";
+    [Tooltip("set에 사용할 stage 값 (4)")]
     public string stageSet = "4";
-    [Tooltip("start/voice/attempt/complete 등에 사용할 2단계 stage 값 (예: 4)")]
+    [Tooltip("start/voice/attempt/complete 등에 사용할 stage 값 (4)")]
     public string stageTwoPart = "4";
     public int count = 5;
     [Tooltip("Authorization: Bearer {token}")]
@@ -47,19 +33,25 @@ public class Stage41Controller : MonoBehaviour
     public string stageSessionId = "";
 
     [Header("UI 참조")]
-    public Text progressText;            // 상단 "i / N"
-    public Image guideImage;             // 가이드 이미지
-    public TMP_Text wordText;            // 문제 단어 표시(선택)
-    public TMP_Text choseongText;        // 초성 박스 내 텍스트
-    public TMP_Text jungseongText;       // 중성 박스 내 텍스트
-    public TMP_Text jongseongText;       // 종성 박스 내 텍스트
-    public GameObject choseongBox;       // 초성 상자(포커스 효과용)
-    public GameObject jungseongBox;      // 중성 상자(포커스 효과용)
-    public GameObject jongseongBox;      // 종성 상자(포커스 효과용)
-    public GameObject micIndicator;      // 녹음 중 인디케이터
+    public Text progressText;
+    public Image guideImage;
+    public RectTransform guideRect;
+    public TMP_Text wordText;
+    public TMP_Text choseongText;
+    public TMP_Text jungseongText;
+    public TMP_Text jongseongText;
+    public GameObject choseongBox;
+    public GameObject jungseongBox;
+    public GameObject jongseongBox;
+    public GameObject micIndicator;
+    [Tooltip("보기 상자(자모 후보) 컨테이너(공용, 선택)")]
+    public GameObject choicesContainer;
+    [Tooltip("자음 후보 상자(초성/종성 오답 시 표시)")]
+    public GameObject consonantChoicesContainer;
+    [Tooltip("모음 후보 상자(중성 오답 시 표시)")]
+    public GameObject vowelChoicesContainer;
 
     [Header("가이드 이동/축소")]
-    public RectTransform guideRect;      // guideImage의 RectTransform
     public Vector2 guideStartSize = new Vector2(1500, 1500);
     public Vector2 guideEndSize = new Vector2(600, 600);
     public Vector2 guideEndAnchoredPos = new Vector2(650, -350);
@@ -73,7 +65,6 @@ public class Stage41Controller : MonoBehaviour
     public AudioClip sfxStart;
     public AudioClip sfxNext;
 
-    // 멘트 오디오 (필요한 클립을 인스펙터에서 연결)
     [Header("대사 오디오")]
     public AudioClip clipIntroAdvancedMagic;     // [4.1.1]
     public AudioClip clipIntroListenPhonemes;    // [4.1.2]
@@ -93,27 +84,39 @@ public class Stage41Controller : MonoBehaviour
     public int recordSeconds = 3;
     public int recordSampleRate = 44100;
 
+    [Header("박스 포커스/점멸")]
+    [Range(0f,1f)] public float dimAlpha = 0.4f;
+    [Range(0f,1f)] public float blinkAlphaMin = 0.4f;
+    [Range(0f,1f)] public float blinkAlphaMax = 1.0f;
+    public float blinkPeriod = 0.6f; // sec per cycle
+
     [Header("개발/우회")]
-    public bool bypassStartRequest = true;   // 개발 시 세션 시작 생략
-    public bool bypassVoiceUpload = false;   // 개발 시 음성 업로드 생략
+    public bool bypassStartRequest = true;
+    public bool bypassVoiceUpload = false;
     public bool logVerbose = true;
 
     // 상태
     private int _currentProblemNumber = 0; // 1-based
     private bool _awaitingUserArrangement;
-    private List<string> _recognizedPhonemes = new List<string>(); // 사용자 음성 인식 결과
-    private List<string> _expectedPhonemes = new List<string>();   // 정답(서버/세트에서 제공 시)
+    private List<string> _segmentReplies = new List<string>();
+    private List<bool> _segmentCorrects = new List<bool>();
+    private List<string> _expectedPhonemes = new List<string>();
+    private int _expectedSegmentCount = 0; // 2 or 3
     private int _attemptCountForProblem = 0;
+    private Coroutine _blinkCo;
+    private GameObject _focusedBox;
+    private bool[] _finalizedSlots = new bool[3]; // 각 슬롯(초/중/종) 최종 확정 여부
 
     #region DTOs
     [Serializable]
     public class QuestionDto
     {
-        public int questionId;       // 문제 식별자
-        public string problemWord;   // 단어 표기
-        public string voiceUrl;      // 음절 단위 안내 음성
-        public string imageUrl;      // (선택)
-        public List<string> phonemes; // 정답 음소 (서버가 제공 시)
+        public int questionId;          // 선택
+        public string problemWord;
+        public string slowVoiceUrl;     // 듣기용
+        public int answerCnt;           // 2 또는 3
+        public string imageUrl;         // 선택
+        public List<string> phonemes;   // index 0=초,1=중,2=종
     }
 
     [Serializable]
@@ -130,8 +133,6 @@ public class Stage41Controller : MonoBehaviour
         public bool success;
         public string message;
         public QuestionData data;
-        public List<QuestionDto> questions; // 일부 서버 케이스 대응
-        public List<QuestionDto> problems;  // 변형 대응
     }
 
     [Serializable]
@@ -140,9 +141,9 @@ public class Stage41Controller : MonoBehaviour
     private class StartStageResp { public bool success = true; public string message; public StartStageData data; }
 
     [Serializable]
-    private class VoiceCheckData { public List<string> phonemes; }
+    private class VoiceReplyData { public string reply; public bool isReplyCorrect; public float accuracy; public string audioUrl; }
     [Serializable]
-    private class VoiceCheckResp { public bool success = true; public string message; public VoiceCheckData data; public List<string> phonemes; }
+    private class VoiceReplyResp { public bool success = true; public string message; public VoiceReplyData data; }
     #endregion
 
     private void Start()
@@ -163,9 +164,13 @@ public class Stage41Controller : MonoBehaviour
         if (wordText) wordText.text = string.Empty;
         if (choseongText) choseongText.text = string.Empty;
         if (jungseongText) jungseongText.text = string.Empty;
-        if (jongseongText) jongseongText.text = string.Empty;
+        if (jongseongText)  jongseongText.text  = string.Empty;
         if (micIndicator) micIndicator.SetActive(false);
+        if (choicesContainer) choicesContainer.SetActive(false);
+        if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
+        if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
         FocusBox(null);
+        SetAllBoxAlpha(dimAlpha);
     }
 
     private IEnumerator RunStage()
@@ -175,14 +180,10 @@ public class Stage41Controller : MonoBehaviour
         yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
 
         if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
-        {
             yield return StartStageSession();
-        }
 
-        // 문제 세트 로드
         List<QuestionDto> questions = null;
         yield return StartCoroutine(FetchQuestions(result => questions = result));
-
         if (questions == null || questions.Count == 0)
         {
             Debug.LogWarning("[Stage41] 문제 세트를 불러오지 못했습니다.");
@@ -190,89 +191,93 @@ public class Stage41Controller : MonoBehaviour
         }
 
         if ((enableGuideMoveBetweenQuestions || !_guideMoved) && guideRect)
-        {
             yield return MoveGuideToCorner();
-        }
 
         for (int i = 0; i < questions.Count; i++)
         {
             var q = questions[i];
             _currentProblemNumber = i + 1;
             _attemptCountForProblem = 0;
-            _recognizedPhonemes.Clear();
+            _segmentReplies.Clear();
+            _segmentCorrects.Clear();
             _expectedPhonemes = (q.phonemes != null) ? new List<string>(q.phonemes) : new List<string>();
+            _expectedSegmentCount = (q.answerCnt > 0) ? q.answerCnt : (_expectedPhonemes != null ? _expectedPhonemes.Count : 3);
+            Array.Clear(_finalizedSlots, 0, _finalizedSlots.Length);
 
             SetProgressLabel(_currentProblemNumber, questions.Count);
             if (wordText) wordText.text = q.problemWord ?? string.Empty;
             ClearPhonemeBoxes();
 
-            // [4.1.3] 집중 안내 + 음절 안내 음성 재생
+            // [4.1.3] 집중 안내 + 듣기
             yield return PlayClip(clipFocusListen);
-            yield return PlayVoiceUrl(q.voiceUrl);
+            yield return PlayVoiceUrl(q.slowVoiceUrl);
 
             // 초성
             FocusBox(choseongBox);
             yield return PlayClip(clipPromptFirstPiece); // [4.1.4]
-            yield return RecordAndUploadPhonemeSegment();
+            yield return RecordAndUploadPhonemeSegment(0);
             yield return PlayClip(clipGreat);            // [4.1.5]
             UpdatePhonemeBoxTexts();
 
             // 중성
-            FocusBox(jungseongBox);
-            yield return PlayClip(clipPromptSecondPiece); // [4.1.6]
-            yield return RecordAndUploadPhonemeSegment();
-            yield return PlayClip(clipGreat);             // [4.1.5]
-            UpdatePhonemeBoxTexts();
-
-            // 종성(필요 시)
-            bool needJongseong = (_expectedPhonemes != null && _expectedPhonemes.Count == 3);
-            if (!needJongseong)
+            if (_expectedSegmentCount >= 2)
             {
-                // 정답 정보가 없을 때: 세그먼트 응답이 2개 미만이면 계속, 2개면 스킵 판단
-                needJongseong = _recognizedPhonemes.Count < 3; // 첫 두 번 업로드 후 부족하면 한 번 더 시도
+                FocusBox(jungseongBox);
+                yield return PlayClip(clipPromptSecondPiece); // [4.1.6]
+                yield return RecordAndUploadPhonemeSegment(1);
+                yield return PlayClip(clipGreat);             // [4.1.5]
+                UpdatePhonemeBoxTexts();
             }
-            if (needJongseong)
+
+            // 종성
+            if (_expectedSegmentCount >= 3)
             {
                 FocusBox(jongseongBox);
                 yield return PlayClip(clipPromptFinalPiece); // [4.1.7]
-                yield return RecordAndUploadPhonemeSegment();
+                yield return RecordAndUploadPhonemeSegment(2);
                 yield return PlayClip(clipGreat);            // [4.1.5]
                 UpdatePhonemeBoxTexts();
             }
 
             FocusBox(null);
 
-            // 정오 판정 및 보정 루프
+            // 모두 정답 여부
             bool allCorrect = EvaluateCorrectness();
             if (allCorrect)
             {
                 yield return PlayClip(clipAllShine); // [4.1.8]
+                SetAllBoxAlpha(1f);
+                if (choicesContainer) choicesContainer.SetActive(false);
+                if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
+                if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
             }
             else
             {
                 yield return PlayClip(clipNeedMorePower); // [4.1.9]
                 yield return PlayClip(clipFindCorrect);    // [4.1.10]
-
-                // UI 드래그 보정 대기 루프(외부에서 SetUserArrangement 호출)
+                // 부분 정답은 채워 보여주고, 오답 슬롯은 비워둠
+                ApplyPartialFill();
+                ShowChoicePanelsForWrong();
                 _awaitingUserArrangement = true;
                 while (_awaitingUserArrangement)
                     yield return null;
+                if (choicesContainer) choicesContainer.SetActive(false);
+                if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
+                if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
             }
 
             if (i < questions.Count - 1)
                 yield return PlayClip(sfxNext);
         }
 
-        // 세션 종료
         if (!string.IsNullOrWhiteSpace(stageSessionId))
             yield return CompleteStageSession();
 
         yield return PlayClip(clipFinalizeSpell); // [4.1.13]
-        // 완료 모달은 별도 UI에서 처리하도록 훅만 남김
         OnStageComplete?.Invoke();
     }
 
-    // 외부(UI)에서 드래그로 재배열 후 호출: 초/중/종성 순으로 전달 (종성이 없으면 null/빈값)
+    // 드래그로 재배열 완료 시 외부에서 호출: 초/중/종 순
     public void SetUserArrangement(string initial, string medial, string finalPhoneme)
     {
         var arranged = new List<string>();
@@ -283,7 +288,6 @@ public class Stage41Controller : MonoBehaviour
         bool correct = ComparePhonemeOrder(arranged, _expectedPhonemes);
         _attemptCountForProblem++;
 
-        // attempt 로깅
         string phonemeStr = string.Join("", _expectedPhonemes ?? new List<string>());
         string selectedAnswer = string.Join("", arranged);
         StartCoroutine(SendAttemptLog(_currentProblemNumber, _attemptCountForProblem, phonemeStr, selectedAnswer, correct, wordText ? wordText.text : null));
@@ -293,6 +297,7 @@ public class Stage41Controller : MonoBehaviour
             StartCoroutine(PlayClip(clipGoodThatsIt)); // [4.1.11]
             _awaitingUserArrangement = false;
             StartCoroutine(PlayClip(clipAllShine));    // [4.1.8]
+            SetAllBoxAlpha(1f);
         }
         else
         {
@@ -312,22 +317,90 @@ public class Stage41Controller : MonoBehaviour
     {
         if (choseongText) choseongText.text = string.Empty;
         if (jungseongText) jungseongText.text = string.Empty;
-        if (jongseongText) jongseongText.text = string.Empty;
+        if (jongseongText)  jongseongText.text  = string.Empty;
+        SetAllBoxAlpha(dimAlpha);
     }
 
     private void UpdatePhonemeBoxTexts()
     {
-        if (_recognizedPhonemes == null) return;
-        if (choseongText) choseongText.text = _recognizedPhonemes.Count >= 1 ? _recognizedPhonemes[0] : "";
-        if (jungseongText) jungseongText.text = _recognizedPhonemes.Count >= 2 ? _recognizedPhonemes[1] : "";
-        if (jongseongText)  jongseongText.text  = _recognizedPhonemes.Count >= 3 ? _recognizedPhonemes[2] : "";
+        if (choseongText) choseongText.text = _segmentReplies.Count >= 1 ? _segmentReplies[0] : "";
+        if (jungseongText) jungseongText.text = _segmentReplies.Count >= 2 ? _segmentReplies[1] : "";
+        if (jongseongText)  jongseongText.text  = _segmentReplies.Count >= 3 ? _segmentReplies[2] : "";
+    }
+
+    // 부분 정답 반영: 맞은 슬롯은 텍스트/밝기, 틀린 슬롯은 비움/희미
+    private void ApplyPartialFill()
+    {
+        for (int i = 0; i < _expectedSegmentCount; i++)
+        {
+            bool ok = (i < _segmentCorrects.Count) && _segmentCorrects[i];
+            string reply = (i < _segmentReplies.Count) ? _segmentReplies[i] : string.Empty;
+            SetSlotText(i, ok ? reply : string.Empty);
+            _finalizedSlots[i] = ok;
+            SetSlotAlpha(i, ok ? 1f : dimAlpha);
+        }
+        // 필요 없는 세그먼트(예: answerCnt=2)의 종성은 비워둠
+        for (int i = _expectedSegmentCount; i < 3; i++)
+        {
+            SetSlotText(i, string.Empty);
+            _finalizedSlots[i] = true; // 없는 슬롯은 완료로 처리
+            SetSlotAlpha(i, dimAlpha);
+        }
+    }
+
+    private void SetSlotText(int idx, string text)
+    {
+        if (idx == 0 && choseongText) choseongText.text = text ?? string.Empty;
+        else if (idx == 1 && jungseongText) jungseongText.text = text ?? string.Empty;
+        else if (idx == 2 && jongseongText) jongseongText.text = text ?? string.Empty;
+    }
+
+    private void SetSlotAlpha(int idx, float a)
+    {
+        if (idx == 0) SetBoxAlpha(choseongBox, a);
+        else if (idx == 1) SetBoxAlpha(jungseongBox, a);
+        else if (idx == 2) SetBoxAlpha(jongseongBox, a);
     }
 
     private void FocusBox(GameObject box)
     {
-        if (choseongBox) choseongBox.SetActive(choseongBox == box);
-        if (jungseongBox) jungseongBox.SetActive(jungseongBox == box);
-        if (jongseongBox)  jongseongBox.SetActive(jongseongBox  == box);
+        if (_blinkCo != null)
+        {
+            StopCoroutine(_blinkCo);
+            _blinkCo = null;
+        }
+        _focusedBox = box;
+        SetAllBoxAlpha(dimAlpha);
+        if (box != null)
+            _blinkCo = StartCoroutine(BlinkBox(box));
+    }
+
+    private void SetAllBoxAlpha(float a)
+    {
+        SetBoxAlpha(choseongBox, a);
+        SetBoxAlpha(jungseongBox, a);
+        SetBoxAlpha(jongseongBox, a);
+    }
+
+    private void SetBoxAlpha(GameObject box, float a)
+    {
+        if (!box) return;
+        var cg = box.GetComponent<CanvasGroup>() ?? box.AddComponent<CanvasGroup>();
+        cg.alpha = Mathf.Clamp01(a);
+    }
+
+    private IEnumerator BlinkBox(GameObject box)
+    {
+        var cg = box.GetComponent<CanvasGroup>() ?? box.AddComponent<CanvasGroup>();
+        float t = 0f;
+        while (_focusedBox == box)
+        {
+            t += Time.deltaTime;
+            float phase = Mathf.Sin((t / Mathf.Max(0.01f, blinkPeriod)) * Mathf.PI * 2f) * 0.5f + 0.5f;
+            cg.alpha = Mathf.Lerp(blinkAlphaMin, blinkAlphaMax, phase);
+            yield return null;
+        }
+        cg.alpha = dimAlpha;
     }
 
     private IEnumerator MoveGuideToCorner()
@@ -338,7 +411,6 @@ public class Stage41Controller : MonoBehaviour
         var startPos = guideRect.anchoredPosition;
         var endSize = guideEndSize;
         var endPos = guideEndAnchoredPos;
-
         float t = 0f;
         while (t < guideMoveDuration)
         {
@@ -369,11 +441,7 @@ public class Stage41Controller : MonoBehaviour
         using (var req = UnityWebRequestMultimedia.GetAudioClip(safeUrl, audioType))
         {
             yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage41] 음성 로드 실패: {req.error} url={voiceUrl}");
-                yield break;
-            }
+            if (req.result != UnityWebRequest.Result.Success) yield break;
             var clip = DownloadHandlerAudioClip.GetContent(req);
             audioSource.Stop();
             audioSource.clip = clip;
@@ -391,7 +459,6 @@ public class Stage41Controller : MonoBehaviour
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[Stage41] set 실패: {req.error} code={req.responseCode} url={url}");
                 onDone?.Invoke(null);
                 yield break;
             }
@@ -400,20 +467,10 @@ public class Stage41Controller : MonoBehaviour
             try
             {
                 var parsed = JsonUtility.FromJson<QuestionListResponse>(json);
-                if (parsed != null)
-                {
-                    if (parsed.data != null && parsed.data.problems != null && parsed.data.problems.Count > 0)
-                        list = parsed.data.problems;
-                    else if (parsed.problems != null && parsed.problems.Count > 0)
-                        list = parsed.problems;
-                    else if (parsed.questions != null && parsed.questions.Count > 0)
-                        list = parsed.questions;
-                }
+                if (parsed != null && parsed.data != null && parsed.data.problems != null)
+                    list = parsed.data.problems;
             }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[Stage41] set 파싱 실패: {e.Message}");
-            }
+            catch { }
             onDone?.Invoke(list);
         }
     }
@@ -425,24 +482,14 @@ public class Stage41Controller : MonoBehaviour
         {
             ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage41] stage/start 실패: {req.error} code={req.responseCode} url={url}");
-                yield break;
-            }
+            if (req.result != UnityWebRequest.Result.Success) yield break;
             try
             {
                 var resp = JsonUtility.FromJson<StartStageResp>(req.downloadHandler.text);
                 if (resp != null && resp.data != null && !string.IsNullOrWhiteSpace(resp.data.stageSessionId))
-                {
                     stageSessionId = resp.data.stageSessionId;
-                    if (logVerbose) Debug.Log($"[Stage41] stageSessionId 수신: {stageSessionId}");
-                }
             }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[Stage41] stage/start 파싱 실패: {e.Message}");
-            }
+            catch { }
         }
     }
 
@@ -454,19 +501,15 @@ public class Stage41Controller : MonoBehaviour
         {
             ApplyCommonHeaders(req);
             yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage41] stage/complete 실패: {req.error} code={req.responseCode} url={url}");
-            }
         }
     }
 
-    private IEnumerator RecordAndUploadPhonemeSegment()
+    private IEnumerator RecordAndUploadPhonemeSegment(int segmentIndex)
     {
         if (bypassVoiceUpload)
         {
-            // 개발 편의: 임시 더미 음소 추가
-            _recognizedPhonemes.Add("*");
+            _segmentReplies.Add("*");
+            _segmentCorrects.Add(true);
             yield break;
         }
 
@@ -486,36 +529,19 @@ public class Stage41Controller : MonoBehaviour
             ApplyCommonHeaders(req);
             req.chunkedTransfer = false;
             yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
-                Debug.LogWarning($"[Stage41] 음성 업로드 실패: {req.error} code={req.responseCode}\nURL={url}\nBody={body}");
-                yield break;
-            }
+            if (req.result != UnityWebRequest.Result.Success) yield break;
 
             var respText = req.downloadHandler.text;
             try
             {
-                var parsed = JsonUtility.FromJson<VoiceCheckResp>(respText);
-                List<string> phs = null;
-                if (parsed != null)
-                {
-                    if (parsed.data != null && parsed.data.phonemes != null && parsed.data.phonemes.Count > 0)
-                        phs = parsed.data.phonemes;
-                    else if (parsed.phonemes != null && parsed.phonemes.Count > 0)
-                        phs = parsed.phonemes;
-                }
-                if (phs != null && phs.Count > 0)
-                {
-                    foreach (var p in phs)
-                        _recognizedPhonemes.Add(Normalize(p));
-                }
-                if (logVerbose) Debug.Log($"[Stage41] 인식 결과 누적: [{string.Join(",", _recognizedPhonemes)}]");
+                var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
+                string reply = parsed?.data?.reply ?? string.Empty;
+                bool ok = parsed?.data?.isReplyCorrect ?? false;
+                _segmentReplies.Add((reply ?? string.Empty).Trim());
+                _segmentCorrects.Add(ok);
+                if (logVerbose) Debug.Log($"[Stage41] segment {segmentIndex} → reply='{reply}', correct={ok}");
             }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[Stage41] 음성 응답 파싱 실패: {e.Message}");
-            }
+            catch { }
         }
     }
 
@@ -543,14 +569,6 @@ public class Stage41Controller : MonoBehaviour
             ApplyCommonHeaders(req);
             req.SetRequestHeader("Content-Type", "application/json");
             yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage41] attempt 실패: {req.error} code={req.responseCode}\nURL={url}\nBody={json}\nResp={req.downloadHandler.text}");
-            }
-            else if (logVerbose)
-            {
-                Debug.Log($"[Stage41] attempt OK: problem={problemNumber}, attempt={attemptNumber}, correct={isCorrect}");
-            }
         }
     }
 
@@ -591,17 +609,6 @@ public class Stage41Controller : MonoBehaviour
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
-    private static string Normalize(string s)
-    {
-        return (s ?? "").Trim();
-    }
-
-    private bool EvaluateCorrectness()
-    {
-        if (_expectedPhonemes == null || _expectedPhonemes.Count == 0) return false; // 정답 미제공 시 외부 보정 플로우로 진입
-        return ComparePhonemeOrder(_recognizedPhonemes, _expectedPhonemes);
-    }
-
     private static bool ComparePhonemeOrder(List<string> a, List<string> b)
     {
         if (a == null || b == null) return false;
@@ -615,6 +622,71 @@ public class Stage41Controller : MonoBehaviour
         return true;
     }
 
+    private bool EvaluateCorrectness()
+    {
+        if (_segmentCorrects == null || _segmentCorrects.Count < _expectedSegmentCount) return false;
+        for (int i = 0; i < _expectedSegmentCount; i++)
+        {
+            if (i >= _segmentCorrects.Count || !_segmentCorrects[i]) return false;
+        }
+        return true;
+    }
+
+    // 오답 슬롯에 맞춰 보기 상자(자음/모음) 표시
+    private void ShowChoicePanelsForWrong()
+    {
+        bool wrongInitial = (_expectedSegmentCount >= 1) && !(_segmentCorrects.Count >= 1 && _segmentCorrects[0]);
+        bool wrongMedial  = (_expectedSegmentCount >= 2) && !(_segmentCorrects.Count >= 2 && _segmentCorrects[1]);
+        bool wrongFinal   = (_expectedSegmentCount >= 3) && !(_segmentCorrects.Count >= 3 && _segmentCorrects[2]);
+
+        if (consonantChoicesContainer)
+            consonantChoicesContainer.SetActive(wrongInitial || wrongFinal);
+        if (vowelChoicesContainer)
+            vowelChoicesContainer.SetActive(wrongMedial);
+        if (choicesContainer)
+            choicesContainer.SetActive((wrongInitial || wrongFinal) || wrongMedial);
+    }
+
+    // 드래그 타일이 슬롯에 떨어졌을 때 호출 (PhonemeSlotUI에서 연결)
+    public void OnUserDrop(int slotIndex, string symbol)
+    {
+        if (!_awaitingUserArrangement) return; // 보정 단계 외에는 무시
+        // 유효성
+        if (slotIndex < 0 || slotIndex >= 3) return;
+        if (_expectedPhonemes == null || slotIndex >= _expectedPhonemes.Count) return;
+        string expected = _expectedPhonemes[slotIndex];
+        bool correct = string.Equals((symbol ?? string.Empty).Trim(), (expected ?? string.Empty).Trim(), StringComparison.Ordinal);
+
+        // attempt 로깅 (슬롯 단위 시도)
+        _attemptCountForProblem++;
+        string phonemeStr = string.Join("", _expectedPhonemes);
+        StartCoroutine(SendAttemptLog(_currentProblemNumber, _attemptCountForProblem, phonemeStr, symbol, correct, wordText ? wordText.text : null));
+
+        if (!correct)
+        {
+            StartCoroutine(PlayClip(clipTryAgain)); // [4.1.12]
+            return;
+        }
+
+        // 정답일 때 해당 슬롯 채우고 빛나게
+        SetSlotText(slotIndex, expected);
+        SetSlotAlpha(slotIndex, 1f);
+        _finalizedSlots[slotIndex] = true;
+        StartCoroutine(PlayClip(clipGoodThatsIt)); // [4.1.11]
+
+        // 모두 채워졌는지 확인
+        bool done = true;
+        for (int i = 0; i < _expectedSegmentCount; i++)
+            if (!_finalizedSlots[i]) { done = false; break; }
+
+        if (done)
+        {
+            StartCoroutine(PlayClip(clipAllShine)); // [4.1.8]
+            SetAllBoxAlpha(1f);
+            _awaitingUserArrangement = false; // 루프 종료
+        }
+    }
+
     private static string EncodePlusInPath(string url)
     {
         if (string.IsNullOrEmpty(url)) return url;
@@ -625,10 +697,7 @@ public class Stage41Controller : MonoBehaviour
             var rebuilt = uri.Scheme + "://" + uri.Host + (uri.IsDefaultPort ? "" : ":" + uri.Port) + path + uri.Query;
             return rebuilt;
         }
-        catch
-        {
-            return url.Replace("+", "%2B");
-        }
+        catch { return url.Replace("+", "%2B"); }
     }
 
     private static AudioType GuessAudioType(string url)
@@ -642,4 +711,3 @@ public class Stage41Controller : MonoBehaviour
     }
     #endregion
 }
-
