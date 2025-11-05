@@ -81,7 +81,7 @@ public class ProblemGenerateService {
             List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(unicodePoint);
 
             results.add(
-                    new Stage4Problem(koreanChar, letter.getSlowVoiceUrl(), letter.getCount(), phonemes)
+                    new Stage4Problem(koreanChar, letter.getSlowVoiceUrl(), letter.getVoiceUrl(), letter.getCount(), phonemes)
             );
         }
         return results;
