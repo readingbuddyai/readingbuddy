@@ -144,7 +144,7 @@ class TrainManagerTest {
                 .addHeader("Content-Type", "application/json"));
 
         // when
-        trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemId);
+        trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemId, "");
 
         // 비동기 처리 대기
         Thread.sleep(500);

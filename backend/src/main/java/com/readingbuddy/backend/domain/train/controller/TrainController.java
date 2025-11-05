@@ -117,7 +117,8 @@ public class TrainController {
             @RequestParam("audio") MultipartFile audioFile,
             @RequestParam("stageSessionId") String stageSessionId,
             @RequestParam("stage") String stage,
-            @RequestParam("problemNumber") Integer problemNumber
+            @RequestParam("problemNumber") Integer problemNumber,
+            @RequestParam("answer") String target
     ) {
 
         try {
@@ -134,13 +135,13 @@ public class TrainController {
             String audioUrl = s3Service.uploadAudioFile(audioFile, stageSessionId, userId, problemNumber);
 
             // AI 서버로 음성 전송하고 응답 받기 (동기)
-            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemNumber);
+            VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemNumber, target);
 
             VoiceCheckResponse response = VoiceCheckResponse.builder()
-                    .reply(aiResponse.getReply())
+                    .reply("")
                     .isReplyCorrect(aiResponse.getIsReplyCorrect())
-                    .accuracy(aiResponse.getAccuracy())
-                    .audioUrl(audioUrl)
+                    .accuracy(0D)
+                    .audioUrl("")
                     .build();
 
             return ResponseEntity.ok(ApiResponse.success("음성 인식이 완료되었습니다.", response));
