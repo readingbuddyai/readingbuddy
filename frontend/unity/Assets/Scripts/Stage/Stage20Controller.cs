@@ -640,7 +640,7 @@ public class Stage20Controller : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
 
-        string url = ComposeUrl($"/api/train/stage/complete?sessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
+        string url = ComposeUrl($"/api/train/stage/complete?snity/mergeessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
