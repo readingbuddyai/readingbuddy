@@ -70,13 +70,10 @@ public class TrainController {
                             .body(ApiResponse.success(message, problemSetResponse));
 
                 case "1.2.1", "1.2.2":
-                    // TODO: 수정 (이렇게 하면 하나의 KC에 대한 문제로 5개가 구성됩니다.)
-                    for (int i = 0; i < count; i++) {
-                        problems.add(
-                                stage.equals("1.2.1")
-                                        ? consonantTrainService.getBasicProblem(userId)
-                                        : consonantTrainService.getAdvancedProblem()
-                        );
+                    if(stage.equals("1.2.1")){
+                        problems = consonantTrainService.getBasicProblem(userId,count);
+                    }else{
+                        problems = consonantTrainService.getAdvancedProblem(userId,count);
                     }
 
                     problemSetResponse = ProblemSetResponse.builder()
