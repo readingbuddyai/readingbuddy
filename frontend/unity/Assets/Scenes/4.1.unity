@@ -631,8 +631,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -2654,10 +2654,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 773253a0087dff747b8b64811ba2501a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  symbol: 
-  type: 0
-  label: {fileID: 0}
-  fontAsset: {fileID: 0}
+  symbol: "\u3158"
+  type: 1
+  label: {fileID: 595272212}
+  fontAsset: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
 --- !u!225 &481360875
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -4100,7 +4100,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: -13}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &649297322
@@ -4768,10 +4768,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 773253a0087dff747b8b64811ba2501a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  symbol: 
-  type: 0
-  label: {fileID: 0}
-  fontAsset: {fileID: 0}
+  symbol: "\u3156"
+  type: 1
+  label: {fileID: 1675910345}
+  fontAsset: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
 --- !u!225 &780520462
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -5370,7 +5370,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baseUrl: https://readingbuddyai.co.kr
   stageSet: 4
-  stageTwoPart: 4
+  stageTwoPart: ^4(\.\\d+)*$
   count: 5
   authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjM5MzgwOSwiZXhwIjoxNzYyNDgwMjA5fQ.M2gpoFNeGptR7BjR6ELhGn4lD4bI_28u109B1EcNqcyWqd-6i1GkSi3pzjpiRbBm
   stageSessionId: 
@@ -5769,7 +5769,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -1000}
+  m_AnchoredPosition: {x: 1287, y: -1000}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1300634883
@@ -5824,10 +5824,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 773253a0087dff747b8b64811ba2501a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  symbol: 
-  type: 0
-  label: {fileID: 0}
-  fontAsset: {fileID: 0}
+  symbol: "\u3152"
+  type: 1
+  label: {fileID: 578912135}
+  fontAsset: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
 --- !u!225 &1300634886
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -6285,10 +6285,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 773253a0087dff747b8b64811ba2501a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  symbol: 
-  type: 0
-  label: {fileID: 0}
-  fontAsset: {fileID: 0}
+  symbol: "\u3150"
+  type: 1
+  label: {fileID: 1630337388}
+  fontAsset: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
 --- !u!225 &1352088237
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -7132,10 +7132,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 773253a0087dff747b8b64811ba2501a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  symbol: 
-  type: 0
-  label: {fileID: 0}
-  fontAsset: {fileID: 0}
+  symbol: "\u315D"
+  type: 1
+  label: {fileID: 612256500}
+  fontAsset: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
 --- !u!225 &1497847023
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -7238,10 +7238,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 773253a0087dff747b8b64811ba2501a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  symbol: 
-  type: 0
-  label: {fileID: 0}
-  fontAsset: {fileID: 0}
+  symbol: "\u315E"
+  type: 1
+  label: {fileID: 174486243}
+  fontAsset: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
 --- !u!225 &1511850825
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -7623,8 +7623,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -8799,7 +8799,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 660, y: -1000}
+  m_AnchoredPosition: {x: -1736, y: -1000}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1878929445
@@ -9090,10 +9090,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 773253a0087dff747b8b64811ba2501a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  symbol: 
-  type: 0
-  label: {fileID: 0}
-  fontAsset: {fileID: 0}
+  symbol: "\u3159"
+  type: 1
+  label: {fileID: 620582380}
+  fontAsset: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
 --- !u!225 &1994226220
 CanvasGroup:
   m_ObjectHideFlags: 0

@@ -294,7 +294,7 @@ public class Stage41Controller : MonoBehaviour
                 // 안내 멘트는 CorrectionFlow 내에서 슬롯별로 1회씩 재생
                 // 부분 정답은 채워두고(맞은 칸 고정), 드롭 교정 플로우를 순차 진행
                 ApplyPartialFill();
-                ShowChoicePanelsForWrong();
+                // 패널 표시는 CorrectionFlow에서 현재 슬롯에 맞게 제어
                 yield return StartCoroutine(CorrectionFlow());
                 if (choicesContainer) choicesContainer.SetActive(false);
                 if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
@@ -1046,6 +1046,8 @@ public class Stage41Controller : MonoBehaviour
             if (slot == 0 && choseongBox) FocusBox(choseongBox);
             else if (slot == 1 && jungseongBox) FocusBox(jungseongBox);
             else if (slot == 2 && jongseongBox) FocusBox(jongseongBox);
+            // 현재 슬롯에 맞는 보기 상자만 노출
+            ShowChoicePanelsForSlot(slot);
             _awaitingUserArrangement = true; // 드래그를 즉시 허용
             yield return PlayClip(clipFindCorrect); // [4.1.10]
             // 사용자가 올바르게 배치하거나 3회 실패로 자동완료될 때까지 대기
@@ -1053,6 +1055,46 @@ public class Stage41Controller : MonoBehaviour
         }
         _currentCorrectionSlot = -1;
         FocusBox(null);
+        // 모든 교정 종료 시 보기 숨김
+        HideChoicePanels();
+    }
+
+    // 현재 교정 중인 슬롯에 맞춰 보기 상자를 표시
+    // slotIndex: 0=초성(자음), 1=중성(모음), 2=종성(자음)
+    private void ShowChoicePanelsForSlot(int slotIndex)
+    {
+        bool showConsonants = (slotIndex == 0) || (slotIndex == 2);
+        bool showVowels = (slotIndex == 1);
+        bool showAny = showConsonants || showVowels;
+
+        if (choicesContainer) choicesContainer.SetActive(showAny);
+        if (consonantChoicesContainer) consonantChoicesContainer.SetActive(showConsonants);
+        if (vowelChoicesContainer) vowelChoicesContainer.SetActive(showVowels);
+
+        // 레이아웃 갱신
+        if (choicesContainer)
+        {
+            var rt = choicesContainer.GetComponent<RectTransform>();
+            if (rt) LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+        }
+        if (consonantChoicesContainer)
+        {
+            var rtC = consonantChoicesContainer.GetComponent<RectTransform>();
+            if (rtC) LayoutRebuilder.ForceRebuildLayoutImmediate(rtC);
+        }
+        if (vowelChoicesContainer)
+        {
+            var rtV = vowelChoicesContainer.GetComponent<RectTransform>();
+            if (rtV) LayoutRebuilder.ForceRebuildLayoutImmediate(rtV);
+        }
+    }
+
+    // 보기 상자 모두 숨김
+    private void HideChoicePanels()
+    {
+        if (choicesContainer) choicesContainer.SetActive(false);
+        if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
+        if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
     }
 
 
