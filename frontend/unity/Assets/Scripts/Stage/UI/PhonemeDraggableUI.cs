@@ -92,26 +92,9 @@ public class PhonemeDraggableUI : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         if (_cg == null) _cg = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
         _cg.blocksRaycasts = true;
-
-        // If not already snapped by a prior handler, check slot + correctness then decide
-        if (!_snapped)
-        {
-            var slotUI = eventData.pointerEnter ? eventData.pointerEnter.GetComponentInParent<PhonemeSlotUI>() : null;
-            bool snapped = false;
-            if (slotUI != null && slotUI.controller != null)
-            {
-                // Only snap when correct for that slot
-                if (slotUI.controller.IsCorrectForSlot(slotUI.slotIndex, symbol))
-                {
-                    SnapToSlot(slotUI.transform);
-                    snapped = true;
-                }
-            }
-            if (!snapped)
-            {
-                ReturnToOrigin();
-            }
-        }
+        // Always return to origin after drop.
+        // Drop handling (correctness, logging, slot text) is managed by PhonemeSlotUI + Stage41Controller.
+        ReturnToOrigin();
     }
 
     public void SnapToSlot(Transform slotTransform)

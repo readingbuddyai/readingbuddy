@@ -103,6 +103,10 @@ public class Stage41Controller : MonoBehaviour
     private List<string> _expectedPhonemes = new List<string>();
     private int _expectedSegmentCount = 0; // 2 or 3
     private int _attemptCountForProblem = 0;
+    private int _pendingVoiceUploads = 0; // async voice uploads in flight
+    private bool _isRecording = false;    // 3초 녹음 진행 여부
+    private int _currentCorrectionSlot = -1; // 드래그 교정 대상 슬롯(0/1/2)
+    private int[] _attemptsPerSlot = new int[3]; // 슬롯별 드래그 시도 횟수
     private Coroutine _blinkCo;
     private GameObject _focusedBox;
     private bool[] _finalizedSlots = new bool[3]; // 각 슬롯(초/중/종) 최종 확정 여부
@@ -219,44 +223,27 @@ public class Stage41Controller : MonoBehaviour
             // 초성
             FocusBox(choseongBox);
             yield return PlayClip(clipPromptFirstPiece); // [4.1.4]
-            bool seg0Ok = false;
-            yield return RecordAndUploadPhonemeSegment(0, (ok, reply) => seg0Ok = ok);
-            UpdatePhonemeBoxTexts();
-            if (seg0Ok)
-            {
-                yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
-            }
-            else
-            {
-                yield return PlayClip(clipTryAgain);     // [4.1.12]
-                yield return PlayVoiceUrl(q.voiceUrl);
-                yield return PlayClip(clipPromptFirstPiece); // [4.1.4]
-                yield return RecordAndUploadPhonemeSegment(0, (ok, reply) => seg0Ok = ok);
-                UpdatePhonemeBoxTexts();
-                yield return PlayClip(clipGreat);         // [4.1.5]
-            }
+            // fire-and-forget voice upload for 초성
+            _pendingVoiceUploads++;
+            _isRecording = true; // ensure wait condition blocks until recording finishes
+            StartCoroutine(Co_WrapRecordUpload(0));
+            // 녹음(3초) 종료를 보장한 뒤 칭찬 재생
+            yield return new WaitForSeconds(recordSeconds + 0.15f);
+            yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+            // proceed immediately without waiting response
 
             // 중성
             if (_expectedSegmentCount >= 2)
             {
                 FocusBox(jungseongBox);
                 yield return PlayClip(clipPromptSecondPiece); // [4.1.6]
-                bool seg1Ok = false;
-                yield return RecordAndUploadPhonemeSegment(1, (ok, reply) => seg1Ok = ok);
-                UpdatePhonemeBoxTexts();
-                if (seg1Ok)
-                {
-                    yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
-                }
-                else
-                {
-                    yield return PlayClip(clipTryAgain);     // [4.1.12]
-                    yield return PlayVoiceUrl(q.voiceUrl);
-                    yield return PlayClip(clipPromptSecondPiece); // [4.1.6]
-                    yield return RecordAndUploadPhonemeSegment(1, (ok, reply) => seg1Ok = ok);
-                    UpdatePhonemeBoxTexts();
-                    yield return PlayClip(clipGreat);         // [4.1.5]
-                }
+                // fire-and-forget voice upload for 중성
+                _pendingVoiceUploads++;
+                _isRecording = true;
+                StartCoroutine(Co_WrapRecordUpload(1));
+                yield return new WaitForSeconds(recordSeconds + 0.15f);
+                yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+                // proceed immediately without waiting response
             }
 
             // 종성
@@ -264,28 +251,35 @@ public class Stage41Controller : MonoBehaviour
             {
                 FocusBox(jongseongBox);
                 yield return PlayClip(clipPromptFinalPiece); // [4.1.7]
-                bool seg2Ok = false;
-                yield return RecordAndUploadPhonemeSegment(2, (ok, reply) => seg2Ok = ok);
-                UpdatePhonemeBoxTexts();
-                if (seg2Ok)
-                {
-                    yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
-                }
-                else
-                {
-                    yield return PlayClip(clipTryAgain);     // [4.1.12]
-                    yield return PlayVoiceUrl(q.voiceUrl);
-                    yield return PlayClip(clipPromptFinalPiece); // [4.1.7]
-                    yield return RecordAndUploadPhonemeSegment(2, (ok, reply) => seg2Ok = ok);
-                    UpdatePhonemeBoxTexts();
-                    yield return PlayClip(clipGreat);         // [4.1.5]
-                }
+                // fire-and-forget voice upload for 종성
+                _pendingVoiceUploads++;
+                _isRecording = true;
+                StartCoroutine(Co_WrapRecordUpload(2));
+                yield return new WaitForSeconds(recordSeconds + 0.15f);
+                yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+                // proceed immediately without waiting response
             }
 
             FocusBox(null);
 
+            // wait for all pending voice uploads to complete before evaluating correctness
+            yield return new WaitUntil(() => _pendingVoiceUploads == 0);
+
+            FillSlotsFromRepliesWithDim();
+
             // 모두 정답 여부
             bool allCorrect = EvaluateCorrectness();
+            // Send final combined attempt per new spec
+            string combinedAnswer = string.Join("", _segmentReplies);
+            StartCoroutine(SendAttemptLogNew(
+                problemNumber: _currentProblemNumber,
+                attemptNumber: 1,
+                problem: wordText ? wordText.text : string.Empty,
+                answer: combinedAnswer,
+                isCorrect: allCorrect,
+                isReplyCorrect: allCorrect,
+                audioUrl: string.Empty
+            ));
             if (allCorrect)
             {
                 yield return PlayClip(clipAllShine); // [4.1.8]
@@ -297,13 +291,11 @@ public class Stage41Controller : MonoBehaviour
             else
             {
                 yield return PlayClip(clipNeedMorePower); // [4.1.9]
-                yield return PlayClip(clipFindCorrect);    // [4.1.10]
-                // 부분 정답은 채워 보여주고, 오답 슬롯은 비워둠
+                // 안내 멘트는 CorrectionFlow 내에서 슬롯별로 1회씩 재생
+                // 부분 정답은 채워두고(맞은 칸 고정), 드롭 교정 플로우를 순차 진행
                 ApplyPartialFill();
                 ShowChoicePanelsForWrong();
-                _awaitingUserArrangement = true;
-                while (_awaitingUserArrangement)
-                    yield return null;
+                yield return StartCoroutine(CorrectionFlow());
                 if (choicesContainer) choicesContainer.SetActive(false);
                 if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
                 if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
@@ -331,9 +323,16 @@ public class Stage41Controller : MonoBehaviour
         bool correct = ComparePhonemeOrder(arranged, _expectedPhonemes);
         _attemptCountForProblem++;
 
-        string phonemeStr = string.Join("", _expectedPhonemes ?? new List<string>());
         string selectedAnswer = string.Join("", arranged);
-        StartCoroutine(SendAttemptLog(_currentProblemNumber, _attemptCountForProblem, phonemeStr, selectedAnswer, correct, wordText ? wordText.text : null));
+        StartCoroutine(SendAttemptLogNew(
+            problemNumber: _currentProblemNumber,
+            attemptNumber: 1,
+            problem: wordText ? wordText.text : string.Empty,
+            answer: selectedAnswer,
+            isCorrect: correct,
+            isReplyCorrect: correct,
+            audioUrl: string.Empty
+        ));
 
         if (correct)
         {
@@ -387,6 +386,26 @@ public class Stage41Controller : MonoBehaviour
         {
             SetSlotText(i, string.Empty);
             _finalizedSlots[i] = true; // 없는 슬롯은 완료로 처리
+            SetSlotAlpha(i, dimAlpha);
+        }
+    }
+
+    // After all voice replies arrive, fill every slot with its reply text.
+    // Wrong slots are dimmed; right slots are bright and finalized.
+    private void FillSlotsFromRepliesWithDim()
+    {
+        for (int i = 0; i < _expectedSegmentCount; i++)
+        {
+            string reply = (i < _segmentReplies.Count) ? _segmentReplies[i] : string.Empty;
+            bool ok = (i < _segmentCorrects.Count) && _segmentCorrects[i];
+            SetSlotText(i, reply);
+            SetSlotAlpha(i, ok ? 1f : dimAlpha);
+            _finalizedSlots[i] = ok;
+        }
+        for (int i = _expectedSegmentCount; i < 3; i++)
+        {
+            SetSlotText(i, string.Empty);
+            _finalizedSlots[i] = true;
             SetSlotAlpha(i, dimAlpha);
         }
     }
@@ -493,6 +512,13 @@ public class Stage41Controller : MonoBehaviour
         }
     }
 
+    // Wrapper: runs the upload coroutine and ensures pending counter is decreased
+    private IEnumerator Co_WrapRecordUpload(int segmentIndex)
+    {
+        yield return RecordAndUploadPhonemeSegment(segmentIndex, (ok, reply) => { });
+        _pendingVoiceUploads = Mathf.Max(0, _pendingVoiceUploads - 1);
+    }
+
     // '+'가 경로에 포함될 때 안전하게 인코딩
     private static string EncodePlusInPath(string url)
     {
@@ -597,13 +623,28 @@ public class Stage41Controller : MonoBehaviour
             yield break;
         }
 
+        _isRecording = true;
+        _isRecording = true;
         if (micIndicator) micIndicator.SetActive(true);
+        // 한 프레임 먼저 켜서 표시 지연을 최소화
+        yield return null;
         var clip = StartMic(recordSeconds, recordSampleRate);
+        // 마이크 실제 시작까지 최대 0.5초 대기 (환경에 따라 지연 존재)
+        float waitStarted = 0f;
+        while (Microphone.GetPosition(null) <= 0 && waitStarted < 0.5f)
+        {
+            waitStarted += Time.deltaTime;
+            yield return null;
+        }
         yield return new WaitForSeconds(recordSeconds);
         if (micIndicator) micIndicator.SetActive(false);
+        Microphone.End(null);
+        _isRecording = false;
+        _isRecording = false;
 
         var wav = WavUtility.FromAudioClip(clip);
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}";
+        string targetAns0 = GetTargetPhonemeAnswer(segmentIndex);
+        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns0)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
@@ -613,6 +654,16 @@ public class Stage41Controller : MonoBehaviour
         {
             ApplyCommonHeaders(req);
             req.chunkedTransfer = false;
+            // Immediately send attempt for this voice step (do not wait for response)
+            StartCoroutine(SendAttemptLogNew(
+                problemNumber: _currentProblemNumber,
+                attemptNumber: 1,
+                problem: wordText ? wordText.text : string.Empty,
+                answer: string.Empty,
+                isCorrect: null,
+                isReplyCorrect: null,
+                audioUrl: string.Empty
+            ));
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -644,17 +695,39 @@ public class Stage41Controller : MonoBehaviour
             while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
             _segmentReplies[segmentIndex] = "*";
             _segmentCorrects[segmentIndex] = true;
+            // attempt (voice) per new spec (mock path)
+            StartCoroutine(SendAttemptLogNew(
+                problemNumber: _currentProblemNumber,
+                attemptNumber: 1,
+                problem: wordText ? wordText.text : string.Empty,
+                answer: string.Empty,
+                isCorrect: null,
+                isReplyCorrect: true,
+                audioUrl: string.Empty
+            ));
+            // no immediate UI fill; will fill after all segments complete
             onDone?.Invoke(true, "*");
             yield break;
         }
 
         if (micIndicator) micIndicator.SetActive(true);
+        // 한 프레임 먼저 켜서 표시 지연을 최소화
+        yield return null;
         var clip = StartMic(recordSeconds, recordSampleRate);
+        // 마이크 실제 시작까지 최대 0.5초 대기
+        float waitStarted2 = 0f;
+        while (Microphone.GetPosition(null) <= 0 && waitStarted2 < 0.5f)
+        {
+            waitStarted2 += Time.deltaTime;
+            yield return null;
+        }
         yield return new WaitForSeconds(recordSeconds);
         if (micIndicator) micIndicator.SetActive(false);
+        Microphone.End(null);
 
         var wav = WavUtility.FromAudioClip(clip);
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}";
+        string targetAns1 = GetTargetPhonemeAnswer(segmentIndex);
+        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns1)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
@@ -664,6 +737,16 @@ public class Stage41Controller : MonoBehaviour
         {
             ApplyCommonHeaders(req);
             req.chunkedTransfer = false;
+            // Immediately send attempt for this voice step (do not wait for response)
+            StartCoroutine(SendAttemptLogNew(
+                problemNumber: _currentProblemNumber,
+                attemptNumber: 1,
+                problem: wordText ? wordText.text : string.Empty,
+                answer: string.Empty,
+                isCorrect: null,
+                isReplyCorrect: null,
+                audioUrl: string.Empty
+            ));
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -683,11 +766,7 @@ public class Stage41Controller : MonoBehaviour
                 while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
                 _segmentReplies[segmentIndex] = (reply ?? string.Empty).Trim();
                 _segmentCorrects[segmentIndex] = ok;
-
-                // attempt 요청 (음성 시도)
-                _attemptCountForProblem++;
-                string phonemeStr = string.Join("", _expectedPhonemes ?? new List<string>());
-                StartCoroutine(SendAttemptLog(_currentProblemNumber, _attemptCountForProblem, phonemeStr, reply, ok, wordText ? wordText.text : null));
+                // no immediate UI fill; will fill after all segments complete
 
                 if (logVerbose) Debug.Log($"[Stage41] segment {segmentIndex} reply='{reply}', correct={ok}");
                 onDone?.Invoke(ok, reply);
@@ -725,6 +804,39 @@ public class Stage41Controller : MonoBehaviour
         }
     }
 
+    // New attempt payload per updated spec
+    private IEnumerator SendAttemptLogNew(int problemNumber, int attemptNumber, string problem, string answer, bool? isCorrect, bool? isReplyCorrect, string audioUrl)
+    {
+        string url = ComposeUrl("/api/train/attempt");
+        string ssid = stageSessionId ?? string.Empty;
+        string stageStr = stageTwoPart ?? string.Empty;
+
+        string json = "{" +
+                      "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
+                      "\"problemNumber\":" + problemNumber + "," +
+                      "\"stage\":\"" + JsonEscape(stageStr) + "\"," +
+                      "\"problem\":\"" + JsonEscape(problem ?? "") + "\"," +
+                      "\"answer\":\"" + JsonEscape(answer ?? "") + "\"," +
+                      // When null, send empty string per spec
+                      "\"isCorrect\":" + (isCorrect.HasValue ? (isCorrect.Value ? "true" : "false") : "\"\"") + "," +
+                      "\"isReplyCorrect\":" + (isReplyCorrect.HasValue ? (isReplyCorrect.Value ? "true" : "false") : "\"\"") + "," +
+                      "\"attemptNumber\":" + attemptNumber + "," +
+                      "\"audioUrl\":\"" + JsonEscape(audioUrl ?? "") + "\"" +
+                      "}";
+
+        if (logVerbose) Debug.Log($"[Stage41] POST {url}\nBody={json}");
+        var bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+        using (var req = new UnityWebRequest(url, "POST"))
+        {
+            req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            req.downloadHandler = new DownloadHandlerBuffer();
+            ApplyCommonHeaders(req);
+            req.SetRequestHeader("Content-Type", "application/json");
+            yield return req.SendWebRequest();
+            if (logVerbose) Debug.Log($"[Stage41] attempt (new): code={req.responseCode} body={req.downloadHandler.text}");
+        }
+    }
+
     private string ComposeUrl(string path)
     {
         if (string.IsNullOrWhiteSpace(baseUrl)) return path;
@@ -743,6 +855,16 @@ public class Stage41Controller : MonoBehaviour
             req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
         }
         req.SetRequestHeader("Accept", "application/json");
+    }
+
+    // Returns normalized expected target phoneme for the segment (초성/중성/종성)
+    private string GetTargetPhonemeAnswer(int segmentIndex)
+    {
+        if (_expectedPhonemes == null) return string.Empty;
+        if (segmentIndex < 0 || segmentIndex >= _expectedPhonemes.Count) return string.Empty;
+        var raw = _expectedPhonemes[segmentIndex] ?? string.Empty;
+        // Normalize to standard jamo like 'ㄱ','ㅗ','ㅁ'
+        return NormalizePhoneme(raw).Trim();
     }
 
     private AudioClip StartMic(int seconds, int sampleRate)
@@ -899,32 +1021,101 @@ public class Stage41Controller : MonoBehaviour
         }
     }
 
-    // 드래그 타일이 슬롯에 떨어졌을 때 호출 (PhonemeSlotUI에서 연결)
-    public void OnUserDrop(int slotIndex, string symbol)
+    // 모든 필요한 슬롯(초/중/종)이 완료됐는지 확인
+    private bool AreAllSlotsFinalized()
     {
-        if (!_awaitingUserArrangement) return; // 보정 단계 외에는 무시
+        int needed = Mathf.Max(0, _expectedSegmentCount);
+        for (int i = 0; i < needed && i < _finalizedSlots.Length; i++)
+        {
+            if (!_finalizedSlots[i]) return false;
+        }
+        return needed > 0;
+    }
+
+    // 틀린 슬롯을 순차적으로 교정하는 코루틴 (초성→중성→종성)
+    private IEnumerator CorrectionFlow()
+    {
+        // 슬롯별 시도횟수 초기화
+        for (int i = 0; i < _attemptsPerSlot.Length; i++) _attemptsPerSlot[i] = 0;
+        // 순서대로 대상 슬롯 탐색
+        for (int slot = 0; slot < _expectedSegmentCount; slot++)
+        {
+            if (_finalizedSlots[slot]) continue; // 이미 맞춘 슬롯은 건너뜀
+            _currentCorrectionSlot = slot;
+            // 포커스 & 안내 멘트
+            if (slot == 0 && choseongBox) FocusBox(choseongBox);
+            else if (slot == 1 && jungseongBox) FocusBox(jungseongBox);
+            else if (slot == 2 && jongseongBox) FocusBox(jongseongBox);
+            _awaitingUserArrangement = true; // 드래그를 즉시 허용
+            yield return PlayClip(clipFindCorrect); // [4.1.10]
+            // 사용자가 올바르게 배치하거나 3회 실패로 자동완료될 때까지 대기
+            while (_awaitingUserArrangement) yield return null;
+        }
+        _currentCorrectionSlot = -1;
+        FocusBox(null);
+    }
+
+
+    // 드래그 타일이 슬롯에 떨어졌을 때 호출 (PhonemeSlotUI에서 연결)
+        public void OnUserDrop(int slotIndex, string symbol)
+    {
+        if (!_awaitingUserArrangement) return; // 드롭을 기다리는 단계가 아님
+        // 현재 교정 대상 슬롯이 지정된 경우, 그 슬롯만 허용
+        if (_currentCorrectionSlot >= 0 && slotIndex != _currentCorrectionSlot) return;
         // 유효성
         if (slotIndex < 0 || slotIndex >= 3) return;
         if (_expectedPhonemes == null || slotIndex >= _expectedPhonemes.Count) return;
         string expected = _expectedPhonemes[slotIndex];
         bool correct = string.Equals(NormalizePhoneme((symbol ?? string.Empty).Trim()), NormalizePhoneme((expected ?? string.Empty).Trim()), StringComparison.Ordinal);
 
-        // attempt 로깅 (슬롯 단위 시도)
+        // attempt 로깅 (드래그 교정)
+        if (_currentCorrectionSlot >= 0)
+            _attemptsPerSlot[_currentCorrectionSlot] = Mathf.Clamp(_attemptsPerSlot[_currentCorrectionSlot] + 1, 1, 3);
         _attemptCountForProblem++;
-        string phonemeStr = string.Join("", _expectedPhonemes);
-        StartCoroutine(SendAttemptLog(_currentProblemNumber, _attemptCountForProblem, phonemeStr, symbol, correct, wordText ? wordText.text : null));
+        int attemptNum = (_currentCorrectionSlot >= 0) ? _attemptsPerSlot[_currentCorrectionSlot] : Mathf.Min(_attemptCountForProblem, 3);
+        StartCoroutine(SendAttemptLogNew(
+            problemNumber: _currentProblemNumber,
+            attemptNumber: attemptNum,
+            problem: wordText ? wordText.text : string.Empty,
+            answer: symbol,
+            isCorrect: correct,
+            isReplyCorrect: false,
+            audioUrl: string.Empty
+        ));
 
         if (!correct)
         {
-            StartCoroutine(PlayClip(clipTryAgain)); // [4.1.12]
+            // 3회 실패 시 자동 정답 처리
+            if (_currentCorrectionSlot >= 0 && _attemptsPerSlot[_currentCorrectionSlot] >= 3)
+            {
+                StartCoroutine(PlayClip(clipFinalizeSpell)); // [4.1.13]
+                SetSlotText(slotIndex, NormalizePhoneme(expected));
+                SetSlotAlpha(slotIndex, 1f);
+                _finalizedSlots[slotIndex] = true;
+                _awaitingUserArrangement = false;
+            }
+            else
+            {
+                StartCoroutine(PlayClip(clipTryAgain)); // [4.1.12]
+            }
             return;
         }
 
-        // 정답일 때 해당 슬롯 채우고 빛나게
+        // 정답이면 해당 슬롯 채우기
         SetSlotText(slotIndex, NormalizePhoneme(expected));
         SetSlotAlpha(slotIndex, 1f);
         _finalizedSlots[slotIndex] = true;
         StartCoroutine(PlayClip(clipGoodThatsIt)); // [4.1.11]
+        if (_currentCorrectionSlot >= 0)
+            _awaitingUserArrangement = false;
+
+        // 모두 완료 시 즉시 다음으로 진행
+        if (AreAllSlotsFinalized())
+        {
+            _awaitingUserArrangement = false;
+            SetAllBoxAlpha(1f);
+            StartCoroutine(PlayClip(clipGreat)); // [4.1.5]
+        }
 
     } 
     #endregion
