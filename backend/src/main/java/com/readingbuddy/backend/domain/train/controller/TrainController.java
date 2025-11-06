@@ -94,7 +94,7 @@ public class TrainController {
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("음절 개수 세기 문제가 생성되었습니다.", problemSetResponse));
-                case "3", "4":
+                case "3", "4.1", "4.2":
                     problems = problemGenerateService.extractLetters(stage, count, userId);
 
                     problemSetResponse = ProblemSetResponse.builder()
@@ -102,7 +102,7 @@ public class TrainController {
                             .build();
 
                     // Stage 3, 4일 때 세션에 문제별 KC 정보와 candidateList 저장
-                    if (stageSessionId != null && (stage.equals("3") || stage.equals("4"))) {
+                    if (stageSessionId != null) {
                         trainedStageService.saveProblemInfoToSession(stageSessionId, problems);
                     }
 

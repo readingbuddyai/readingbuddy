@@ -44,8 +44,8 @@ INSERT INTO knowledge_component (id, category, stage) VALUES
 (42, 'PALATAL_CODA_2', '4.2'),
 (43, 'ALVEOLAR_FRICATIVE_CODA_2', '4.2'),
 (44, 'GLOTTAL_AND_ALVEOLAR_CODA_2', '4.2'),
-(21, 'MONOPHTHONG_NUCLEUS_2', '4.2'),
-(22, 'DIPHTHONG_NUCLEUS_2', '4.2'),
+(45, 'MONOPHTHONG_NUCLEUS_2', '4.2'),
+(46, 'DIPHTHONG_NUCLEUS_2', '4.2')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO words (id, word, voice_url) VALUES
