@@ -4,6 +4,7 @@ import com.readingbuddy.backend.common.util.function.PhonemeCounter;
 import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 import com.readingbuddy.backend.domain.bkt.service.BktService;
+import com.readingbuddy.backend.domain.train.dto.result.PhonemeWithKcIdAndCandidate;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_1Problem;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_2Problem;
@@ -12,6 +13,8 @@ import com.readingbuddy.backend.domain.train.entity.Words;
 import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.WordsRepository;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,7 @@ public class VowelTrainService {
     private final KnowledgeComponentRepository knowledgeComponentRepository;
     private final Random random = new Random();
 
+
     /**
      * 모음 기초 단계 문제 생성 (Stage 1.1.1) - BKT 적용
      */
@@ -38,10 +42,12 @@ public class VowelTrainService {
         List<ProblemResult> problemList = new ArrayList<>();
 
         // 1. 유저 숙련도 기반 정답 Phonemes 뽑기
-        List<Phonemes> answerPhonemes = getBasedUserMasteryPhonemes(userId, count, stage);
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = getBasedUserMasteryPhonemes(userId, count, stage);
 
         // 2. 문제 생성
-        for (Phonemes answerPhoneme : answerPhonemes) {
+        for (PhonemeWithKcIdAndCandidate phonemeWithKc : phonemeWithKcs) {
+            Phonemes answerPhoneme = phonemeWithKc.getPhonemes();
+
             // 2-1. 보기 생성
             Phonemes wrongVowel = phonemesRepository.findRandomVowel(answerPhoneme.getId());
 
@@ -68,6 +74,8 @@ public class VowelTrainService {
                     .phonemeId(answerPhoneme.getId())
                     .voiceUrl(answerPhoneme.getVoiceUrl())
                     .options(optionDtos)
+                    .kcId(phonemeWithKc.getKcId())
+                    .candidateList(phonemeWithKc.getCandidateList())
                     .build()
             );
         }
@@ -80,11 +88,13 @@ public class VowelTrainService {
     public List<ProblemResult> getAdvancedProblem(Long userId, int count) {
         final String stage = "1.1.2";
         List<ProblemResult> problemList = new ArrayList<>();
-        List<Phonemes> targetPhonemes = getBasedUserMasteryPhonemes(userId, count, stage);
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = getBasedUserMasteryPhonemes(userId, count, stage);
         List<Words> allWords = wordsRepository.findAll();
         Collections.shuffle(allWords);
 
-        for (Phonemes targetPhoneme : targetPhonemes) {
+        for (PhonemeWithKcIdAndCandidate phonemeWithKc : phonemeWithKcs) {
+            Phonemes targetPhoneme = phonemeWithKc.getPhonemes();
+
             List<Words> selectedWords = new ArrayList<>();
             boolean foundCorrect = false;
             char targetVowel = targetPhoneme.getValue().charAt(0);
@@ -129,6 +139,8 @@ public class VowelTrainService {
                     .imageUrl(targetPhoneme.getImageUrl())
                     .voiceUrl(targetPhoneme.getVoiceUrl())
                     .options(options)
+                    .kcId(phonemeWithKc.getKcId())
+                    .candidateList(phonemeWithKc.getCandidateList())
                     .build()
             );
         }
@@ -154,8 +166,8 @@ public class VowelTrainService {
     /**
      * 유저 숙련도 기반으로 Phonemes 선택
      */
-    private List<Phonemes> getBasedUserMasteryPhonemes(Long userId, int count, String stage) {
-        List<Phonemes> phonemes = new ArrayList<>();
+    private List<PhonemeWithKcIdAndCandidate> getBasedUserMasteryPhonemes(Long userId, int count, String stage) {
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = new ArrayList<>();
 
         // 1. 해당 단계에 해당하는 KC 모두 가져오기
         List<KnowledgeComponent> stageKcs = knowledgeComponentRepository.findByStage(stage);
@@ -193,11 +205,12 @@ public class VowelTrainService {
             KnowledgeComponent selectedKc = levelFilteredKcs.get(random.nextInt(levelFilteredKcs.size()));
 
             // 3-4. 비트마스킹을 이용해 선택된 지식단위에서 문제 가져오기
-            Phonemes answerVowel = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId());
+            PhonemeWithKcIdAndCandidate answerVowel = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId());
 
-            phonemes.add(answerVowel);
+            // 3-5. Phonemes와 KC ID를 함께 저장
+            phonemeWithKcs.add(answerVowel);
         }
-        return phonemes;
+        return phonemeWithKcs;
     }
 
     /**

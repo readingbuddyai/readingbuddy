@@ -17,14 +17,18 @@ public class Stage1_2Problem extends ProblemResult {
     private final String imageUrl;
     private final String voiceUrl;
     private final List<OptionDto> options;
+    private final Long kcId;  // Knowledge Component ID
+    private final Integer candidateList;  // 업데이트된 candidateList 비트마스크
 
-    public Stage1_2Problem(String problemWord, Long phonemeId, String targetPhoneme, String imageUrl, String voiceUrl, List<OptionDto> options) {
+    public Stage1_2Problem(String problemWord, Long phonemeId, String targetPhoneme, String imageUrl, String voiceUrl, List<OptionDto> options, Long kcId, Integer candidateList) {
         super(problemWord);
         this.phonemeId = phonemeId;
         this.targetPhoneme = targetPhoneme;
         this.imageUrl = imageUrl;
         this.voiceUrl = voiceUrl;
         this.options = options;
+        this.kcId = kcId;
+        this.candidateList = candidateList;
     }
 
     @Getter

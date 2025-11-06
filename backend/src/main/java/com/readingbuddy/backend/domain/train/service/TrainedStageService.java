@@ -9,6 +9,7 @@ import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
+import com.readingbuddy.backend.domain.train.dto.result.*;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage3Problem;
 import com.readingbuddy.backend.domain.train.dto.result.Stage4Problem;
@@ -210,6 +211,25 @@ public class TrainedStageService {
 
                 // KC ID -> candidateList 매핑 (업데이트된 값으로)
                 stageSessionInfo.getKcCandidateList().put(stage4Problem.getKcId(), stage4Problem.getCandidateList());
+            }
+            else if (problem instanceof Stage1_1Problem) {
+                Stage1_1Problem stage1_1Problem = (Stage1_1Problem) problem;
+                int problemNumber = i + 1;  // 문제 번호는 1부터 시작
+
+                // 문제 번호 -> KC ID 매핑
+                stageSessionInfo.getProblemKcMap().put(problemNumber, stage1_1Problem.getKcId());
+
+                // KC ID -> candidateList 매핑 (업데이트된 값으로)
+                stageSessionInfo.getKcCandidateList().put(stage1_1Problem.getKcId(), stage1_1Problem.getCandidateList());
+            }else if (problem instanceof Stage1_2Problem) {
+                Stage1_2Problem stage1_2Problem = (Stage1_2Problem) problem;
+                int problemNumber = i + 1;  // 문제 번호는 1부터 시작
+
+                // 문제 번호 -> KC ID 매핑
+                stageSessionInfo.getProblemKcMap().put(problemNumber, stage1_2Problem.getKcId());
+
+                // KC ID -> candidateList 매핑 (업데이트된 값으로)
+                stageSessionInfo.getKcCandidateList().put(stage1_2Problem.getKcId(), stage1_2Problem.getCandidateList());
             }
         }
     }

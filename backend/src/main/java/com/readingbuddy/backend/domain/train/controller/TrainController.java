@@ -42,7 +42,7 @@ public class TrainController {
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam String stage,
             @RequestParam(defaultValue = "5") Integer count,
-            @RequestParam(required = false) String stageSessionId) {
+            @RequestParam String stageSessionId) {
 
         try {
             ProblemSetResponse problemSetResponse;
@@ -66,6 +66,10 @@ public class TrainController {
                             ? "모음 기초 단계 문제가 생성되었습니다."
                             : "모음 심화 단계 문제가 생성되었습니다.";
 
+                    if (stageSessionId != null) {
+                        trainedStageService.saveProblemInfoToSession(stageSessionId, problems);
+                    }
+
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success(message, problemSetResponse));
 
@@ -83,6 +87,10 @@ public class TrainController {
                     message = stage.equals("1.2.1")
                             ? "자음 기초 단계 문제가 생성되었습니다."
                             : "자음 심화 단계 문제가 생성되었습니다.";
+
+                    if (stageSessionId != null) {
+                        trainedStageService.saveProblemInfoToSession(stageSessionId, problems);
+                    }
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success(message, problemSetResponse));
