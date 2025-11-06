@@ -202,4 +202,24 @@ public class BktService {
         log.info("선택된 Phoneme: {}", selected.getValue());
         return selected;
     }
+
+    public Integer getCandidateBitMask(Long userId, Long kcId) {
+        Optional<TrainedProblemHistories> latestProblemHistory =
+                trainedProblemHistoriesRepository.findFirstKCProbleHistories(userId, kcId);
+
+        // 문제 이력이 없음
+        if (latestProblemHistory.isEmpty()) {
+            return 0;
+        }
+
+        Integer candidateList = latestProblemHistory.get().getCandidateList();
+        if (candidateList == null) {
+            log.info("candidateList가 null이어서 랜덤 선택");
+            return 0;
+        }
+
+        log.info("candidateList 비트마스크: {} (binary: {})", candidateList, Integer.toBinaryString(candidateList));
+
+        return candidateList;
+    }
 }

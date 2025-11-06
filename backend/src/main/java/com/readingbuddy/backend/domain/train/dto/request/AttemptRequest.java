@@ -19,4 +19,5 @@ public class AttemptRequest {
     private Boolean isCorrect;
     private Boolean isReplyCorrect;
     private String audioUrl;
+    private Integer candidateList;  // 업데이트된 candidateList 비트마스크
 }
