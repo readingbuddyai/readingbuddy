@@ -35,7 +35,6 @@ public class BktService {
 
     private final UserKcMasteryRepository userKcMasteryRepository;
     private final KnowledgeComponentRepository knowledgeComponentRepository;
-    private final TrainProblemHistoriesKcMapRepository trainedStageHistoriesKcMapRepository;
     private final PhonemesKcMapRepository phonemesKcMapRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
     /**
@@ -111,61 +110,16 @@ public class BktService {
     /**
      * TODO: 유저와 stage 가 들어오면 해당 stage에 대한 kc들의 숙련도가 충분한지 출력
      */
-    public KnowledgeComponent selectKnowledgeComponent(Long userId, String stage) {
-        // 1. Stage에 해당하는 모든 KnowledgeComponent 조회
-        List<KnowledgeComponent> stageKcs = knowledgeComponentRepository.findByStage(stage);
-        log.info("Stage {} KnowledgeComponents 개수: {}", stage, stageKcs.size());
-
-        // 2. 각 KC에 대한 정답률 계산 (BKT 기반)
-        Map<Long, Float> kcCorrectRateMap = new HashMap<>();
-        for (KnowledgeComponent kc : stageKcs) {
-            try {
-                Float correctRate = getCorrectAnswerRate(userId, kc.getId());
-                kcCorrectRateMap.put(kc.getId(), correctRate);
-                log.info("KC ID: {}, 정답률: {}", kc.getId(), correctRate);
-            } catch (Exception e) {
-                // mastery가 없는 경우 기본값 0.0 사용
-                kcCorrectRateMap.put(kc.getId(), 0.0f);
-                log.info("KC ID: {} - mastery 없음, 기본값 0.0 사용", kc.getId());
-            }
-        }
-
-        // 3. 정답률이 가장 높은 KC 찾기
-        Long highestKcId = kcCorrectRateMap.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse(null);
-
-        if (highestKcId != null) {
-            log.info("정답률이 가장 높은 KC ID: {}, 정답률: {}", highestKcId, kcCorrectRateMap.get(highestKcId));
-        }
-
-        // 4. 정답률이 가장 높은 KC를 제외한 후보 KC 목록 생성
-        List<KnowledgeComponent> candidateKcs = stageKcs.stream()
-                .filter(kc -> highestKcId == null || !kc.getId().equals(highestKcId))
-                .collect(Collectors.toList());
-
-        log.info("정답률이 가장 높은 KC 제외 후 후보 KC 개수: {}", candidateKcs.size());
-
-        // 5. 후보 KC 중 랜덤으로 하나 선택
-        if (candidateKcs.isEmpty()) {
-            candidateKcs = stageKcs;
-        }
-
-        return candidateKcs.get(new Random().nextInt(candidateKcs.size()));
-    }
-
-    public Phonemes selectPhonemeUsingBitMask(KnowledgeComponent selectedKc, Long userId, String stage) {
+    public Phonemes selectPhonemeUsingBitMask(Long userId,Long kcId) {
         // 1. 선택된 KC에 해당하는 모든 Phonemes 조회
-        List<Phonemes> kcPhonemes = phonemesKcMapRepository.findByKnowledgeComponent_Id(selectedKc.getId())
+        List<Phonemes> kcPhonemes = phonemesKcMapRepository.findByKnowledgeComponent_Id(kcId)
                 .stream()
                 .map(PhonemesKcMap::getPhonemes)
                 .toList();
         log.info("선택된 KC에 속한 Phonemes 개수: {}", kcPhonemes.size());
 
-        // 2. 해당 user의 해당 stage에 대한 최신 문제 이력 조회 (candidateList)
         Optional<TrainedProblemHistories> latestProblemHistory =
-                trainedProblemHistoriesRepository.findFirstByTrainedStageHistories_User_IdAndTrainedStageHistories_StageOrderBySolvedAtDesc(userId, stage);
+                trainedProblemHistoriesRepository.findFirstKCProbleHistories(userId, kcId);
 
         // 3. 문제 이력이 없으면 처음 문제를 푸는 것이므로 랜덤 선택
         if (latestProblemHistory.isEmpty()) {
@@ -192,9 +146,9 @@ public class BktService {
             }
         }
 
+        // 모든 비트를 사용했다면 Random 가져오기
         if (availablePhonemes.isEmpty()) {
-            log.warn("모든 Phoneme이 이미 출제되었습니다. candidateList 초기화 필요");
-            return null;
+            availablePhonemes.add(kcPhonemes.get(new Random().nextInt(kcPhonemes.size())));
         }
 
         // 6. 사용 가능한 Phoneme 중 랜덤 선택
