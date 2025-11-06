@@ -34,13 +34,15 @@ public class TrainController {
      * 훈련 문제 세트 생성 API
      * @param stage 문제 단계 ( 1.1.1: 모음 기초, 1.1.2: 모음 심화, 1.2.1: 자음 기초, 1.2.2: 자음 심화, 2: 음절 개수, 3, 4: 음소 개수 )
      * @param count 문제 개수 ( 기본값: 5 )
+     * @param stageSessionId 스테이지 세션 ID (Stage 3, 4일 때 필수)
      * @return 생성된 문제 세트
      */
     @GetMapping(value = "/set")
     public ResponseEntity<ApiResponse<?>> generateTrainSet(
             @AuthenticationPrincipal CustomUserDetails customUserDetails,
             @RequestParam String stage,
-            @RequestParam(defaultValue = "5") Integer count) {
+            @RequestParam(defaultValue = "5") Integer count,
+            @RequestParam(required = false) String stageSessionId) {
 
         try {
             ProblemSetResponse problemSetResponse;
@@ -93,9 +95,16 @@ public class TrainController {
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("음절 개수 세기 문제가 생성되었습니다.", problemSetResponse));
                 case "3", "4":
+                    problems = problemGenerateService.extractLetters(stage, count, userId);
+
                     problemSetResponse = ProblemSetResponse.builder()
-                            .problems(problemGenerateService.extractLetters(stage, count, userId))
+                            .problems(problems)
                             .build();
+
+                    // Stage 3, 4일 때 세션에 문제별 KC 정보와 candidateList 저장
+                    if (stageSessionId != null && stage.equals("3")) {
+                        trainedStageService.saveProblemInfoToSession(stageSessionId, problems);
+                    }
 
                     return ResponseEntity.status(HttpStatus.CREATED)
                             .body(ApiResponse.success("음소 개수 세기 문제가 생성되었습니다.", problemSetResponse));
@@ -183,7 +192,7 @@ public class TrainController {
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            AttemptResponse response = trainedStageService.submitAttempt(request);
+            AttemptResponse response = trainedStageService.submitAttempt(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("문제 풀이가 기록되었습니다.", response));
         } catch (Exception e) {

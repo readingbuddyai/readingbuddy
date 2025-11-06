@@ -24,13 +24,6 @@ public class TrainedProblemHistories {
     @Column(nullable = false)
     private Integer problemNumber;  // 문제 번호 (1, 2, 3, ...)
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "phoneme_id", nullable = true)
-    private Phonemes phoneme;
-
-    @Column(nullable = true)
-    private String phonemes;
-
     @Column(nullable = true)
     private String word;
 
