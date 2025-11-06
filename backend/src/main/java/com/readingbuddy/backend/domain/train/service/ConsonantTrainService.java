@@ -4,6 +4,7 @@ import com.readingbuddy.backend.common.util.function.PhonemeCounter;
 import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 import com.readingbuddy.backend.domain.bkt.service.BktService;
+import com.readingbuddy.backend.domain.train.dto.result.PhonemeWithKcIdAndCandidate;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_1Problem;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_2Problem;
@@ -30,6 +31,7 @@ public class ConsonantTrainService {
     private final KnowledgeComponentRepository knowledgeComponentRepository;
     private final Random random = new Random();
 
+
     /**
      * 자음 기초 단계 문제 생성 (Stage 1.2.1)
      */
@@ -37,9 +39,11 @@ public class ConsonantTrainService {
         final String stage = "1.2.1";
         List<ProblemResult> problemList = new ArrayList<>();
         // 1. 유저 숙련도 기반 정답 Answer 뽑아와서
-        List<Phonemes> answerPhonemes = getBasedUserMasteryPhonemes(userId,count,stage);
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcIdAndCandidates = getBasedUserMasteryPhonemes(userId,count,stage);
         // 2. 문제 생성
-        for (Phonemes answerPhoneme : answerPhonemes) {
+        for (PhonemeWithKcIdAndCandidate phonemeWithKcIdAndCandidate : phonemeWithKcIdAndCandidates) {
+            Phonemes answerPhoneme = phonemeWithKcIdAndCandidate.getPhonemes();
+
             // 2-1. 보기 생성
             Phonemes wrongConsonant = phonemesRepository.findRandomConsonant(answerPhoneme.getId());
 
@@ -66,6 +70,8 @@ public class ConsonantTrainService {
                     .phonemeId(answerPhoneme.getId())
                     .voiceUrl(answerPhoneme.getVoiceUrl())
                     .options(optionDtos)
+                    .kcId(phonemeWithKcIdAndCandidate.getKcId())
+                    .candidateList(phonemeWithKcIdAndCandidate.getCandidateList())
                     .build()
             );
         }
@@ -78,11 +84,13 @@ public class ConsonantTrainService {
     public List<ProblemResult> getAdvancedProblem(Long userId,int count) {
         final String stage = "1.2.2";
         List<ProblemResult> problemList = new ArrayList<>();
-        List<Phonemes> targetPhonemes = getBasedUserMasteryPhonemes(userId,count,stage);
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = getBasedUserMasteryPhonemes(userId,count,stage);
         List<Words> allWords = wordsRepository.findAll();
         Collections.shuffle(allWords);
 
-        for (Phonemes targetPhoneme : targetPhonemes){
+        for (PhonemeWithKcIdAndCandidate phonemeWithKcIdAndCandidate : phonemeWithKcs){
+            Phonemes targetPhoneme = phonemeWithKcIdAndCandidate.getPhonemes();
+
             List<Words> selectedWords = new ArrayList<>();
             boolean foundCorrect = false;
             char targetConsonant = targetPhoneme.getValue().charAt(0);
@@ -127,6 +135,8 @@ public class ConsonantTrainService {
                     .imageUrl(targetPhoneme.getImageUrl())
                     .voiceUrl(targetPhoneme.getVoiceUrl())
                     .options(options)
+                    .kcId(phonemeWithKcIdAndCandidate.getKcId())
+                    .candidateList(phonemeWithKcIdAndCandidate.getCandidateList())
                     .build()
             );
         }
@@ -148,8 +158,8 @@ public class ConsonantTrainService {
         }
         return false;
     }
-    private List<Phonemes> getBasedUserMasteryPhonemes(Long userId,int count,String stage) {
-        List<Phonemes> phonemes = new ArrayList<>();
+    private List<PhonemeWithKcIdAndCandidate> getBasedUserMasteryPhonemes(Long userId,int count,String stage) {
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = new ArrayList<>();
         // 1. 해당 단계에 해당하는 KC 모두 가져오기
         List<KnowledgeComponent> stageKcs = knowledgeComponentRepository.findByStage(stage);
         // 2. 각 KC에 대한 정답률 계산 (BKT 기반)
@@ -185,12 +195,12 @@ public class ConsonantTrainService {
             KnowledgeComponent selectedKc = levelFilteredKcs.get(random.nextInt(levelFilteredKcs.size()));
 
             // 3-4. 비트마스킹을 이용해 선택된 지식단위에서 문제 가져오기
-            Phonemes answerConsonant = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId());
-
-            phonemes.add(answerConsonant);
+            PhonemeWithKcIdAndCandidate answerConsonant = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId());
+            // 3-5. Phonemes와 KC ID를 함께 저장
+            phonemeWithKcs.add(answerConsonant);
 
         }
-        return phonemes;
+        return phonemeWithKcs;
     }
 
     private List<KnowledgeComponent> filterByLevel(String level,List<KnowledgeComponent> stageKcs,Map<Long, Float> kcCorrectRateMap){

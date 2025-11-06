@@ -2,22 +2,16 @@ package com.readingbuddy.backend.domain.bkt.service;
 
 import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
-import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
 import com.readingbuddy.backend.domain.train.dto.result.KcWithCorrectRate;
 import com.readingbuddy.backend.domain.bkt.entity.PhonemesKcMap;
-import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
-import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 import com.readingbuddy.backend.domain.bkt.repository.PhonemesKcMapRepository;
-import com.readingbuddy.backend.domain.bkt.repository.TrainProblemHistoriesKcMapRepository;
-import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
+import com.readingbuddy.backend.domain.train.dto.result.PhonemeWithKcIdAndCandidate;
 import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -110,7 +104,7 @@ public class BktService {
     /**
      * TODO: 유저와 stage 가 들어오면 해당 stage에 대한 kc들의 숙련도가 충분한지 출력
      */
-    public Phonemes selectPhonemeUsingBitMask(Long userId,Long kcId) {
+    public PhonemeWithKcIdAndCandidate selectPhonemeUsingBitMask(Long userId, Long kcId) {
         // 1. 선택된 KC에 해당하는 모든 Phonemes 조회
         List<Phonemes> kcPhonemes = phonemesKcMapRepository.findByKnowledgeComponent_Id(kcId)
                 .stream()
@@ -124,15 +118,15 @@ public class BktService {
         // 3. 문제 이력이 없으면 처음 문제를 푸는 것이므로 랜덤 선택
         if (latestProblemHistory.isEmpty()) {
             log.info("문제 이력이 없어 랜덤 선택");
-            return kcPhonemes.get(new Random().nextInt(kcPhonemes.size()));
+            return PhonemeWithKcIdAndCandidate.builder()
+                    .phonemes(kcPhonemes.get(new Random().nextInt(kcPhonemes.size())))
+                    .candidateList(0)
+                    .KcId(kcId)
+                    .build();
         }
 
         // 4. 최신 candidateList 가져오기
         Integer candidateList = latestProblemHistory.get().getCandidateList();
-        if (candidateList == null) {
-            log.info("candidateList가 null이어서 랜덤 선택");
-            return kcPhonemes.get(new Random().nextInt(kcPhonemes.size()));
-        }
 
         log.info("candidateList 비트마스크: {} (binary: {})", candidateList, Integer.toBinaryString(candidateList));
 
@@ -151,10 +145,14 @@ public class BktService {
             availablePhonemes.add(kcPhonemes.get(new Random().nextInt(kcPhonemes.size())));
         }
 
-        // 6. 사용 가능한 Phoneme 중 랜덤 선택
+        // 사용 가능한 Phoneme 중 랜덤 선택
         Phonemes selected = availablePhonemes.get(new Random().nextInt(availablePhonemes.size()));
         log.info("선택된 Phoneme: {}", selected.getValue());
-        return selected;
+        return PhonemeWithKcIdAndCandidate.builder()
+                .phonemes(selected)
+                .candidateList(candidateList)
+                .KcId(kcId)
+                .build();
     }
 
     public Integer getCandidateBitMask(Long userId, Long kcId) {
