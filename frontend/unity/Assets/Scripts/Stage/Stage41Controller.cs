@@ -1127,14 +1127,10 @@ public class Stage41Controller : MonoBehaviour
 
         if (!correct)
         {
-            // 3회 실패 시 자동 정답 처리
+            // 3회 실패 시: 위로 멘트 [4.1.13] 재생을 끝까지 듣고 자동 정답 처리
             if (_currentCorrectionSlot >= 0 && _attemptsPerSlot[_currentCorrectionSlot] >= 3)
             {
-                StartCoroutine(PlayClip(clipFinalizeSpell)); // [4.1.13]
-                SetSlotText(slotIndex, NormalizePhoneme(expected));
-                SetSlotAlpha(slotIndex, 1f);
-                _finalizedSlots[slotIndex] = true;
-                _awaitingUserArrangement = false;
+                StartCoroutine(Co_FinalizeSlotAfterComfort(slotIndex, expected));
             }
             else
             {
@@ -1160,5 +1156,15 @@ public class Stage41Controller : MonoBehaviour
         }
 
     } 
+    
+    // 3회 실패 후 위로 멘트(4.1.13)를 재생한 뒤 해당 슬롯을 자동 정답 처리
+    private IEnumerator Co_FinalizeSlotAfterComfort(int slotIndex, string expectedRaw)
+    {
+        yield return PlayClip(clipFinalizeSpell); // [4.1.13]
+        SetSlotText(slotIndex, NormalizePhoneme(expectedRaw));
+        SetSlotAlpha(slotIndex, 1f);
+        _finalizedSlots[slotIndex] = true;
+        _awaitingUserArrangement = false;
+    }
     #endregion
 }

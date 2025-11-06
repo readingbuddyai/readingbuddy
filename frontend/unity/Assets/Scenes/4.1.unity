@@ -5370,7 +5370,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baseUrl: https://readingbuddyai.co.kr
   stageSet: 4
-  stageTwoPart: ^4(\.\\d+)*$
+  stageTwoPart: 4
   count: 5
   authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjM5MzgwOSwiZXhwIjoxNzYyNDgwMjA5fQ.M2gpoFNeGptR7BjR6ELhGn4lD4bI_28u109B1EcNqcyWqd-6i1GkSi3pzjpiRbBm
   stageSessionId: 
