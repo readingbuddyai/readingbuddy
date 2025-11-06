@@ -1,9 +1,11 @@
 package com.readingbuddy.backend.domain.train.dto.result;
 
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
+@SuperBuilder
 @Getter
 public class Stage4Problem extends ProblemResult {
 
@@ -11,12 +13,16 @@ public class Stage4Problem extends ProblemResult {
     private final String voiceUrl;
     private final Integer answerCnt;
     private final List<Character> phonemes;
+    private final Long kcId;  // Knowledge Component ID
+    private final Integer candidateList;  // Updated candidateList bitmask
 
-    public Stage4Problem(String problemWord, String slowVoiceUrl, String voiceUrl, Integer answerCnt, List<Character> phonemes) {
+    public Stage4Problem(String problemWord, String slowVoiceUrl, String voiceUrl, Integer answerCnt, List<Character> phonemes, Long kcId, Integer candidateList) {
         super(problemWord);
         this.slowVoiceUrl = slowVoiceUrl;
         this.voiceUrl = voiceUrl;
         this.answerCnt = answerCnt;
         this.phonemes = phonemes;
+        this.kcId = kcId;
+        this.candidateList = candidateList;
     }
 }

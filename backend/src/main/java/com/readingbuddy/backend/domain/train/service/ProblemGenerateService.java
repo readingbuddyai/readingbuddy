@@ -45,14 +45,11 @@ public class ProblemGenerateService {
 
     public List<ProblemResult> extractLetters(String stage, Integer cnt, Long userId) {
         List<ProblemResult> results = null;
-        
-        // TODO: 문제 뽑는 건 각각의 generateStage 안으로 삽입
-        List<Integer> unicodePoints = lettersRepository.findRandomLetters(cnt);
 
         if (stage.equals("3")) {
             results = generateStage3(userId);
-        } else if (stage.equals("4")) {
-            results = generateStage4(unicodePoints);
+        } else if (stage.equals("4.1") || stage.equals("4.2")) {
+            results = generateStage4(userId, stage);
         }
         return results;
     }
@@ -216,27 +213,74 @@ public class ProblemGenerateService {
         return problems;
     }
 
-    public List<ProblemResult> generateStage4(List<Integer> unicodePoints) {
-        List<ProblemResult> results = new ArrayList<>();
-
-        // TODO: userId와 stage로 해당 stage에서 부족한 KC를 뽑는다.
-
-        // TODO: 해당 kc를 토대로 문제 구성
-
-        for (Integer unicodePoint : unicodePoints) {
-            Letters letter = lettersRepository.findByUnicodePoint(unicodePoint)
-                    .orElseThrow(() -> new IllegalStateException("Letter not found for unicode point: " + unicodePoint));
+    /**
+     * LetterWithIndex 리스트로 Stage4Problem 리스트 생성
+     * @param selectedLetters 선택된 LetterWithIndex 리스트
+     * @param kcId Knowledge Component ID
+     * @param candidateList 업데이트된 candidateList
+     * @return Stage4Problem 리스트
+     */
+    private List<ProblemResult> createStage4Problems(List<LetterWithIndex> selectedLetters, Long kcId, int candidateList) {
+        List<ProblemResult> problems = new ArrayList<>();
+        for (LetterWithIndex letterWithIndex : selectedLetters) {
+            Letters letter = letterWithIndex.letter;
 
             // unicodePoint를 실제 한글 문자로 변환
-            String koreanChar = String.valueOf((char) unicodePoint.intValue());
+            String koreanChar = String.valueOf((char) letter.getUnicodePoint().intValue());
 
             // PhonemeCounter를 사용하여 음소 분해
-            List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(unicodePoint);
+            List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(letter.getUnicodePoint());
 
-            results.add(
-                    new Stage4Problem(koreanChar, letter.getSlowVoiceUrl(), letter.getVoiceUrl(), letter.getCount(), phonemes)
-            );
+            problems.add(new Stage4Problem(
+                    koreanChar,
+                    letter.getSlowVoiceUrl(),
+                    letter.getVoiceUrl(),
+                    letter.getCount(),
+                    phonemes,
+                    kcId,
+                    candidateList
+            ));
         }
+        return problems;
+    }
+
+    public List<ProblemResult> generateStage4(Long userId, String stage) {
+        List<ProblemResult> results = new ArrayList<>();
+
+        // 정답률이 낮은 순으로 정렬된 KC 목록 가져오기
+        List<KcWithCorrectRate> kcList = bktService.getLowestCorrectRateKcsByStage(userId, stage);
+
+        // Stage 4: KC당 1개씩, 최대 5개 KC
+        int maxKcCount = 5;
+        int problemPerKc = 1;
+
+        for (int idx = 0; idx < Math.min(kcList.size(), maxKcCount); idx++) {
+            KcWithCorrectRate kcWithRate = kcList.get(idx);
+            Long kcId = kcWithRate.getKnowledgeComponent().getId();
+
+            // 해당 KC에 매핑된 Letters 조회
+            List<Letters> letters = lettersKcMapRepository.findByKnowledgeComponentId(kcId).stream()
+                    .map(LettersKcMap::getLetters)
+                    .toList();
+
+            // 현재 candidateList 가져오기
+            int candidateList = bktService.getCandidateBitMask(userId, kcId);
+
+            // 1. 사용 가능한 Letters 필터링 (비트마스크 기반)
+            List<LetterWithIndex> availableLetters = filterAvailableLetters(letters, candidateList);
+            boolean wasReset = availableLetters.size() == letters.size() && candidateList != 0;
+
+            // 2. 랜덤으로 1개 선택 (부족하면 전체 letters에서 선택)
+            List<LetterWithIndex> selectedLetters = selectRandomLetters(availableLetters, letters, problemPerKc);
+
+            // 3. candidateList 업데이트 (부족해서 추가 선택한 경우 리셋)
+            boolean needsReset = wasReset || selectedLetters.size() > availableLetters.size();
+            int updatedCandidateList = updateCandidateList(selectedLetters, candidateList, needsReset);
+
+            // 4. Stage4Problem 생성 및 추가
+            results.addAll(createStage4Problems(selectedLetters, kcId, updatedCandidateList));
+        }
+
         return results;
     }
 
