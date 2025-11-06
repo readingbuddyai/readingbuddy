@@ -3,7 +3,35 @@ guid: a8c1ad346c111544cbfdd91177f30a86
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - progressText: {instanceID: 0}
+  - progressTextTMP: {instanceID: 0}
+  - wordLabel: {instanceID: 0}
+  - audioSource: {instanceID: 0}
+  - sfxStart: {fileID: 8300000, guid: 3b37cea90cc807b4a8d4cba2a56e0eff, type: 3}
+  - sfxNext: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}
+  - clipGreeting: {fileID: 8300000, guid: c95f9dff05d6c9f4f942e5e9b41cbf50, type: 3}
+  - clipLessonIntro: {fileID: 8300000, guid: 17b75902ae3fc964c830f7e5c13c4298, type: 3}
+  - clipRecallPreviousLesson: {fileID: 8300000, guid: a71b8af42823232459036cbcd7c8c951, type: 3}
+  - clipExplainPhonemeMagic: {fileID: 8300000, guid: 6b38a1c31a7bdc24cb76ab1e682cdf1f, type: 3}
+  - clipInstructionListenCarefully: {fileID: 8300000, guid: 3543a610754797d4a85adecc6f66ef3a, type: 3}
+  - clipInstructionHiddenPieces: {fileID: 8300000, guid: 8f6253673eb6c014ca4b410051b82162, type: 3}
+  - clipInstructionMoveStones: {fileID: 8300000, guid: 7d710c3b0f53cb241ac6f40d8c47d0f1, type: 3}
+  - clipTeacherChant: {fileID: 8300000, guid: 94fb48f972f8a1c4399ae83ba86771a7, type: 3}
+  - clipPromptYourTurn: {fileID: 8300000, guid: 62741873ad7bb40448f6ce3b162daf42, type: 3}
+  - clipPromptRepeat: {fileID: 8300000, guid: 80738e002aa75564c9a1b3f448e1c91b, type: 3}
+  - clipPraisePrecision: {fileID: 8300000, guid: 69e8cd3052f73c84994d2932c8a1e56b, type: 3}
+  - clipPromptCountStones: {fileID: 8300000, guid: cc86ad6b68089a349bb54d3e5a850814, type: 3}
+  - clipCorrectCelebration: {fileID: 8300000, guid: d837b9e43e6ff7c4cab644c0d25633bb, type: 3}
+  - clipRetryEncourageAttempt: {fileID: 8300000, guid: 7ecb1de0f59f44e46985377524094d5a, type: 3}
+  - stoneBoard: {instanceID: 0}
+  - countdownText: {instanceID: 0}
+  - clipFeedbackLackSense: {fileID: 8300000, guid: b9f2db0044bb96843bce662524be4d71, type: 3}
+  - clipFeedbackRetryPrompt: {fileID: 8300000, guid: 979998e671eab1c4fa19d9f4578e2dc9, type: 3}
+  - clipFeedbackTryAgainFirst: {fileID: 8300000, guid: 2ffc70cb233ccbe4285b55b860c26702, type: 3}
+  - clipFeedbackTryAgainSecond: {fileID: 8300000, guid: ca42e548555e2fd45be88f2608178f91, type: 3}
+  - clipFeedbackGreatJob: {fileID: 8300000, guid: 0426d53f0853494478ed2c9846db4946, type: 3}
+  - clipFinalEncouragement: {fileID: 8300000, guid: 2286a3c3e8a1b5442874e66157243bd5, type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

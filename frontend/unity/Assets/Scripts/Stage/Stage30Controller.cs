@@ -39,23 +39,22 @@ public class Stage30Controller : MonoBehaviour
     public int recordSampleRate = 44100;
 
     [Header("도입 대사")]
-    public AudioClip clipHello;
-    public AudioClip clipLesson;
-    public AudioClip clipExplain;
-    public AudioClip clipStoneIntro;
+    public AudioClip clipGreeting;                      // "안녕~! 꼬마 마법사!"
+    public AudioClip clipLessonIntro;                   // [3.1]
+    public AudioClip clipRecallPreviousLesson;          // [3.2]
+    public AudioClip clipExplainPhonemeMagic;           // [3.3]
+    public AudioClip clipInstructionListenCarefully;    // [3.4.1]
+    public AudioClip clipInstructionHiddenPieces;       // [3.4.2]
+    public AudioClip clipInstructionMoveStones;         // [3.5]
 
     [Header("문항 흐름 대사")]
-    public AudioClip clipTeacherLead;      // [2.4.1]
-    public AudioClip clipListenCue;        // [2.4.2]
-    public AudioClip clipYourTurn;         // [2.5.1]
-    public AudioClip clipRepeatPrompt;     // [2.5.2]
-    public AudioClip clipPerfect;          // [2.6.1]
-    public AudioClip clipMagicFeel;        // [2.6.2]
-    public AudioClip clipCountInstruction; // [2.7]
-    public AudioClip clipCountCorrect1;    // [2.8.1.1]
-    public AudioClip clipCountCorrect2;    // [2.8.1.2]
-    public AudioClip clipCountWrong1;      // [2.8.2.1]
-    public AudioClip clipCountWrong2;      // [2.8.2.2]
+    public AudioClip clipTeacherChant;                  // [3.6]
+    public AudioClip clipPromptYourTurn;                // [3.7]
+    public AudioClip clipPromptRepeat;                  // [3.8]
+    public AudioClip clipPraisePrecision;               // [3.9]
+    public AudioClip clipPromptCountStones;             // [3.10]
+    public AudioClip clipCorrectCelebration;            // [3.11.1]
+    public AudioClip clipRetryEncourageAttempt;         // [3.11.2]
 
     [Header("마법 돌 퍼즐")]
     public GameObject stoneBoard;
@@ -72,15 +71,12 @@ public class Stage30Controller : MonoBehaviour
     public bool autoStartCountdown = true;
 
     [Header("발음 피드백")]
-    public AudioClip clipNeedsMorePower;      // [2.9.1]
-    public AudioClip clipRetryEncourage;      // [2.9.2.1]
-    public AudioClip clipRetryTryAgain1;      // [2.9.3.1]
-    public AudioClip clipRetryTryAgain2;      // [2.9.3.2]
-    public AudioClip clipRetryTryAgain3;      // [2.9.4.1]
-    public AudioClip clipRetryTryAgain4;      // [2.9.4.2]
-    public AudioClip clipGreatJob1;           // [2.9.5.1]
-    public AudioClip clipGreatJob2;           // [2.9.5.2]
-    public AudioClip clipReadyNextLesson;     // [2.9.6]
+    public AudioClip clipFeedbackLackSense;             // [3.12.1]
+    public AudioClip clipFeedbackRetryPrompt;           // [3.12.2]
+    public AudioClip clipFeedbackTryAgainFirst;         // [3.12.3.1]
+    public AudioClip clipFeedbackTryAgainSecond;        // [3.12.3.2]
+    public AudioClip clipFeedbackGreatJob;              // [3.13]
+    public AudioClip clipFinalEncouragement;            // [3.14]
 
     private bool waitingForStoneCount;
     private int? pendingStoneCount;
@@ -128,8 +124,8 @@ public class Stage30Controller : MonoBehaviour
             yield return ProcessAccumulatedFeedback();
         }
 
-        if (clipReadyNextLesson)
-            yield return PlayClip(clipReadyNextLesson);
+        if (clipFinalEncouragement)
+            yield return PlayClip(clipFinalEncouragement);
 
         if (!bypassStageStart && !string.IsNullOrWhiteSpace(stageSessionId))
             yield return StageComplete();
@@ -137,10 +133,13 @@ public class Stage30Controller : MonoBehaviour
 
     private IEnumerator RunIntroSequence()
     {
-        if (clipHello) yield return PlayClip(clipHello);
-        if (clipLesson) yield return PlayClip(clipLesson);
-        if (clipExplain) yield return PlayClip(clipExplain);
-        if (clipStoneIntro) yield return PlayClip(clipStoneIntro);
+        if (clipGreeting) yield return PlayClip(clipGreeting);
+        if (clipLessonIntro) yield return PlayClip(clipLessonIntro);
+        if (clipRecallPreviousLesson) yield return PlayClip(clipRecallPreviousLesson);
+        if (clipExplainPhonemeMagic) yield return PlayClip(clipExplainPhonemeMagic);
+        if (clipInstructionListenCarefully) yield return PlayClip(clipInstructionListenCarefully);
+        if (clipInstructionHiddenPieces) yield return PlayClip(clipInstructionHiddenPieces);
+        if (clipInstructionMoveStones) yield return PlayClip(clipInstructionMoveStones);
     }
 
     private IEnumerator RunOneProblem(int index, int total, QuestionDto problem)
@@ -156,20 +155,18 @@ public class Stage30Controller : MonoBehaviour
             wordLabel.gameObject.SetActive(true);
         }
 
-        if (clipTeacherLead) yield return PlayClip(clipTeacherLead);
-        if (clipListenCue) yield return PlayClip(clipListenCue);
+        if (clipTeacherChant) yield return PlayClip(clipTeacherChant);
         if (!string.IsNullOrEmpty(problem.wordVoiceUrl))
             yield return PlayVoiceUrl(problem.wordVoiceUrl);
 
-        if (clipYourTurn) yield return PlayClip(clipYourTurn);
-        if (clipRepeatPrompt) yield return PlayClip(clipRepeatPrompt);
+        if (clipPromptYourTurn) yield return PlayClip(clipPromptYourTurn);
+        if (clipPromptRepeat) yield return PlayClip(clipPromptRepeat);
 
         yield return RecordAndUpload(problem, index);
 
-        if (clipPerfect) yield return PlayClip(clipPerfect);
-        if (clipMagicFeel) yield return PlayClip(clipMagicFeel);
+        if (clipPraisePrecision) yield return PlayClip(clipPraisePrecision);
 
-        if (clipCountInstruction) yield return PlayClip(clipCountInstruction);
+        if (clipPromptCountStones) yield return PlayClip(clipPromptCountStones);
         if (!string.IsNullOrEmpty(problem.wordVoiceUrl))
             yield return PlayVoiceUrl(problem.wordVoiceUrl);
 
@@ -235,13 +232,11 @@ public class Stage30Controller : MonoBehaviour
             if (isCorrect)
             {
                 solved = true;
-                if (clipCountCorrect1) yield return PlayClip(clipCountCorrect1);
-                if (clipCountCorrect2) yield return PlayClip(clipCountCorrect2);
+                if (clipCorrectCelebration) yield return PlayClip(clipCorrectCelebration);
             }
             else
             {
-                if (clipCountWrong1) yield return PlayClip(clipCountWrong1);
-                if (clipCountWrong2) yield return PlayClip(clipCountWrong2);
+                if (clipRetryEncourageAttempt) yield return PlayClip(clipRetryEncourageAttempt);
                 attempts++;
             }
         }
@@ -391,13 +386,12 @@ public class Stage30Controller : MonoBehaviour
     {
         if (_accumulatedFeedback.Count == 0)
         {
-            if (clipGreatJob1) yield return PlayClip(clipGreatJob1);
-            if (clipGreatJob2) yield return PlayClip(clipGreatJob2);
+            if (clipFeedbackGreatJob) yield return PlayClip(clipFeedbackGreatJob);
             yield break;
         }
 
-        if (clipNeedsMorePower) yield return PlayClip(clipNeedsMorePower);
-        if (clipRetryEncourage) yield return PlayClip(clipRetryEncourage);
+        if (clipFeedbackLackSense) yield return PlayClip(clipFeedbackLackSense);
+        if (clipFeedbackRetryPrompt) yield return PlayClip(clipFeedbackRetryPrompt);
 
         var ordered = _accumulatedFeedback
             .Where(p => p != null)
@@ -417,13 +411,12 @@ public class Stage30Controller : MonoBehaviour
 
             if (i == 0)
             {
-                if (clipRetryTryAgain1) yield return PlayClip(clipRetryTryAgain1);
-                if (clipRetryTryAgain2) yield return PlayClip(clipRetryTryAgain2);
+                if (clipFeedbackTryAgainFirst) yield return PlayClip(clipFeedbackTryAgainFirst);
+                if (clipFeedbackTryAgainSecond) yield return PlayClip(clipFeedbackTryAgainSecond);
             }
             else
             {
-                if (clipRetryTryAgain3) yield return PlayClip(clipRetryTryAgain3);
-                if (clipRetryTryAgain4) yield return PlayClip(clipRetryTryAgain4);
+                if (clipFeedbackTryAgainSecond) yield return PlayClip(clipFeedbackTryAgainSecond);
             }
         }
     }
