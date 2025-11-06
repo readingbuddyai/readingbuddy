@@ -44,7 +44,7 @@ public class BktService {
         /**
          * 정답을 맞출 확률 = 이미 알고 있을 확률  * 실수 하지 않을 확룰 + 모를 확률 * 찍어서 맞출 확률
           */
-        return userKcMastery.getP_l() * (1 - userKcMastery.getP_s()) + (1 - userKcMastery.getP_l()) * (userKcMastery.getP_g());
+        return userKcMastery.getPLearn() * (1 - userKcMastery.getPSlip()) + (1 - userKcMastery.getPLearn()) * (userKcMastery.getPGuess());
     }
 
 
@@ -56,17 +56,17 @@ public class BktService {
 
         float conditionalProbability = 0F;
         if (isCorrect) {
-            conditionalProbability = (userKcMastery.getP_l() * (1 - userKcMastery.getP_s())) / correctRate;
+            conditionalProbability = (userKcMastery.getPLearn() * (1 - userKcMastery.getPSlip())) / correctRate;
         }
         else {
-            conditionalProbability = (userKcMastery.getP_l() * (userKcMastery.getP_s())) / (1 - correctRate);
+            conditionalProbability = (userKcMastery.getPLearn() * (userKcMastery.getPSlip())) / (1 - correctRate);
         }
 
-        Float updatedLearnedMastery = conditionalProbability + (1 - conditionalProbability) * userKcMastery.getP_t();
+        Float updatedLearnedMastery = conditionalProbability + (1 - conditionalProbability) * userKcMastery.getPTrain();
 
         UserKcMastery updatedKcMastery = userKcMastery.toBuilder()
                 .id(null)
-                .p_l(updatedLearnedMastery)
+                .pLearn(updatedLearnedMastery)
                 .build();
 
         userKcMasteryRepository.save(updatedKcMastery);
