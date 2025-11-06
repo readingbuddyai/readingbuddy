@@ -106,7 +106,7 @@ public class TrainManager {
             if (response instanceof Map) {
                 Map<String, Object> responseMap = (Map<String, Object>) response;
                 Boolean isCorrect = (Boolean) responseMap.get("is_correct");
-                List<String> decomposed = (List<String>) responseMap.get("decomposed");
+                List<String> decomposed = (List<String>) responseMap.get("decoded_tokens");
 
                 // 세션 정보에 결과 저장
                 if (stageSessionInfo != null) {
