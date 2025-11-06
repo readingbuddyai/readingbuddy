@@ -1,9 +1,11 @@
 package com.readingbuddy.backend.domain.train.dto.result;
 
 import lombok.Getter;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
+@SuperBuilder
 @Getter
 public class Stage4Problem extends ProblemResult {
 

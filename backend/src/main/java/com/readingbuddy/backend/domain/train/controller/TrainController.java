@@ -102,7 +102,7 @@ public class TrainController {
                             .build();
 
                     // Stage 3, 4일 때 세션에 문제별 KC 정보와 candidateList 저장
-                    if (stageSessionId != null && stage.equals("3")) {
+                    if (stageSessionId != null && (stage.equals("3") || stage.equals("4"))) {
                         trainedStageService.saveProblemInfoToSession(stageSessionId, problems);
                     }
 

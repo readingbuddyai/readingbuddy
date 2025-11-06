@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.gradlew.bat test --tests ProblemGenerateServiceTest)",
+      "Bash(gradlew.bat test:*)",
+      "Bash(./gradlew test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
