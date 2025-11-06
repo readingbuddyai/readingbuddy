@@ -410,7 +410,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMjc1NTksImV4cCI6MTc2MjMxMzk1OX0.MSv-06PqFsbjdQV1W4HvV-QeoE5bTDE6HMrnW7YB_NdMSnYfaBRG5zXay5oEwMrp
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNDE0NTE3LCJleHAiOjE3NjI1MDA5MTd9.OW1LZBVLXmWTQDQ0Hz2egGE0nL2fBza0SEIlDAB5QSTABbgvP_h_deHqUOJap0Ze
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}

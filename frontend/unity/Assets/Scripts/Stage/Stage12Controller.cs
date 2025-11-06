@@ -788,19 +788,20 @@ public class Stage12Controller : MonoBehaviour
         string url = ComposeUrl("/api/train/attempt");
         string stg = string.IsNullOrEmpty(stageTwoPart) ? (stage ?? string.Empty) : stageTwoPart;
         string ssid = stageSessionId ?? string.Empty;
-        string ph = phonemes ?? string.Empty;
-        string sel = selectedAnswer ?? string.Empty;
-        string wd = word; // null 허용
+        string ans = selectedAnswer ?? string.Empty;
+        string problemWord = word ?? string.Empty;
+        string audioUrl = string.Empty;
+        bool includeReplyResult = attemptNumber > 1;
         string json = "{" +
                       "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
                       "\"problemNumber\":" + problemNumber + "," +
                       "\"stage\":\"" + JsonEscape(stg) + "\"," +
-                      "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"phonemes\":\"" + JsonEscape(ph) + "\"," +
-                      "\"selectedAnswer\":\"" + JsonEscape(sel) + "\"," +
-                      "\"word\":" + (wd == null ? "null" : ("\"" + JsonEscape(wd) + "\"")) + "," +
+                      "\"problem\":\"" + JsonEscape(problemWord) + "\"," +
+                      "\"audioUrl\":\"" + JsonEscape(audioUrl) + "\"," +
                       "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
-                      "\"isReplyCorrect\":null,\"audioUrl\":null}";
+                      "\"isReplyCorrect\":" + (includeReplyResult ? (isCorrect ? "true" : "false") : "null") + "," +
+                      "\"attemptNumber\":" + attemptNumber + "," +
+                      "\"answer\":\"" + JsonEscape(ans) + "\"" + "}";
 
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
