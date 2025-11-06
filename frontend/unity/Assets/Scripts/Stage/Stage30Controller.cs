@@ -156,8 +156,8 @@ public class Stage30Controller : MonoBehaviour
         }
 
         if (clipTeacherChant) yield return PlayClip(clipTeacherChant);
-        if (!string.IsNullOrEmpty(problem.wordVoiceUrl))
-            yield return PlayVoiceUrl(problem.wordVoiceUrl);
+        if (!string.IsNullOrEmpty(problem.problemVoiceUrl))
+            yield return PlayVoiceUrl(problem.problemVoiceUrl);
 
         if (clipPromptYourTurn) yield return PlayClip(clipPromptYourTurn);
         if (clipPromptRepeat) yield return PlayClip(clipPromptRepeat);
@@ -167,8 +167,8 @@ public class Stage30Controller : MonoBehaviour
         if (clipPraisePrecision) yield return PlayClip(clipPraisePrecision);
 
         if (clipPromptCountStones) yield return PlayClip(clipPromptCountStones);
-        if (!string.IsNullOrEmpty(problem.wordVoiceUrl))
-            yield return PlayVoiceUrl(problem.wordVoiceUrl);
+        if (!string.IsNullOrEmpty(problem.problemVoiceUrl))
+            yield return PlayVoiceUrl(problem.problemVoiceUrl);
 
         yield return RunStoneRound(problem, index);
     }
@@ -192,7 +192,7 @@ public class Stage30Controller : MonoBehaviour
 
     private IEnumerator RunStoneRound(QuestionDto problem, int problemNumber)
     {
-        int expectedCount = problem != null ? problem.wordLength : 0;
+        int expectedCount = problem != null ? problem.answerCnt : 0;
         int attempts = 0;
         bool solved = false;
 
@@ -702,11 +702,10 @@ public class Stage30Controller : MonoBehaviour
     [Serializable]
     private class QuestionDto
     {
-        public int questionId;
-        public string sessionId;
         public string problemWord;
-        public int wordLength;
-        public string wordVoiceUrl;
+        public string problemVoiceUrl;
+        public int answerCnt;
+        public string sessionId;
     }
 
     [Serializable]

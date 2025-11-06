@@ -8,8 +8,8 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
     [Tooltip("드롭 후 붙일 부모 (CountDisplay로 지정)")]
     public Transform slotParent; // Inspector에서 CountDisplay Transform을 드래그해서 지정
     
-    [Tooltip("Stage20Controller 참조 (비우면 자동으로 찾습니다)")]
-    public Stage20Controller stageController; // Inspector에서 할당하거나 자동으로 찾음
+    [Tooltip("Stage Controller 참조 (비우면 Stage30 → Stage20 순으로 자동 탐색)")]
+    public MonoBehaviour stageController; // Inspector에서 할당하거나 자동으로 찾음
     
     [Tooltip("이 Slot의 번호 (예: Slot_1이면 1, CountDisplay면 0으로 두기)")]
     public int slotNumber = 0; // Inspector에서 설정하거나 자동으로 파싱
@@ -21,7 +21,11 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
     {
         // Stage20Controller가 할당되지 않았으면 자동으로 찾기
         if (stageController == null)
-            stageController = FindObjectOfType<Stage20Controller>();
+        {
+            stageController = FindObjectOfType<Stage30Controller>();
+            if (stageController == null)
+                stageController = FindObjectOfType<Stage20Controller>();
+        }
         
         // slotNumber가 0이면 이름에서 자동으로 파싱 (예: "Slot_1" -> 1)
         if (slotNumber == 0)
@@ -175,8 +179,12 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
         if (searchRoot == null && slotParent != null)
             searchRoot = slotParent;
 
-        if (searchRoot == null && stageController != null && stageController.stoneBoard != null)
-            searchRoot = stageController.stoneBoard.transform;
+        if (searchRoot == null)
+        {
+            Transform stageBoard = GetStoneBoardTransform();
+            if (stageBoard != null)
+                searchRoot = stageBoard;
+        }
 
         if (searchRoot != null)
             return searchRoot.GetComponentsInChildren<StoneDropZone>(true);
@@ -196,14 +204,13 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
 
         int stoneCount = CountStoneDraggablesRecursive(targetParent);
 
-        if (stageController != null)
+        if (TryReportStoneCount(stoneCount))
         {
-            stageController.ReportStoneCount(stoneCount);
             Debug.Log($"[StoneDropZone] 드롭된 Stone 개수: {stoneCount} (CountDisplay: {targetParent.name})");
         }
         else
         {
-            Debug.LogWarning("[StoneDropZone] Stage20Controller를 찾을 수 없습니다.");
+            Debug.LogWarning("[StoneDropZone] Stage Controller를 찾을 수 없습니다.");
         }
     }
 
@@ -226,6 +233,34 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
         }
 
         return count;
+    }
+
+    private bool TryReportStoneCount(int stoneCount)
+    {
+        if (stageController is Stage20Controller stage20)
+        {
+            stage20.ReportStoneCount(stoneCount);
+            return true;
+        }
+
+        if (stageController is Stage30Controller stage30)
+        {
+            stage30.ReportStoneCount(stoneCount);
+            return true;
+        }
+
+        return false;
+    }
+
+    private Transform GetStoneBoardTransform()
+    {
+        if (stageController is Stage20Controller stage20 && stage20.stoneBoard != null)
+            return stage20.stoneBoard.transform;
+
+        if (stageController is Stage30Controller stage30 && stage30.stoneBoard != null)
+            return stage30.stoneBoard.transform;
+
+        return null;
     }
 
     /// <summary>
