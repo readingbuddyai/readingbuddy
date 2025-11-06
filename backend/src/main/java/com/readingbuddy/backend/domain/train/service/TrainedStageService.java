@@ -95,6 +95,7 @@ public class TrainedStageService {
                 .isCorrect(request.getIsCorrect())
                 .isReplyCorrect(request.getIsReplyCorrect())
                 .audioUrl(request.getAudioUrl())
+                .candidateList(request.getCandidateList() != null ? request.getCandidateList() : 0)  // 업데이트된 candidateList 저장
                 .solvedAt(LocalDateTime.now())
                 .build();
 

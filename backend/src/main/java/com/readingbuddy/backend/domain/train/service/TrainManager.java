@@ -26,6 +26,7 @@ public class TrainManager {
 
         StageSessionInfo stageSessionInfo = StageSessionInfo.builder()
                 .isProblemCorrect(new HashMap<>())
+                .kcCandidateList(new HashMap<>())
                 .trainedStageHistoriesId(id)
                 .build();
 
@@ -40,6 +41,10 @@ public class TrainManager {
 
     public void removeStageSession(String stageSessionId) {
         this.stageSessions.remove(stageSessionId);
+    }
+
+    public void setKcCandidateList(String stageSessionId, Long kcId, Integer candidateList) {
+        stageSessions.get(stageSessionId).getKcCandidateList().put(kcId, candidateList);
     }
 
     // TODO : Object -> Dto로 변경

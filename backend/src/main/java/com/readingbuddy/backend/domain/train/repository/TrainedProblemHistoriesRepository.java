@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.repository;
 
+import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
 import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
 import com.readingbuddy.backend.domain.user.entity.TrainedStageHistories;
@@ -24,6 +25,18 @@ public interface TrainedProblemHistoriesRepository extends JpaRepository<Trained
     Optional<TrainedProblemHistories> findFirstByTrainedStageHistories_User_IdAndTrainedStageHistories_StageOrderBySolvedAtDesc(
             Long userId, String stage);
 
+    @Query(value = """
+            SELECT tph.* FROM trained_problem_histories tph
+            JOIN train_problem_histories_kc_map kc_map ON tph.id = kc_map.trained_problem_histories_id
+            JOIN trained_stage_histories tsh ON tph.trained_stage_id = tsh.id
+            WHERE tsh.user_id = :userId
+            AND kc_map.knowledge_component_id = :kcId
+            ORDER BY tph.solved_at DESC
+            LIMIT 1
+            """,
+            nativeQuery = true)
+    Optional<TrainedProblemHistories> findFirstKCProbleHistories(
+            @Param("userId") Long userId, @Param("kcId") Long kcId);
 
     /**
      * 사용자별 틀린 음소 조회 (내림차순)
