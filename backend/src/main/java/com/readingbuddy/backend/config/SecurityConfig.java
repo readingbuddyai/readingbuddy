@@ -30,7 +30,9 @@ public class SecurityConfig {
             // Swagger UI
             "/v3/api-docs/**",
             "/swagger-ui/**",
-            "/swagger-resources/**"
+            "/swagger-resources/**",
+            // Actuator (Monitoring)
+            "/actuator/**"
     };
 
     @Bean
