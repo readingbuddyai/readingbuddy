@@ -717,7 +717,7 @@ PrefabInstance:
       objectReference: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: authToken
-      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6Iuq3uOumsE1hdGUiLCJpYXQiOjE3NjIyMzAyMTIsImV4cCI6MTc2MjMxNjYxMn0.4-WCpqs0dZ8aaDQQGakW6sjuyEEiW-fnaISxCnVHNLnCsoifY6Hfl0pZjAhsXA_Y
+      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyMzkxMDgyLCJleHAiOjE3NjI0Nzc0ODJ9.vNMQg-yyH0zxlNJrRJyqB0kG4mwWdGuWQ_cLar6nx3piNFjmxciXuorlRixUMe6g
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: micIndicator

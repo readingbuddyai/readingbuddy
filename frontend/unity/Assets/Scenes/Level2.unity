@@ -3074,7 +3074,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: authToken
-      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoiamluIiwiaWF0IjoxNzYyMzM0MzQzLCJleHAiOjE3NjI0MjA3NDN9.Nuha9q4SWchrsT5gTj9ZB-r3kJJjaRoRb1ddfK5cQD_13xqRqKzAFjFhfHx29S6y
+      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyMzkxMDgyLCJleHAiOjE3NjI0Nzc0ODJ9.vNMQg-yyH0zxlNJrRJyqB0kG4mwWdGuWQ_cLar6nx3piNFjmxciXuorlRixUMe6g
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: m_Enabled
@@ -3114,7 +3114,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 2
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoiamluIiwiaWF0IjoxNzYyMzM0MzQzLCJleHAiOjE3NjI0MjA3NDN9.Nuha9q4SWchrsT5gTj9ZB-r3kJJjaRoRb1ddfK5cQD_13xqRqKzAFjFhfHx29S6y
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyMzkxMDgyLCJleHAiOjE3NjI0Nzc0ODJ9.vNMQg-yyH0zxlNJrRJyqB0kG4mwWdGuWQ_cLar6nx3piNFjmxciXuorlRixUMe6g
   bypassStageStart: 0
   verboseLogging: 1
   progressText: {fileID: 0}

@@ -229,7 +229,8 @@ public class Stage20Controller : MonoBehaviour
 
             int attemptNumber = attempts + 1;
             bool isCorrect = (submitted == expectedCount);
-            yield return SendAttemptLog(problemNumber, attemptNumber, expectedCount, submitted, isCorrect, problem != null ? problem.problemWord : null);
+            yield return SendAttemptLog(problemNumber, attemptNumber, expectedCount, submitted, isCorrect,
+                problem != null ? problem.problemWord : null);
 
             if (isCorrect)
             {
@@ -639,21 +640,21 @@ public class Stage20Controller : MonoBehaviour
         string url = ComposeUrl("/api/train/attempt");
         string ssid = stageSessionId ?? string.Empty;
         string stg = stage ?? string.Empty;
-        // Stage20은 phoneme을 사용하지 않으므로 빈 문자열로 보냄 (다른 Stage와 동일하게)
-        // selectedAnswer는 Stone 개수를 문자열로 변환
-        string submitted = submittedCount >= 0 ? submittedCount.ToString() : string.Empty;
-        string wd = word;
+        string answer = submittedCount >= 0 ? submittedCount.ToString() : string.Empty;
+        string problemWord = word ?? string.Empty;
+        string audioUrl = string.Empty;
+        bool includeReplyResult = attemptNumber > 1;
 
         string json = "{" +
                       "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
                       "\"problemNumber\":" + problemNumber + "," +
                       "\"stage\":\"" + JsonEscape(stg) + "\"," +
-                      "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"phonemes\":\"" + JsonEscape(string.Empty) + "\"," +
-                      "\"selectedAnswer\":\"" + JsonEscape(submitted) + "\"," +
-                      "\"word\":" + (wd == null ? "null" : "\"" + JsonEscape(wd) + "\"") + "," +
+                      "\"problem\":\"" + JsonEscape(problemWord) + "\"," +
+                      "\"answer\":\"" + JsonEscape(answer) + "\"," +
                       "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
-                      "\"isReplyCorrect\":null,\"audioUrl\":null}";
+                      "\"isReplyCorrect\":" + (includeReplyResult ? (isCorrect ? "true" : "false") : "null") + "," +
+                      "\"attemptNumber\":" + attemptNumber + "," +
+                      "\"audioUrl\":\"" + JsonEscape(audioUrl) + "\"" + "}";
 
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
