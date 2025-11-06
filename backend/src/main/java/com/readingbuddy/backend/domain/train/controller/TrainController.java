@@ -49,13 +49,11 @@ public class TrainController {
             Long userId = customUserDetails.getId();
 
             switch (stage) {
-                case "1.1.1","1.1.2":
-                    for (int i = 0; i < count; i++) {
-                        problems.add(
-                                stage.equals("1.1.1")
-                                        ? vowelTrainService.getBasicProblem()
-                                        : vowelTrainService.getAdvancedProblem()
-                        );
+                case "1.1.1", "1.1.2":
+                    if (stage.equals("1.1.1")) {
+                        problems = vowelTrainService.getBasicProblem(userId, count);
+                    } else {
+                        problems = vowelTrainService.getAdvancedProblem(userId, count);
                     }
 
                     problemSetResponse = ProblemSetResponse.builder()
