@@ -13,6 +13,9 @@ public class PhonemeDraggableUI : MonoBehaviour, IBeginDragHandler, IDragHandler
     public PhonemeType type = PhonemeType.Initial;
     public TMP_Text label;
     public TMP_FontAsset fontAsset;
+    [Tooltip("드래그 중 임시로 붙일 부모 (보통 Canvas 루트)")]
+    public Transform dragRoot;
+    [Range(0.5f, 3.0f)] public float dragSensitivity = 1.0f;
 
     private CanvasGroup _cg;
     private Transform _originParent;
@@ -22,6 +25,8 @@ public class PhonemeDraggableUI : MonoBehaviour, IBeginDragHandler, IDragHandler
     private bool _createdRuntimeLabel;
     private bool _snapped;
     private int _originSiblingIndex;
+    private Canvas _parentCanvas;
+    private Vector3 _dragWorldOffset;
 
     // Helper: Initial/Final are consonants; Medial is vowel
     public bool IsConsonant => type == PhonemeType.Initial || type == PhonemeType.Final;
@@ -31,6 +36,7 @@ public class PhonemeDraggableUI : MonoBehaviour, IBeginDragHandler, IDragHandler
     {
         _cg = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
         _rt = GetComponent<RectTransform>();
+        _parentCanvas = GetComponentInParent<Canvas>();
         EnsureLabel();
     }
 
@@ -81,20 +87,37 @@ public class PhonemeDraggableUI : MonoBehaviour, IBeginDragHandler, IDragHandler
             _originAnchoredPos = _rt.anchoredPosition;
         _cg.blocksRaycasts = false;
         _snapped = false;
+
+        if (dragRoot != null)
+            transform.SetParent(dragRoot, true);
+
+        // 포인터 월드 좌표와의 오프셋 계산 (카메라/월드 스페이스 캔버스 대응)
+        if (TryGetPointerWorldPosition(eventData.pointerPressRaycast, eventData, out var pointerWorld))
+            _dragWorldOffset = _rt.position - pointerWorld;
+        else
+            _dragWorldOffset = Vector3.zero;
     }
 
     public void OnDrag(PointerEventData eventData)
     {
-        transform.position = eventData.position;
+        if (TryGetPointerWorldPosition(eventData.pointerCurrentRaycast, eventData, out var pointerWorld))
+        {
+            _rt.position = pointerWorld + _dragWorldOffset;
+        }
+        else
+        {
+            // 폴백: 스크린 델타를 앵커 좌표에 적용
+            _rt.anchoredPosition += eventData.delta * dragSensitivity;
+        }
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         if (_cg == null) _cg = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
         _cg.blocksRaycasts = true;
-        // Always return to origin after drop.
-        // Drop handling (correctness, logging, slot text) is managed by PhonemeSlotUI + Stage41Controller.
-        ReturnToOrigin();
+        // If we already snapped into a valid slot, keep it there. Otherwise, return to origin.
+        if (!_snapped)
+            ReturnToOrigin();
     }
 
     public void SnapToSlot(Transform slotTransform)
@@ -147,5 +170,30 @@ public class PhonemeDraggableUI : MonoBehaviour, IBeginDragHandler, IDragHandler
         // 이벤트 취소 시 원복 보장
         ReturnToOrigin();
         if (_cg != null) _cg.blocksRaycasts = true;
+    }
+
+    private bool TryGetPointerWorldPosition(RaycastResult raycastResult, PointerEventData eventData, out Vector3 worldPoint)
+    {
+        if (raycastResult.gameObject != null)
+        {
+            worldPoint = raycastResult.worldPosition;
+            return true;
+        }
+
+        Camera eventCamera = eventData.pressEventCamera;
+        if (eventCamera == null && _parentCanvas != null)
+            eventCamera = _parentCanvas.worldCamera;
+
+        if (RectTransformUtility.ScreenPointToWorldPointInRectangle(
+                _rt,
+                eventData.position,
+                eventCamera,
+                out worldPoint))
+        {
+            return true;
+        }
+
+        worldPoint = Vector3.zero;
+        return false;
     }
 }

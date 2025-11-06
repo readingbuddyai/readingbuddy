@@ -44,15 +44,18 @@ public class PhonemeSlotUI : MonoBehaviour, IDropHandler
     {
         var drag = eventData.pointerDrag ? eventData.pointerDrag.GetComponent<PhonemeDraggableUI>() : null;
         if (drag == null) return;
+        if (controller == null) return;
+
+        // 드롭 허용 상태가 아니면 무시 (교정 단계/해당 슬롯 차례/미완료 등)
+        if (!controller.CanAcceptDropToSlot(slotIndex)) return;
+
         var symbol = drag.symbol ?? string.Empty;
+        bool correct = controller.IsCorrectForSlot(slotIndex, symbol);
 
-        // 컨트롤러???�임?�여 ?�답/?�답 ?�정�??�출, 로깅 처리
-        if (controller != null)
-        {
-            controller.OnUserDrop(slotIndex, symbol);
-        }
-
-        // ?�롯 ?�스?�는 컨트롤러가 결정(?�답 ??채�?)
+        // 컨트롤러에 시도/정오 처리 위임 (로그/텍스트/다음 단계)
+        controller.OnUserDrop(slotIndex, symbol);
+        // 상자(타일)는 항상 원 위치로 복귀하고, 슬롯에는 텍스트만 채웁니다.
+        // 정답 여부에 관계없이 EndDrag에서 ReturnToOrigin이 실행됩니다.
     }
 }
 

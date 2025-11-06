@@ -324,7 +324,7 @@ public class Stage41Controller : MonoBehaviour
         _attemptCountForProblem++;
 
         string selectedAnswer = string.Join("", arranged);
-        StartCoroutine(SendAttemptLogNew(
+            StartCoroutine(SendAttemptLogNew(
             problemNumber: _currentProblemNumber,
             attemptNumber: 1,
             problem: wordText ? wordText.text : string.Empty,
@@ -655,13 +655,14 @@ public class Stage41Controller : MonoBehaviour
             ApplyCommonHeaders(req);
             req.chunkedTransfer = false;
             // Immediately send attempt for this voice step (do not wait for response)
+            // 서버는 is_correct NOT NULL이므로, 판단 전 단계는 false로 보냅니다.
             StartCoroutine(SendAttemptLogNew(
                 problemNumber: _currentProblemNumber,
                 attemptNumber: 1,
                 problem: wordText ? wordText.text : string.Empty,
                 answer: string.Empty,
-                isCorrect: null,
-                isReplyCorrect: null,
+                isCorrect: false,
+                isReplyCorrect: false,
                 audioUrl: string.Empty
             ));
             yield return req.SendWebRequest();
@@ -701,7 +702,7 @@ public class Stage41Controller : MonoBehaviour
                 attemptNumber: 1,
                 problem: wordText ? wordText.text : string.Empty,
                 answer: string.Empty,
-                isCorrect: null,
+                isCorrect: false,
                 isReplyCorrect: true,
                 audioUrl: string.Empty
             ));
@@ -738,13 +739,14 @@ public class Stage41Controller : MonoBehaviour
             ApplyCommonHeaders(req);
             req.chunkedTransfer = false;
             // Immediately send attempt for this voice step (do not wait for response)
+            // 서버 NOT NULL 제약 대응: 판단 전 값은 false로 기록
             StartCoroutine(SendAttemptLogNew(
                 problemNumber: _currentProblemNumber,
                 attemptNumber: 1,
                 problem: wordText ? wordText.text : string.Empty,
                 answer: string.Empty,
-                isCorrect: null,
-                isReplyCorrect: null,
+                isCorrect: false,
+                isReplyCorrect: false,
                 audioUrl: string.Empty
             ));
             yield return req.SendWebRequest();
@@ -811,15 +813,19 @@ public class Stage41Controller : MonoBehaviour
         string ssid = stageSessionId ?? string.Empty;
         string stageStr = stageTwoPart ?? string.Empty;
 
+        // 서버가 NOT NULL 제약을 가진 경우 null을 빈 문자열로 보내면 DB에서 null로 간주될 수 있으므로,
+        // 클라이언트에서 항상 true/false 값을 직렬화합니다.
+        bool ic = isCorrect.HasValue ? isCorrect.Value : false;
+        bool irc = isReplyCorrect.HasValue ? isReplyCorrect.Value : false;
+
         string json = "{" +
                       "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
                       "\"problemNumber\":" + problemNumber + "," +
                       "\"stage\":\"" + JsonEscape(stageStr) + "\"," +
                       "\"problem\":\"" + JsonEscape(problem ?? "") + "\"," +
                       "\"answer\":\"" + JsonEscape(answer ?? "") + "\"," +
-                      // When null, send empty string per spec
-                      "\"isCorrect\":" + (isCorrect.HasValue ? (isCorrect.Value ? "true" : "false") : "\"\"") + "," +
-                      "\"isReplyCorrect\":" + (isReplyCorrect.HasValue ? (isReplyCorrect.Value ? "true" : "false") : "\"\"") + "," +
+                      "\"isCorrect\":" + (ic ? "true" : "false") + "," +
+                      "\"isReplyCorrect\":" + (irc ? "true" : "false") + "," +
                       "\"attemptNumber\":" + attemptNumber + "," +
                       "\"audioUrl\":\"" + JsonEscape(audioUrl ?? "") + "\"" +
                       "}";
@@ -894,6 +900,17 @@ public class Stage41Controller : MonoBehaviour
             var bb = NormalizePhoneme((b[i] ?? string.Empty).Trim());
             if (!string.Equals(aa, bb, StringComparison.Ordinal)) return false;
         }
+        return true;
+    }
+
+    // 현재 드롭을 받아들일 수 있는지(교정 진행 중, 해당 슬롯 차례/미완료) 공개
+    public bool CanAcceptDropToSlot(int slotIndex)
+    {
+        if (!_awaitingUserArrangement) return false;
+        if (slotIndex < 0 || slotIndex >= 3) return false;
+        if (_currentCorrectionSlot >= 0 && slotIndex != _currentCorrectionSlot) return false;
+        if (slotIndex < _finalizedSlots.Length && _finalizedSlots[slotIndex]) return false;
+        if (_expectedPhonemes == null || slotIndex >= _expectedPhonemes.Count) return false;
         return true;
     }
 
