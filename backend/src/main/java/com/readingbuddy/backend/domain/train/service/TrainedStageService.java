@@ -5,7 +5,6 @@ import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
 import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
-import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
@@ -28,7 +27,6 @@ public class TrainedStageService {
     private final UserRepository userRepository;
     private final TrainedStageHistoriesRepository trainedStageHistoriesRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
-    private final PhonemesRepository phonemesRepository;
     private final TrainManager trainManager;
 
 
@@ -80,26 +78,19 @@ public class TrainedStageService {
         TrainedStageHistories stage = trainedStageHistoriesRepository.findById(stageSessionInfo.getTrainedStageHistoriesId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
-        // phonemes 문자열로 Phonemes 엔티티 조회
-        Phonemes phoneme = phonemesRepository.findByValue(request.getPhonemes()).orElse(null);
-
         // 시도 기록 생성
         TrainedProblemHistories attempt = TrainedProblemHistories.builder()
                 .trainedStageHistories(stage)
                 .problemNumber(request.getProblemNumber())
-                .phoneme(phoneme)  // FK 관계 설정
-                .phonemes(request.getPhonemes())  // 문자열도 함께 저장
-                .word(request.getWord())
-                .selectedAnswer(request.getSelectedAnswer())
-                .attemptNumber(request.getAttemptNumber())
+                .problem(request.getProblem())
+                .answer(request.getAnswer())
                 .isCorrect(request.getIsCorrect())
                 .isReplyCorrect(request.getIsReplyCorrect())
+                .attemptNumber(request.getAttemptNumber())
                 .audioUrl(request.getAudioUrl())
                 .solvedAt(LocalDateTime.now())
                 .build();
 
-        // TODO: 이때 mastery 값 업데이트 시키기 bkt service 호출
-        // 문제 하나씩 저장
         attempt = trainedProblemHistoriesRepository.save(attempt);
 
         // 저장한 session 업데이트
@@ -109,13 +100,11 @@ public class TrainedStageService {
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
-                .problemNumber(attempt.getProblemNumber())
                 .stageSessionId(stageSessionId)
                 .problemNumber(attempt.getProblemNumber())
-                .phonemeId(phoneme.getId())
-                .phonemes(attempt.getPhonemes())
-                .word(attempt.getWord())
-                .selectedAnswer(attempt.getSelectedAnswer())
+                .stage(stage.getStage())
+                .problem(attempt.getProblem())
+                .answer(attempt.getAnswer())
                 .isCorrect(attempt.getIsCorrect())
                 .isReplyCorrect(attempt.getIsReplyCorrect())
                 .attemptNumber(attempt.getAttemptNumber())

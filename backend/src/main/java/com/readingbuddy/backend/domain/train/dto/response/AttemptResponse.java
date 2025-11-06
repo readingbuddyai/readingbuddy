@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @NoArgsConstructor
@@ -13,14 +14,12 @@ public class AttemptResponse {
 
     private Long attemptId;
     private String stageSessionId;
-    private Integer problemNumber;
-    private Long phonemeId;
-    private String phonemes;
-    private String word;
-    private String selectedAnswer;
+    private Integer problemNumber;  // 문제 번호
+    private String stage;  // 스테이지
+    private String problem;  // 문제
+    private String answer;  // 정답
+    private String audioUrl;  // 사용자 응답
     private Boolean isCorrect;
     private Boolean isReplyCorrect;
-    private Double accuracy;
     private Integer attemptNumber;
-    private String audioUrl;
 }
