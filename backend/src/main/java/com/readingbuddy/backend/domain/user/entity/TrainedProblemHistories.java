@@ -1,7 +1,10 @@
 package com.readingbuddy.backend.domain.user.entity;
 
+<<<<<<< backend/src/main/java/com/readingbuddy/backend/domain/user/entity/TrainedProblemHistories.java
+=======
 import com.readingbuddy.backend.domain.train.entity.Letters;
 import com.readingbuddy.backend.domain.train.entity.Phonemes;
+>>>>>>> backend/src/main/java/com/readingbuddy/backend/domain/user/entity/TrainedProblemHistories.java
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -48,5 +51,8 @@ public class TrainedProblemHistories {
     private String audioUrl;  // 응답 (개수, 음소, 음절)
 
     @Column(nullable = false)
-    private LocalDateTime solvedAt;  // 문제 푼 시간
+    private LocalDateTime solvedAt;
+
+    @Column(nullable = false)
+    private Integer candidateList;
 }

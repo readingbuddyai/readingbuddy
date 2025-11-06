@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.repository;
 
+import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
 import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
 import com.readingbuddy.backend.domain.user.entity.TrainedStageHistories;
@@ -8,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TrainedProblemHistoriesRepository extends JpaRepository<TrainedProblemHistories, Long> {
 
@@ -16,6 +18,25 @@ public interface TrainedProblemHistoriesRepository extends JpaRepository<Trained
      */
     List<TrainedProblemHistories> findByTrainedStageHistories(TrainedStageHistories session);
 
+    /**
+     * 특정 user의 특정 stage에 대한 최신 문제 이력 조회 (candidateList 확인용)
+     * Spring Data JPA 메서드 네이밍 규칙 사용 (First = 최신 1개)
+     */
+    Optional<TrainedProblemHistories> findFirstByTrainedStageHistories_User_IdAndTrainedStageHistories_StageOrderBySolvedAtDesc(
+            Long userId, String stage);
+
+    @Query(value = """
+            SELECT tph.* FROM trained_problem_histories tph
+            JOIN train_problem_histories_kc_map kc_map ON tph.id = kc_map.trained_problem_histories_id
+            JOIN trained_stage_histories tsh ON tph.trained_stage_id = tsh.id
+            WHERE tsh.user_id = :userId
+            AND kc_map.knowledge_component_id = :kcId
+            ORDER BY tph.solved_at DESC
+            LIMIT 1
+            """,
+            nativeQuery = true)
+    Optional<TrainedProblemHistories> findFirstKCProbleHistories(
+            @Param("userId") Long userId, @Param("kcId") Long kcId);
 
     /**
      * 사용자별 틀린 음소 조회 (내림차순)

@@ -2,15 +2,13 @@ package com.readingbuddy.backend.domain.bkt.entity;
 
 import com.readingbuddy.backend.domain.train.entity.Letters;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.io.Serializable;
 
 @Entity
 @Getter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class LettersKcMap {

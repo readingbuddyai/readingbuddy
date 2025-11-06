@@ -20,75 +20,75 @@ public class LettersKcMapSeederConfig {
 
     private final DataSource dataSource;
 
-    // 초성 인덱스 -> ONSET KC ID 매핑
-    private static final Map<Integer, Long> CHO_TO_ONSET_KC = new HashMap<>() {{
-        put(0, 8L);   // ㄱ -> VELAR_ONSET
-        put(1, 8L);   // ㄲ -> VELAR_ONSET
-        put(2, 9L);   // ㄴ -> ALVEOLAR_ONSET
-        put(3, 9L);   // ㄷ -> ALVEOLAR_ONSET
-        put(4, 9L);   // ㄸ -> ALVEOLAR_ONSET
-        put(5, 12L);  // ㄹ -> GLOTTAL_AND_ALVEOLAR_ONSET
-        put(6, 7L);   // ㅁ -> LABIAL_ONSET
-        put(7, 7L);   // ㅂ -> LABIAL_ONSET
-        put(8, 7L);   // ㅃ -> LABIAL_ONSET
-        put(9, 11L);  // ㅅ -> ALVEOLAR_FRICATIVE_ONSET
-        put(10, 11L); // ㅆ -> ALVEOLAR_FRICATIVE_ONSET
-        put(11, 8L);  // ㅇ -> VELAR_ONSET
-        put(12, 10L); // ㅈ -> PALATAL_ONSET
-        put(13, 10L); // ㅉ -> PALATAL_ONSET
-        put(14, 10L); // ㅊ -> PALATAL_ONSET
-        put(15, 8L);  // ㅋ -> VELAR_ONSET
-        put(16, 9L);  // ㅌ -> ALVEOLAR_ONSET
-        put(17, 7L);  // ㅍ -> LABIAL_ONSET
-        put(18, 12L); // ㅎ -> GLOTTAL_AND_ALVEOLAR_ONSET
+    // 초성 인덱스 -> ONSET KC ID 매핑 (4.1 + 4.2)
+    private static final Map<Integer, List<Long>> CHO_TO_ONSET_KC = new HashMap<>() {{
+        put(0, List.of(8L, 34L));   // ㄱ -> VELAR_ONSET_1 + VELAR_ONSET_2
+        put(1, List.of(8L, 34L));   // ㄲ -> VELAR_ONSET_1 + VELAR_ONSET_2
+        put(2, List.of(9L, 35L));   // ㄴ -> ALVEOLAR_ONSET_1 + ALVEOLAR_ONSET_2
+        put(3, List.of(9L, 35L));   // ㄷ -> ALVEOLAR_ONSET_1 + ALVEOLAR_ONSET_2
+        put(4, List.of(9L, 35L));   // ㄸ -> ALVEOLAR_ONSET_1 + ALVEOLAR_ONSET_2
+        put(5, List.of(12L, 38L));  // ㄹ -> GLOTTAL_AND_ALVEOLAR_ONSET_1 + GLOTTAL_AND_ALVEOLAR_ONSET_2
+        put(6, List.of(7L, 33L));   // ㅁ -> LABIAL_ONSET_1 + LABIAL_ONSET_2
+        put(7, List.of(7L, 33L));   // ㅂ -> LABIAL_ONSET_1 + LABIAL_ONSET_2
+        put(8, List.of(7L, 33L));   // ㅃ -> LABIAL_ONSET_1 + LABIAL_ONSET_2
+        put(9, List.of(11L, 37L));  // ㅅ -> ALVEOLAR_FRICATIVE_ONSET_1 + ALVEOLAR_FRICATIVE_ONSET_2
+        put(10, List.of(11L, 37L)); // ㅆ -> ALVEOLAR_FRICATIVE_ONSET_1 + ALVEOLAR_FRICATIVE_ONSET_2
+        put(11, List.of(8L, 34L));  // ㅇ -> VELAR_ONSET_1 + VELAR_ONSET_2
+        put(12, List.of(10L, 36L)); // ㅈ -> PALATAL_ONSET_1 + PALATAL_ONSET_2
+        put(13, List.of(10L, 36L)); // ㅉ -> PALATAL_ONSET_1 + PALATAL_ONSET_2
+        put(14, List.of(10L, 36L)); // ㅊ -> PALATAL_ONSET_1 + PALATAL_ONSET_2
+        put(15, List.of(8L, 34L));  // ㅋ -> VELAR_ONSET_1 + VELAR_ONSET_2
+        put(16, List.of(9L, 35L));  // ㅌ -> ALVEOLAR_ONSET_1 + ALVEOLAR_ONSET_2
+        put(17, List.of(7L, 33L));  // ㅍ -> LABIAL_ONSET_1 + LABIAL_ONSET_2
+        put(18, List.of(12L, 38L)); // ㅎ -> GLOTTAL_AND_ALVEOLAR_ONSET_1 + GLOTTAL_AND_ALVEOLAR_ONSET_2
     }};
 
-    // 종성 인덱스 -> CODA KC ID 매핑
-    private static final Map<Integer, Long> JONG_TO_CODA_KC = new HashMap<>() {{
-        put(1, 14L);  // ㄱ -> VELAR_CODA
-        put(2, 14L);  // ㄲ -> VELAR_CODA
-        put(4, 15L);  // ㄴ -> ALVEOLAR_CODA
-        put(7, 15L);  // ㄷ -> ALVEOLAR_CODA
-        put(8, 18L);  // ㄹ -> GLOTTAL_AND_ALVEOLAR_CODA
-        put(16, 13L); // ㅁ -> LABIAL_CODA
-        put(17, 13L); // ㅂ -> LABIAL_CODA
-        put(19, 17L); // ㅅ -> ALVEOLAR_FRICATIVE_CODA
-        put(20, 17L); // ㅆ -> ALVEOLAR_FRICATIVE_CODA
-        put(21, 14L); // ㅇ -> VELAR_CODA
-        put(22, 16L); // ㅈ -> PALATAL_CODA
-        put(23, 16L); // ㅊ -> PALATAL_CODA
-        put(24, 14L); // ㅋ -> VELAR_CODA
-        put(25, 15L); // ㅌ -> ALVEOLAR_CODA
-        put(26, 13L); // ㅍ -> LABIAL_CODA
-        put(27, 18L); // ㅎ -> GLOTTAL_AND_ALVEOLAR_CODA
+    // 종성 인덱스 -> CODA KC ID 매핑 (4.1 + 4.2)
+    private static final Map<Integer, List<Long>> JONG_TO_CODA_KC = new HashMap<>() {{
+        put(1, List.of(14L, 40L));  // ㄱ -> VELAR_CODA_1 + VELAR_CODA_2
+        put(2, List.of(14L, 40L));  // ㄲ -> VELAR_CODA_1 + VELAR_CODA_2
+        put(4, List.of(15L, 41L));  // ㄴ -> ALVEOLAR_CODA_1 + ALVEOLAR_CODA_2
+        put(7, List.of(15L, 41L));  // ㄷ -> ALVEOLAR_CODA_1 + ALVEOLAR_CODA_2
+        put(8, List.of(18L, 44L));  // ㄹ -> GLOTTAL_AND_ALVEOLAR_CODA_1 + GLOTTAL_AND_ALVEOLAR_CODA_2
+        put(16, List.of(13L, 39L)); // ㅁ -> LABIAL_CODA_1 + LABIAL_CODA_2
+        put(17, List.of(13L, 39L)); // ㅂ -> LABIAL_CODA_1 + LABIAL_CODA_2
+        put(19, List.of(17L, 43L)); // ㅅ -> ALVEOLAR_FRICATIVE_CODA_1 + ALVEOLAR_FRICATIVE_CODA_2
+        put(20, List.of(17L, 43L)); // ㅆ -> ALVEOLAR_FRICATIVE_CODA_1 + ALVEOLAR_FRICATIVE_CODA_2
+        put(21, List.of(14L, 40L)); // ㅇ -> VELAR_CODA_1 + VELAR_CODA_2
+        put(22, List.of(16L, 42L)); // ㅈ -> PALATAL_CODA_1 + PALATAL_CODA_2
+        put(23, List.of(16L, 42L)); // ㅊ -> PALATAL_CODA_1 + PALATAL_CODA_2
+        put(24, List.of(14L, 40L)); // ㅋ -> VELAR_CODA_1 + VELAR_CODA_2
+        put(25, List.of(15L, 41L)); // ㅌ -> ALVEOLAR_CODA_1 + ALVEOLAR_CODA_2
+        put(26, List.of(13L, 39L)); // ㅍ -> LABIAL_CODA_1 + LABIAL_CODA_2
+        put(27, List.of(18L, 44L)); // ㅎ -> GLOTTAL_AND_ALVEOLAR_CODA_1 + GLOTTAL_AND_ALVEOLAR_CODA_2
     }};
 
-    // 중성 인덱스 -> NUCLEUS KC ID 매핑
-    private static final Map<Integer, Long> JUNG_TO_NUCLEUS_KC = new HashMap<>() {{
-        // 단모음 -> MONOPHTHONG_NUCLEUS (21)
-        put(0, 21L);  // ㅏ
-        put(1, 21L);  // ㅐ
-        put(4, 21L);  // ㅓ
-        put(5, 21L);  // ㅔ
-        put(8, 21L);  // ㅗ
-        put(11, 21L); // ㅚ
-        put(12, 21L); // ㅛ
-        put(13, 21L); // ㅜ
-        put(16, 21L); // ㅟ
-        put(17, 21L); // ㅠ
-        put(18, 21L); // ㅡ
-        put(20, 21L); // ㅣ
+    // 중성 인덱스 -> NUCLEUS KC ID 매핑 (4.1 + 4.2)
+    private static final Map<Integer, List<Long>> JUNG_TO_NUCLEUS_KC = new HashMap<>() {{
+        // 단모음 -> MONOPHTHONG_NUCLEUS_1 + MONOPHTHONG_NUCLEUS_2
+        put(0, List.of(21L, 45L));  // ㅏ
+        put(1, List.of(21L, 45L));  // ㅐ
+        put(4, List.of(21L, 45L));  // ㅓ
+        put(5, List.of(21L, 45L));  // ㅔ
+        put(8, List.of(21L, 45L));  // ㅗ
+        put(11, List.of(21L, 45L)); // ㅚ
+        put(12, List.of(21L, 45L)); // ㅛ
+        put(13, List.of(21L, 45L)); // ㅜ
+        put(16, List.of(21L, 45L)); // ㅟ
+        put(17, List.of(21L, 45L)); // ㅠ
+        put(18, List.of(21L, 45L)); // ㅡ
+        put(20, List.of(21L, 45L)); // ㅣ
 
-        // 이중모음 -> DIPHTHONG_NUCLEUS (22)
-        put(2, 22L);  // ㅑ
-        put(3, 22L);  // ㅒ
-        put(6, 22L);  // ㅕ
-        put(7, 22L);  // ㅖ
-        put(9, 22L);  // ㅘ
-        put(10, 22L); // ㅙ
-        put(14, 22L); // ㅝ
-        put(15, 22L); // ㅞ
-        put(19, 22L); // ㅢ
+        // 이중모음 -> DIPHTHONG_NUCLEUS_1 + DIPHTHONG_NUCLEUS_2
+        put(2, List.of(22L, 46L));  // ㅑ
+        put(3, List.of(22L, 46L));  // ㅒ
+        put(6, List.of(22L, 46L));  // ㅕ
+        put(7, List.of(22L, 46L));  // ㅖ
+        put(9, List.of(22L, 46L));  // ㅘ
+        put(10, List.of(22L, 46L)); // ㅙ
+        put(14, List.of(22L, 46L)); // ㅝ
+        put(15, List.of(22L, 46L)); // ㅞ
+        put(19, List.of(22L, 46L)); // ㅢ
     }};
 
     @Bean
@@ -127,31 +127,30 @@ public class LettersKcMapSeederConfig {
 
                         Set<Long> kcIds = new HashSet<>();
 
-                        // 1. 초성 -> ONSET KC
-                        Long onsetKcId = CHO_TO_ONSET_KC.get(components.cho);
-                        if (onsetKcId != null) {
-                            kcIds.add(onsetKcId);
+                        // 1. 초성 -> ONSET KCs (4.1 + 4.2)
+                        List<Long> onsetKcIds = CHO_TO_ONSET_KC.get(components.cho);
+                        if (onsetKcIds != null) {
+                            kcIds.addAll(onsetKcIds);
                         }
 
-                        // 2. 중성 -> NUCLEUS KC
-                        Long nucleusKcId = JUNG_TO_NUCLEUS_KC.get(components.jung);
-                        if (nucleusKcId != null) {
-                            kcIds.add(nucleusKcId);
+                        // 2. 중성 -> NUCLEUS KCs (4.1 + 4.2)
+                        List<Long> nucleusKcIds = JUNG_TO_NUCLEUS_KC.get(components.jung);
+                        if (nucleusKcIds != null) {
+                            kcIds.addAll(nucleusKcIds);
                         }
 
-                        // 3. 종성 -> CODA KC (있는 경우만)
+                        // 3. 종성 -> CODA KCs (있는 경우만, 4.1 + 4.2)
                         if (components.jong > 0) {
-                            Long codaKcId = JONG_TO_CODA_KC.get(components.jong);
-                            if (codaKcId != null) {
-                                kcIds.add(codaKcId);
+                            List<Long> codaKcIds = JONG_TO_CODA_KC.get(components.jong);
+                            if (codaKcIds != null) {
+                                kcIds.addAll(codaKcIds);
                             }
                         }
 
-                        // 4. 받침 유무 -> SYLLABLE KC
-                        if (components.jong > 0) {
-                            kcIds.add(23L); // CLOSED_SYLLABLE
+                        if (components.jung > 0) {
+                            kcIds.add(23L);
                         } else {
-                            kcIds.add(24L); // OPEN_SYLLABLE
+                            kcIds.add(24L);
                         }
 
                         // 각 KC에 대해 매핑 삽입 (복합키: letters_id + knowledge_component_id)

@@ -1,6 +1,10 @@
 package com.readingbuddy.backend.domain.train.service;
 
 import com.readingbuddy.backend.common.util.function.PhonemeCounter;
+import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
+import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
+import com.readingbuddy.backend.domain.bkt.service.BktService;
+import com.readingbuddy.backend.domain.train.dto.result.PhonemeWithKcIdAndCandidate;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_1Problem;
 import com.readingbuddy.backend.domain.train.dto.result.Stage1_2Problem;
@@ -10,12 +14,12 @@ import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.WordsRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -23,100 +27,120 @@ public class ConsonantTrainService {
 
     private final PhonemesRepository phonemesRepository;
     private final WordsRepository wordsRepository;
+    private final BktService bktService;
+    private final KnowledgeComponentRepository knowledgeComponentRepository;
+    private final Random random = new Random();
+
 
     /**
      * 자음 기초 단계 문제 생성 (Stage 1.2.1)
      */
-    public ProblemResult getBasicProblem() {
-        // TODO: random 조회가 아닌 kc에 대한 mastery값 바탕으로 문제 생성
-        // 정답 자음 1개 조회
-        Phonemes answerConsonant = phonemesRepository.findOneRandomConsonantForQuestion();
+    public List<ProblemResult> getBasicProblem(Long userId,int count) {
+        final String stage = "1.2.1";
+        List<ProblemResult> problemList = new ArrayList<>();
+        // 1. 유저 숙련도 기반 정답 Answer 뽑아와서
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcIdAndCandidates = getBasedUserMasteryPhonemes(userId,count,stage);
+        // 2. 문제 생성
+        for (PhonemeWithKcIdAndCandidate phonemeWithKcIdAndCandidate : phonemeWithKcIdAndCandidates) {
+            Phonemes answerPhoneme = phonemeWithKcIdAndCandidate.getPhonemes();
 
-        // 정답을 제외한 오답 자음 1개 조회
-        Phonemes wrongConsonant = phonemesRepository.findRandomConsonant(answerConsonant.getId());
+            // 2-1. 보기 생성
+            Phonemes wrongConsonant = phonemesRepository.findRandomConsonant(answerPhoneme.getId());
 
-        // 선택지 리스트 생성
-        List<Phonemes> options = new ArrayList<>();
-        options.add(answerConsonant);
-        options.add(wrongConsonant);
+            List<Phonemes> options = new ArrayList<>();
+            options.add(answerPhoneme);
+            options.add(wrongConsonant);
 
-        // 선택지 섞기
-        Collections.shuffle(options);
+            // 선택지 섞기
+            Collections.shuffle(options);
 
-        // DTO로 변환
-        List<Stage1_1Problem.OptionDto> optionDtos = options.stream()
-                .map(consonant -> Stage1_1Problem.OptionDto.builder()
-                        .id(consonant.getId())
-                        .value(consonant.getValue())
-                        .unicode(consonant.getUnicode())
-                        .build()
-                ).toList();
+            // DTO로 변환
+            List<Stage1_1Problem.OptionDto> optionDtos = options.stream()
+                    .map(consonant -> Stage1_1Problem.OptionDto.builder()
+                            .id(consonant.getId())
+                            .value(consonant.getValue())
+                            .unicode(consonant.getUnicode())
+                            .build()
+                    ).toList();
 
-        return Stage1_1Problem.builder()
-                .problemWord(answerConsonant.getValue())
-                .imageUrl(answerConsonant.getImageUrl())
-                .phonemeId(answerConsonant.getId())
-                .voiceUrl(answerConsonant.getVoiceUrl())
-                .options(optionDtos)
-                .build();
+            // N번 문제에 담기
+            problemList.add(Stage1_1Problem.builder()
+                    .problemWord(answerPhoneme.getValue())
+                    .imageUrl(answerPhoneme.getImageUrl())
+                    .phonemeId(answerPhoneme.getId())
+                    .voiceUrl(answerPhoneme.getVoiceUrl())
+                    .options(optionDtos)
+                    .kcId(phonemeWithKcIdAndCandidate.getKcId())
+                    .candidateList(phonemeWithKcIdAndCandidate.getCandidateList())
+                    .build()
+            );
+        }
+        return problemList;
     }
 
     /**
      * 자음 심화 단계 문제 생성 (Stage 1.2.2)
      */
-    public ProblemResult getAdvancedProblem() {
-        // TODO: random 조회가 아닌 kc에 대한 mastery값 바탕으로 문제 생성
-        Phonemes targetPhoneme = phonemesRepository.findOneRandomConsonantForQuestion();
-        char targetConsonant = targetPhoneme.getValue().charAt(0);
-
+    public List<ProblemResult> getAdvancedProblem(Long userId,int count) {
+        final String stage = "1.2.2";
+        List<ProblemResult> problemList = new ArrayList<>();
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = getBasedUserMasteryPhonemes(userId,count,stage);
         List<Words> allWords = wordsRepository.findAll();
         Collections.shuffle(allWords);
 
-        List<Words> selectedWords = new ArrayList<>();
-        boolean foundCorrect = false;
+        for (PhonemeWithKcIdAndCandidate phonemeWithKcIdAndCandidate : phonemeWithKcs){
+            Phonemes targetPhoneme = phonemeWithKcIdAndCandidate.getPhonemes();
 
-        // 전체를 돌면서 처음 2개를 바로 선택, 정답은 따로 찾기
-        for (Words word : allWords) {
-            if (foundCorrect && selectedWords.size() == 3) {
-                break;
-            }
+            List<Words> selectedWords = new ArrayList<>();
+            boolean foundCorrect = false;
+            char targetConsonant = targetPhoneme.getValue().charAt(0);
 
-            if (selectedWords.size() < 2) {
-                if (!checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
+            for (Words word : allWords) {
+                if (foundCorrect && selectedWords.size() == 3) {
+                    break;
+                }
+
+                if (selectedWords.size() < 2) {
+                    if (!checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
+                        selectedWords.add(word);
+                    }
+                }
+
+                // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
+                else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
+                    foundCorrect = true;
                     selectedWords.add(word);
                 }
             }
 
-            // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
-            else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
-                foundCorrect = true;
-                selectedWords.add(word);
+            // 각 단어마다 isAnswer 플래그 설정
+            List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
+            for (Words word : selectedWords) {
+                boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetConsonant);
+                options.add(Stage1_2Problem.OptionDto.builder()
+                        .wordId(word.getId())
+                        .word(word.getWord())
+                        .voiceUrl(word.getVoiceUrl())
+                        .isAnswer(isAnswer)
+                        .build()
+                );
             }
-        }
 
-        // 각 단어마다 isAnswer 플래그 설정
-        List<Stage1_2Problem.OptionDto> options = new ArrayList<>();
-        for (Words word : selectedWords) {
-            boolean isAnswer = checkWordContainsPhoneme(word.getWord(), targetConsonant);
-            options.add(Stage1_2Problem.OptionDto.builder()
-                    .wordId(word.getId())
-                    .word(word.getWord())
-                    .voiceUrl(word.getVoiceUrl())
-                    .isAnswer(isAnswer)
+            Collections.shuffle(options);
+
+            problemList.add(Stage1_2Problem.builder()
+                    .problemWord(targetPhoneme.getValue())
+                    .phonemeId(targetPhoneme.getId())
+                    .targetPhoneme(targetPhoneme.getValue())
+                    .imageUrl(targetPhoneme.getImageUrl())
+                    .voiceUrl(targetPhoneme.getVoiceUrl())
+                    .options(options)
+                    .kcId(phonemeWithKcIdAndCandidate.getKcId())
+                    .candidateList(phonemeWithKcIdAndCandidate.getCandidateList())
                     .build()
             );
         }
-
-        Collections.shuffle(options);
-
-        return Stage1_2Problem.builder()
-                .problemWord(targetPhoneme.getValue())
-                .phonemeId(targetPhoneme.getId())
-                .targetPhoneme(targetPhoneme.getValue())
-                .imageUrl(targetPhoneme.getImageUrl())
-                .voiceUrl(targetPhoneme.getVoiceUrl())
-                .options(options)
-                .build();
+        return problemList;
     }
 
     /**
@@ -133,5 +157,79 @@ public class ConsonantTrainService {
             }
         }
         return false;
+    }
+    private List<PhonemeWithKcIdAndCandidate> getBasedUserMasteryPhonemes(Long userId,int count,String stage) {
+        List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = new ArrayList<>();
+        // 1. 해당 단계에 해당하는 KC 모두 가져오기
+        List<KnowledgeComponent> stageKcs = knowledgeComponentRepository.findByStage(stage);
+        // 2. 각 KC에 대한 정답률 계산 (BKT 기반)
+        Map<Long, Float> kcCorrectRateMap = new HashMap<>();
+        for (KnowledgeComponent kc : stageKcs) {
+            try {
+                Float correctRate = bktService.getCorrectAnswerRate(userId, kc.getId());
+                kcCorrectRateMap.put(kc.getId(), correctRate);
+            } catch (Exception e) {
+                kcCorrectRateMap.put(kc.getId(), 0.0f);
+            }
+        }
+
+        // 3. Count 만큼 문제 생성
+        for (int i = 0; i < count; i++) {
+            List<KnowledgeComponent> levelFilteredKcs = null;
+
+            // 3-1. 수준별로 고르게 지식단위 문제 편성. 수준에 해당하는 지식단위(들)을 뽑아옴
+            if (count % 3 == 0) {
+                levelFilteredKcs = filterByLevel("EASY", stageKcs, kcCorrectRateMap);
+            } else if (count % 3 == 1) {
+                levelFilteredKcs = filterByLevel("MEDIUM", stageKcs, kcCorrectRateMap);
+            } else {
+                levelFilteredKcs = filterByLevel("HARD", stageKcs, kcCorrectRateMap);
+            }
+
+            // 3-2. 지식단위(들)가 뽑힌것이 없다면, 랜덤으로 가져오기 위해 해당 단계의 지식단위 다 담기
+            if (levelFilteredKcs == null || levelFilteredKcs.isEmpty()) {
+                levelFilteredKcs = stageKcs;
+            }
+
+            // 3-3. 지식단위들에서 랜덤 선택
+            KnowledgeComponent selectedKc = levelFilteredKcs.get(random.nextInt(levelFilteredKcs.size()));
+
+            // 3-4. 비트마스킹을 이용해 선택된 지식단위에서 문제 가져오기
+            PhonemeWithKcIdAndCandidate answerConsonant = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId());
+            // 3-5. Phonemes와 KC ID를 함께 저장
+            phonemeWithKcs.add(answerConsonant);
+
+        }
+        return phonemeWithKcs;
+    }
+
+    private List<KnowledgeComponent> filterByLevel(String level,List<KnowledgeComponent> stageKcs,Map<Long, Float> kcCorrectRateMap){
+
+        float minRate, maxRate;
+
+        switch (level.toUpperCase()) {
+            case "EASY":
+                minRate = 0.0f;
+                maxRate = 0.3f;
+                break;
+            case "MEDIUM":
+                minRate = 0.3f;
+                maxRate = 0.7f;
+                break;
+            case "HARD":
+                minRate = 0.7f;
+                maxRate = 1.0f;
+                break;
+            default:
+                throw new IllegalArgumentException("잘못된 level 값입니다. (EASY, MEDIUM, HARD 중 하나여야 함)");
+        }
+
+
+        return stageKcs.stream()
+                .filter(kc -> {
+                    float rate = kcCorrectRateMap.getOrDefault(kc.getId(), 0.0f);
+                    return rate >= minRate && rate < maxRate;
+                })
+                .toList();
     }
 }

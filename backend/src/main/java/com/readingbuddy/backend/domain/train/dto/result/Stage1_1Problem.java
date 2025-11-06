@@ -16,13 +16,18 @@ public class Stage1_1Problem extends ProblemResult {
     private final String voiceUrl;
     private final String imageUrl;
     private final List<OptionDto> options;
+    private final Long kcId;  // Knowledge Component ID
+    private final Integer candidateList;
 
-    public Stage1_1Problem(String problemWord, Long phonemeId, String voiceUrl, String imageUrl, List<OptionDto> options) {
+
+    public Stage1_1Problem(String problemWord, Long phonemeId, String voiceUrl, String imageUrl, List<OptionDto> options, Long kcId, Integer candidateList, Integer candidateList1) {
         super(problemWord);
         this.phonemeId = phonemeId;
         this.voiceUrl = voiceUrl;
         this.imageUrl = imageUrl;
         this.options = options;
+        this.kcId = kcId;
+        this.candidateList = candidateList1;
     }
 
     @Getter
