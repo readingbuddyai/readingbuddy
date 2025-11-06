@@ -145,6 +145,7 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator RunOneProblem(int index, int total, QuestionDto problem)
     {
+        ResetStoneUI();
         _currentProblemNumber = index;
         UpdateProgress(index, total, problem);
 
@@ -200,6 +201,7 @@ public class Stage20Controller : MonoBehaviour
 
         while (attempts < maxStoneAttempts && !solved)
         {
+            ResetStonePositions();
             pendingStoneCount = null;
             waitingForStoneCount = true;
 
@@ -207,37 +209,19 @@ public class Stage20Controller : MonoBehaviour
                 stoneBoard.SetActive(true);
             if (countdownText)
             {
-                countdownText.gameObject.SetActive(true);
-                countdownText.text = Mathf.CeilToInt(countdownSeconds).ToString();
+                countdownText.text = string.Empty;
+                countdownText.gameObject.SetActive(false);
             }
 
             onStoneRoundBegin?.Invoke(expectedCount);
 
-            float remaining = countdownSeconds;
-            while (remaining > 0f && waitingForStoneCount)
+            while (waitingForStoneCount)
             {
-                if (countdownText)
-                    countdownText.text = Mathf.CeilToInt(remaining).ToString();
-
-                if (pendingStoneCount.HasValue)
-                {
-                    waitingForStoneCount = false;
-                    break;
-                }
-
-                remaining -= Time.deltaTime;
                 yield return null;
             }
 
-            waitingForStoneCount = false;
-            int submitted = pendingStoneCount ?? -1;
+            int submitted = pendingStoneCount ?? 0;
             pendingStoneCount = null;
-
-            if (countdownText)
-            {
-                countdownText.text = string.Empty;
-                countdownText.gameObject.SetActive(false);
-            }
 
             if (stoneBoard)
                 stoneBoard.SetActive(false);
@@ -245,7 +229,8 @@ public class Stage20Controller : MonoBehaviour
 
             int attemptNumber = attempts + 1;
             bool isCorrect = (submitted == expectedCount);
-            yield return SendAttemptLog(problemNumber, attemptNumber, expectedCount, submitted, isCorrect, problem != null ? problem.problemWord : null);
+            yield return SendAttemptLog(problemNumber, attemptNumber, expectedCount, submitted, isCorrect,
+                problem != null ? problem.problemWord : null);
 
             if (isCorrect)
             {
@@ -266,12 +251,39 @@ public class Stage20Controller : MonoBehaviour
     {
         if (!waitingForStoneCount) return;
         pendingStoneCount = count;
+        if (verboseLogging)
+            Debug.Log($"[Stage20] ReportStoneCount → pending={pendingStoneCount} (waiting={waitingForStoneCount})");
+    }
+
+    public void ConfirmStoneCount()
+    {
+        Debug.Log("[Stage20] ConfirmStoneCount() 호출 시도");
+        if (!waitingForStoneCount)
+        {
+            if (verboseLogging)
+                Debug.Log("[Stage20] ConfirmStoneCount → waitingForStoneCount=false, 호출 무시");
+            return;
+        }
+
+        if (!pendingStoneCount.HasValue)
+        {
+            Debug.LogWarning("[Stage20] 아직 보고된 Stone 개수가 없습니다. 드롭 후 버튼을 눌러 주세요.");
+            return;
+        }
+
+        if (verboseLogging)
+            Debug.Log($"[Stage20] ConfirmStoneCount → 제출 예정 개수 = {pendingStoneCount.Value}");
+
         waitingForStoneCount = false;
     }
 
     private IEnumerator FetchQuestions(Action<List<QuestionDto>> onCompleted)
     {
-        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}");
+        string sessionQuery = string.IsNullOrWhiteSpace(stageSessionId)
+            ? string.Empty
+            : $"&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}";
+
+        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}{sessionQuery}");
 
         using (var req = UnityWebRequest.Get(url))
         {
@@ -280,7 +292,8 @@ public class Stage20Controller : MonoBehaviour
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogError($"[Stage20] 문제 요청 실패: {req.error}\nURL={url}");
+                string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
+                Debug.LogError($"[Stage20] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
                 yield break;
             }
 
@@ -297,18 +310,34 @@ public class Stage20Controller : MonoBehaviour
                 Debug.LogError($"[Stage20] 문제 파싱 실패: {ex.Message}\nJSON={json}");
             }
 
-            if (parsed == null || parsed.data == null || parsed.data.problems == null || parsed.data.problems.Count == 0)
+            if (parsed == null || parsed.data == null)
+            {
+                Debug.LogError("[Stage20] 문제 데이터가 비어 있습니다 (data=null)." );
+                yield break;
+            }
+
+            string sessionFromResponse = !string.IsNullOrEmpty(parsed.data.stageSessionId)
+                ? parsed.data.stageSessionId
+                : parsed.data.sessionId;
+
+            if (!string.IsNullOrEmpty(sessionFromResponse))
+            {
+                stageSessionId = sessionFromResponse;
+                if (verboseLogging)
+                    Debug.Log($"[Stage20] stageSessionId 수신: {stageSessionId}");
+            }
+
+            if (parsed.data.problems == null || parsed.data.problems.Count == 0)
             {
                 Debug.LogError("[Stage20] 문제 데이터가 비어 있습니다.");
                 yield break;
             }
 
-            if (!string.IsNullOrEmpty(parsed.data.sessionId) && string.IsNullOrEmpty(stageSessionId))
-                {
-                stageSessionId = parsed.data.sessionId;
+            if (!string.IsNullOrWhiteSpace(stageSessionId))
+            {
                 foreach (var problem in parsed.data.problems)
-                    problem.sessionId = parsed.data.sessionId;
-                }
+                    problem.sessionId = stageSessionId;
+            }
 
             onCompleted?.Invoke(parsed.data.problems);
         }
@@ -528,6 +557,7 @@ public class Stage20Controller : MonoBehaviour
     {
         waitingForStoneCount = false;
         pendingStoneCount = null;
+        ResetStonePositions();
         if (stoneBoard) stoneBoard.SetActive(false);
         if (countdownText)
         {
@@ -538,6 +568,22 @@ public class Stage20Controller : MonoBehaviour
         {
             wordLabel.text = string.Empty;
             wordLabel.gameObject.SetActive(false);
+        }
+    }
+
+    private void ResetStonePositions()
+    {
+        if (!stoneBoard)
+            return;
+
+        var stones = stoneBoard.GetComponentsInChildren<StoneDraggable>(true);
+        if (stones == null || stones.Length == 0)
+            return;
+
+        foreach (var stone in stones)
+        {
+            if (stone != null)
+                stone.ResetToInitialState();
         }
     }
 
@@ -594,20 +640,21 @@ public class Stage20Controller : MonoBehaviour
         string url = ComposeUrl("/api/train/attempt");
         string ssid = stageSessionId ?? string.Empty;
         string stg = stage ?? string.Empty;
-        string expected = expectedCount >= 0 ? expectedCount.ToString() : string.Empty;
-        string submitted = submittedCount >= 0 ? submittedCount.ToString() : string.Empty;
-        string wd = word;
+        string answer = submittedCount >= 0 ? submittedCount.ToString() : string.Empty;
+        string problemWord = word ?? string.Empty;
+        string audioUrl = string.Empty;
+        bool includeReplyResult = attemptNumber > 1;
 
         string json = "{" +
                       "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
                       "\"problemNumber\":" + problemNumber + "," +
                       "\"stage\":\"" + JsonEscape(stg) + "\"," +
-                      "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"phonemes\":\"" + JsonEscape(expected) + "\"," +
-                      "\"selectedAnswer\":\"" + JsonEscape(submitted) + "\"," +
-                      "\"word\":" + (wd == null ? "null" : "\"" + JsonEscape(wd) + "\"") + "," +
+                      "\"problem\":\"" + JsonEscape(problemWord) + "\"," +
+                      "\"answer\":\"" + JsonEscape(answer) + "\"," +
                       "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
-                      "\"isReplyCorrect\":null,\"audioUrl\":null}";
+                      "\"isReplyCorrect\":" + (includeReplyResult ? (isCorrect ? "true" : "false") : "null") + "," +
+                      "\"attemptNumber\":" + attemptNumber + "," +
+                      "\"audioUrl\":\"" + JsonEscape(audioUrl) + "\"" + "}";
 
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
@@ -640,7 +687,7 @@ public class Stage20Controller : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
 
-        string url = ComposeUrl($"/api/train/stage/complete?snity/mergeessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
+        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
@@ -672,6 +719,7 @@ public class Stage20Controller : MonoBehaviour
     [Serializable]
     private class ProblemData
     {
+        public string stageSessionId;
         public string sessionId;
         public List<QuestionDto> problems;
     }
