@@ -25,9 +25,6 @@ public class TrainedProblemHistories {
     private Integer problemNumber;  // 문제 번호 (1, 2, 3, ...)
 
     @Column(nullable = true)
-    private String phonemes;
-
-    @Column(nullable = true)
     private String word;
 
     @Column(nullable = false)

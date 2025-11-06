@@ -12,8 +12,6 @@ import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
 import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage3Problem;
 import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
-import com.readingbuddy.backend.domain.train.entity.Phonemes;
-import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -37,7 +35,6 @@ public class TrainedStageService {
     private final UserRepository userRepository;
     private final TrainedStageHistoriesRepository trainedStageHistoriesRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
-    private final PhonemesRepository phonemesRepository;
     private final TrainManager trainManager;
     private final TrainProblemHistoriesKcMapRepository trainProblemHistoriesKcMapRepository;
     private final KnowledgeComponentRepository knowledgeComponentRepository;
@@ -91,9 +88,6 @@ public class TrainedStageService {
         TrainedStageHistories stage = trainedStageHistoriesRepository.findById(stageSessionInfo.getTrainedStageHistoriesId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
-        // phonemes 문자열로 Phonemes 엔티티 조회
-        Phonemes phoneme = phonemesRepository.findByValue(request.getPhonemes()).orElse(null);
-
         // 세션에서 해당 문제의 KC ID와 candidateList 조회
         Integer candidateList = 0;
         Long kcId = null;
@@ -108,7 +102,6 @@ public class TrainedStageService {
         TrainedProblemHistories attempt = TrainedProblemHistories.builder()
                 .trainedStageHistories(stage)
                 .problemNumber(request.getProblemNumber())
-                .phonemes(request.getPhonemes())  // 문자열도 함께 저장
                 .word(request.getWord())
                 .selectedAnswer(request.getSelectedAnswer())
                 .attemptNumber(request.getAttemptNumber())
@@ -119,26 +112,20 @@ public class TrainedStageService {
                 .solvedAt(LocalDateTime.now())
                 .build();
 
-        /***
-         * TODO: 이때 mastery 값 업데이트 시키기 bkt service 호출
-         *  우선은 문제 자체에 매핑된 KC 의 mastery만 업데이트 합니다.
-         *  request에 isCorrect등이 없으면, 지나 갑니다.
-          */
-        if (request.getIsCorrect() != null) {
+        // 문제 하나씩 저장 (먼저 저장)
+        attempt = trainedProblemHistoriesRepository.save(attempt);
+
+        // BKT 업데이트 및 KC 매핑 저장 (isCorrect가 있을 때만)
+        if (request.getIsCorrect() != null && kcId != null) {
             Float correctRate = bktService.getCorrectAnswerRate(userId, kcId);
             bktService.updateLearnedMastery(userId, kcId, request.getIsCorrect(), correctRate);
 
-            // 문제 하나씩 저장
-            attempt = trainedProblemHistoriesRepository.save(attempt);
-
             // KC 매핑 저장 (Stage 3, 4 등 KC가 있는 경우)
-            if (kcId != null) {
-                KnowledgeComponent knowledgeComponent = knowledgeComponentRepository.findById(kcId)
-                        .orElseThrow(() -> new IllegalArgumentException("Knowledge Component를 찾을 수 없습니다: "));
+            KnowledgeComponent knowledgeComponent = knowledgeComponentRepository.findById(kcId)
+                    .orElseThrow(() -> new IllegalArgumentException("Knowledge Component를 찾을 수 없습니다: "));
 
-                TrainProblemHistoriesKcMap kcMap = new TrainProblemHistoriesKcMap(attempt, knowledgeComponent);
-                trainProblemHistoriesKcMapRepository.save(kcMap);
-            }
+            TrainProblemHistoriesKcMap kcMap = new TrainProblemHistoriesKcMap(attempt, knowledgeComponent);
+            trainProblemHistoriesKcMapRepository.save(kcMap);
         }
 
         // 저장한 session 업데이트
@@ -150,9 +137,6 @@ public class TrainedStageService {
                 .attemptId(attempt.getId())
                 .problemNumber(attempt.getProblemNumber())
                 .stageSessionId(stageSessionId)
-                .problemNumber(attempt.getProblemNumber())
-                .phonemeId(phoneme.getId())
-                .phonemes(attempt.getPhonemes())
                 .word(attempt.getWord())
                 .selectedAnswer(attempt.getSelectedAnswer())
                 .isCorrect(attempt.getIsCorrect())
