@@ -43,6 +43,14 @@ public class DashBoardController {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyMMdd");
 
     /**
+     * TODO: 회원의 특정 kc 변화 추이 보여주기
+     */
+
+    /**
+     * TODO: kc
+     */
+
+    /**
      * 사용자별 스테이지 통계 정보 조회 API
      * @param customUserDetails JWT로부터 추출한 사용자 정보
      * @param stage 스테이지 정보 (예: 1.1.1, 1.1.2, 1.2.1, 1.2.2, 2, 3, 4)

@@ -215,7 +215,7 @@ public class TrainedStageService {
             }
             else if (problem instanceof Stage1_1Problem) {
                 Stage1_1Problem stage1_1Problem = (Stage1_1Problem) problem;
-                int problemNumber = i + 1;  // 문제 번호는 1부터 시작
+                problemNumber = i + 1;  // 문제 번호는 1부터 시작
 
                 // 문제 번호 -> KC ID 매핑
                 stageSessionInfo.getProblemKcMap().put(problemNumber, stage1_1Problem.getKcId());
@@ -224,7 +224,7 @@ public class TrainedStageService {
                 stageSessionInfo.getKcCandidateList().put(stage1_1Problem.getKcId(), stage1_1Problem.getCandidateList());
             }else if (problem instanceof Stage1_2Problem) {
                 Stage1_2Problem stage1_2Problem = (Stage1_2Problem) problem;
-                int problemNumber = i + 1;  // 문제 번호는 1부터 시작
+                problemNumber = i + 1;  // 문제 번호는 1부터 시작
 
                 // 문제 번호 -> KC ID 매핑
                 stageSessionInfo.getProblemKcMap().put(problemNumber, stage1_2Problem.getKcId());

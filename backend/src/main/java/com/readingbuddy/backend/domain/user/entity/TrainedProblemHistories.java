@@ -1,10 +1,7 @@
 package com.readingbuddy.backend.domain.user.entity;
 
-<<<<<<< backend/src/main/java/com/readingbuddy/backend/domain/user/entity/TrainedProblemHistories.java
-=======
 import com.readingbuddy.backend.domain.train.entity.Letters;
 import com.readingbuddy.backend.domain.train.entity.Phonemes;
->>>>>>> backend/src/main/java/com/readingbuddy/backend/domain/user/entity/TrainedProblemHistories.java
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
