@@ -792,22 +792,22 @@ using System.Text;
     private IEnumerator SendAttemptLog(int problemNumber, int attemptNumber, string phonemes, string selectedAnswer, bool isCorrect, string word)
     {
         string url = ComposeUrl("/api/train/attempt");
-        // JSON 수동 작성 (nullable 필드 포함을 위해)
         string ssid = stageSessionId ?? string.Empty;
         string stg = stage ?? string.Empty;
-        string ph = phonemes ?? string.Empty;
-        string sel = selectedAnswer ?? string.Empty;
-        string wd = word; // null 허용
+        string ans = selectedAnswer ?? string.Empty;
+        string problemWord = word ?? string.Empty;
+        string audioUrl = string.Empty;
+        bool includeReplyResult = attemptNumber > 1;
         string json = "{" +
                       "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
                       "\"problemNumber\":" + problemNumber + "," +
                       "\"stage\":\"" + JsonEscape(stg) + "\"," +
-                      "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"phonemes\":\"" + JsonEscape(ph) + "\"," +
-                      "\"selectedAnswer\":\"" + JsonEscape(sel) + "\"," +
-                      "\"word\":" + (wd == null ? "null" : ("\"" + JsonEscape(wd) + "\"")) + "," +
+                      "\"problem\":\"" + JsonEscape(problemWord) + "\"," +
+                      "\"audioUrl\":\"" + JsonEscape(audioUrl) + "\"," +
                       "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
-                      "\"isReplyCorrect\":null,\"audioUrl\":null}";
+                      "\"isReplyCorrect\":" + (includeReplyResult ? (isCorrect ? "true" : "false") : "null") + "," +
+                      "\"attemptNumber\":" + attemptNumber + "," +
+                      "\"answer\":\"" + JsonEscape(ans) + "\"" + "}";
 
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
