@@ -10,6 +10,10 @@ import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
 import com.readingbuddy.backend.domain.train.dto.result.*;
+import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
+import com.readingbuddy.backend.domain.train.dto.result.Stage3Problem;
+import com.readingbuddy.backend.domain.train.dto.result.Stage4Problem;
+import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -189,15 +193,24 @@ public class TrainedStageService {
 
         for (int i = 0; i < problems.size(); i++) {
             ProblemResult problem = problems.get(i);
+            int problemNumber = i + 1;  // 문제 번호는 1부터 시작
+
             if (problem instanceof Stage3Problem) {
                 Stage3Problem stage3Problem = (Stage3Problem) problem;
-                int problemNumber = i + 1;  // 문제 번호는 1부터 시작
 
                 // 문제 번호 -> KC ID 매핑
                 stageSessionInfo.getProblemKcMap().put(problemNumber, stage3Problem.getKcId());
 
                 // KC ID -> candidateList 매핑 (업데이트된 값으로)
                 stageSessionInfo.getKcCandidateList().put(stage3Problem.getKcId(), stage3Problem.getCandidateList());
+            } else if (problem instanceof Stage4Problem) {
+                Stage4Problem stage4Problem = (Stage4Problem) problem;
+
+                // 문제 번호 -> KC ID 매핑
+                stageSessionInfo.getProblemKcMap().put(problemNumber, stage4Problem.getKcId());
+
+                // KC ID -> candidateList 매핑 (업데이트된 값으로)
+                stageSessionInfo.getKcCandidateList().put(stage4Problem.getKcId(), stage4Problem.getCandidateList());
             }
             else if (problem instanceof Stage1_1Problem) {
                 Stage1_1Problem stage1_1Problem = (Stage1_1Problem) problem;

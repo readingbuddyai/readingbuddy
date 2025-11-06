@@ -1,6 +1,5 @@
 package com.readingbuddy.backend.domain.user.entity;
 
-import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
