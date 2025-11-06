@@ -4,6 +4,7 @@ import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.entity.TrainProblemHistoriesKcMap;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 import com.readingbuddy.backend.domain.bkt.repository.TrainProblemHistoriesKcMapRepository;
+import com.readingbuddy.backend.domain.bkt.service.BktService;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
@@ -40,7 +41,7 @@ public class TrainedStageService {
     private final TrainManager trainManager;
     private final TrainProblemHistoriesKcMapRepository trainProblemHistoriesKcMapRepository;
     private final KnowledgeComponentRepository knowledgeComponentRepository;
-
+    private final BktService bktService;
 
     /**
      * Stage 시작 - 새로운 훈련 세션 생성
@@ -78,7 +79,7 @@ public class TrainedStageService {
      * 문제 시도 제출 - 개별 문제 시도 기록 저장
      * 개별 시도 map 에도 저장
      */
-    public AttemptResponse submitAttempt(AttemptRequest request) {
+    public AttemptResponse submitAttempt(Long userId, AttemptRequest request) {
         // 세션 조회
         String stageSessionId = request.getStageSessionId();
         StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
@@ -107,7 +108,6 @@ public class TrainedStageService {
         TrainedProblemHistories attempt = TrainedProblemHistories.builder()
                 .trainedStageHistories(stage)
                 .problemNumber(request.getProblemNumber())
-                .phoneme(phoneme)  // FK 관계 설정
                 .phonemes(request.getPhonemes())  // 문자열도 함께 저장
                 .word(request.getWord())
                 .selectedAnswer(request.getSelectedAnswer())
@@ -119,24 +119,32 @@ public class TrainedStageService {
                 .solvedAt(LocalDateTime.now())
                 .build();
 
-        // TODO: 이때 mastery 값 업데이트 시키기 bkt service 호출
-        // TODO: 우선은 문제 자체에 매핑된 KC 의 mastery만 업데이트 합니다.
-        // 문제 하나씩 저장
-        attempt = trainedProblemHistoriesRepository.save(attempt);
+        /***
+         * TODO: 이때 mastery 값 업데이트 시키기 bkt service 호출
+         *  우선은 문제 자체에 매핑된 KC 의 mastery만 업데이트 합니다.
+         *  request에 isCorrect등이 없으면, 지나 갑니다.
+          */
+        if (request.getIsCorrect() != null) {
+            Float correctRate = bktService.getCorrectAnswerRate(userId, kcId);
+            bktService.updateLearnedMastery(userId, kcId, request.getIsCorrect(), correctRate);
 
-        // KC 매핑 저장 (Stage 3, 4 등 KC가 있는 경우)
-        if (kcId != null) {
-            KnowledgeComponent knowledgeComponent = knowledgeComponentRepository.findById(kcId)
-                    .orElseThrow(() -> new IllegalArgumentException("Knowledge Component를 찾을 수 없습니다: "));
+            // 문제 하나씩 저장
+            attempt = trainedProblemHistoriesRepository.save(attempt);
 
-            TrainProblemHistoriesKcMap kcMap = new TrainProblemHistoriesKcMap(attempt, knowledgeComponent);
-            trainProblemHistoriesKcMapRepository.save(kcMap);
+            // KC 매핑 저장 (Stage 3, 4 등 KC가 있는 경우)
+            if (kcId != null) {
+                KnowledgeComponent knowledgeComponent = knowledgeComponentRepository.findById(kcId)
+                        .orElseThrow(() -> new IllegalArgumentException("Knowledge Component를 찾을 수 없습니다: "));
+
+                TrainProblemHistoriesKcMap kcMap = new TrainProblemHistoriesKcMap(attempt, knowledgeComponent);
+                trainProblemHistoriesKcMapRepository.save(kcMap);
+            }
         }
 
         // 저장한 session 업데이트
         // 시도 횟수가 커진다면, 전체 try count를 올립니다.
         if (request.getAttemptNumber() > 1) stage.updateTryCount();
-        if (request.getIsCorrect()) stage.updateCorrectCount();
+        if (Boolean.TRUE.equals(request.getIsCorrect())) stage.updateCorrectCount();
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())

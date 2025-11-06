@@ -197,7 +197,7 @@ public class TrainController {
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            AttemptResponse response = trainedStageService.submitAttempt(request);
+            AttemptResponse response = trainedStageService.submitAttempt(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("문제 풀이가 기록되었습니다.", response));
         } catch (Exception e) {
