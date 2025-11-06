@@ -14,6 +14,7 @@ import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage3Problem;
 import com.readingbuddy.backend.domain.train.dto.result.Stage4Problem;
 import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
+import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -104,9 +105,9 @@ public class TrainedStageService {
         TrainedProblemHistories attempt = TrainedProblemHistories.builder()
                 .trainedStageHistories(stage)
                 .problemNumber(request.getProblemNumber())
-                .word(request.getWord())
-                .selectedAnswer(request.getSelectedAnswer())
                 .attemptNumber(request.getAttemptNumber())
+                .problem(request.getProblem())
+                .answer(request.getAnswer())
                 .isCorrect(request.getIsCorrect())
                 .isReplyCorrect(request.getIsReplyCorrect())
                 .audioUrl(request.getAudioUrl())
@@ -114,7 +115,6 @@ public class TrainedStageService {
                 .solvedAt(LocalDateTime.now())
                 .build();
 
-        // 문제 하나씩 저장 (먼저 저장)
         attempt = trainedProblemHistoriesRepository.save(attempt);
 
         // BKT 업데이트 및 KC 매핑 저장 (isCorrect가 있을 때만)
@@ -137,10 +137,11 @@ public class TrainedStageService {
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
-                .problemNumber(attempt.getProblemNumber())
                 .stageSessionId(stageSessionId)
-                .word(attempt.getWord())
-                .selectedAnswer(attempt.getSelectedAnswer())
+                .problemNumber(attempt.getProblemNumber())
+                .stage(stage.getStage())
+                .problem(attempt.getProblem())
+                .answer(attempt.getAnswer())
                 .isCorrect(attempt.getIsCorrect())
                 .isReplyCorrect(attempt.getIsReplyCorrect())
                 .attemptNumber(attempt.getAttemptNumber())

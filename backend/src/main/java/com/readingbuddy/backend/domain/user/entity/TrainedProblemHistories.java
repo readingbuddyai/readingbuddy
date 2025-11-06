@@ -1,5 +1,10 @@
 package com.readingbuddy.backend.domain.user.entity;
 
+<<<<<<< backend/src/main/java/com/readingbuddy/backend/domain/user/entity/TrainedProblemHistories.java
+=======
+import com.readingbuddy.backend.domain.train.entity.Letters;
+import com.readingbuddy.backend.domain.train.entity.Phonemes;
+>>>>>>> backend/src/main/java/com/readingbuddy/backend/domain/user/entity/TrainedProblemHistories.java
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,34 +25,33 @@ public class TrainedProblemHistories {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private Integer problemNumber;  // 문제 번호 (1, 2, 3, ...)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trained_stage_id")  // FK 실제 위치
+    private TrainedStageHistories trainedStageHistories;
 
-    @Column(nullable = true)
-    private String word;
+    @Column(nullable = false)
+    private Integer problemNumber;  // 문제 번호
+
+    @Column(nullable = false)
+    private String problem;  // 문제 (음소, 음절, 단어)
+
+    @Column(nullable = false)
+    private String answer;  // 정답 (개수, 음소, 음절)
 
     @Column(nullable = false)
     private Boolean isCorrect;  // 문제 정답 여부
 
     @Column
-    private Boolean isReplyCorrect;  // 발음 정답 여부
+    private Boolean isReplyCorrect;  // 발읍 정답 여부
 
-    // 몇번째 시도인지
     @Column(nullable = false)
-    private Integer attemptNumber;
+    private Integer attemptNumber;  // 문제 시도 횟수
 
     @Column
-    private String audioUrl;  // S3 Url
-
-    @Column(nullable = false)
-    private String selectedAnswer;
+    private String audioUrl;  // 응답 (개수, 음소, 음절)
 
     @Column(nullable = false)
     private LocalDateTime solvedAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trained_stage_id")  // FK 실제 위치
-    private TrainedStageHistories trainedStageHistories;
 
     @Column(nullable = false)
     private Integer candidateList;
