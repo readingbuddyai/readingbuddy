@@ -45,9 +45,10 @@ public interface TrainedProblemHistoriesRepository extends JpaRepository<Trained
             SELECT p.id as phonemeId, p.value, p.category, COUNT(tph.id) as wrongCnt
             FROM trained_problem_histories tph
             JOIN trained_stage_histories tsh ON tph.trained_stage_id = tsh.id
-            JOIN phonemes p ON tph.phoneme_id = p.id
+            JOIN phonemes p ON tph.problem = p.value
             WHERE tsh.user_id = :userId
             AND tph.is_correct = false
+            AND tsh.stage LIKE '1%'
             GROUP BY p.id, p.value, p.category
             ORDER BY wrongCnt DESC
             LIMIT :limit""",
