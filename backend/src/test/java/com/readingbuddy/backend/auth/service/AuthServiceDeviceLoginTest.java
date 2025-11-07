@@ -1,6 +1,6 @@
 package com.readingbuddy.backend.auth.service;
 
-import com.readingbuddy.backend.auth.RefreshTokenRepository;
+import com.readingbuddy.backend.auth.repository.RefreshTokenRepository;
 import com.readingbuddy.backend.auth.dto.*;
 import com.readingbuddy.backend.auth.jwt.JWTUtil;
 import com.readingbuddy.backend.common.properties.JwtProperties;

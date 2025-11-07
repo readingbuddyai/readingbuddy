@@ -27,26 +27,22 @@ public class UserKcMastery {
     @ManyToOne
     @JoinColumn(name = "knowledge_component")
     private KnowledgeComponent knowledgeComponent;
-
-    /**
-     * TODO: 확률 네이밍 풀네임으로 변경
-     * ex) p_l -> learnedProbability
-      */
+    
     // 현재 숙달 확률
     @Column(nullable = false)
-    private Float p_l;
+    private Float pLearn;
 
     // 학습 확률
     @Column(nullable = false)
-    private Float p_t;
+    private Float pTrain;
 
     // 추측 확률
     @Column(nullable = false)
-    private Float p_g;
+    private Float pGuess;
 
     // 실수 확률
     @Column(nullable = false)
-    private Float p_s;
+    private Float pSlip;
 
     @CreatedDate
     @Column(nullable = false)

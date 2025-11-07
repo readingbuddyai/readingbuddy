@@ -2,15 +2,13 @@ package com.readingbuddy.backend.domain.bkt.entity;
 
 import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 @Entity
 @Table(name = "knowledge_component")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class KnowledgeComponent {
