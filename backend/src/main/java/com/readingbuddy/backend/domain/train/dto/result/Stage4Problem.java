@@ -14,9 +14,9 @@ public class Stage4Problem extends ProblemResult {
     private final Integer answerCnt;
     private final List<Character> phonemes;
     private final Long kcId;  // Knowledge Component ID
-    private final Integer candidateList;  // Updated candidateList bitmask
+    private final String candidateList;  // Updated candidateList bitmask (BigInteger String)
 
-    public Stage4Problem(String problemWord, String slowVoiceUrl, String voiceUrl, Integer answerCnt, List<Character> phonemes, Long kcId, Integer candidateList) {
+    public Stage4Problem(String problemWord, String slowVoiceUrl, String voiceUrl, Integer answerCnt, List<Character> phonemes, Long kcId, String candidateList) {
         super(problemWord);
         this.slowVoiceUrl = slowVoiceUrl;
         this.voiceUrl = voiceUrl;

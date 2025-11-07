@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -39,7 +40,8 @@ public class BktService {
      * TODO: 유저, kc가 들어오면 해당 kc에 대한 정답률 반환
      */
     public Float getCorrectAnswerRate(Long userId, Long kcId) {
-        UserKcMastery userKcMastery = userKcMasteryRepository.findByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId);
+        UserKcMastery userKcMastery = userKcMasteryRepository.findFirstByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId)
+                .orElseThrow(() -> new IllegalArgumentException("UserKcMastery를 찾을 수 없습니다: userId=" + userId + ", kcId=" + kcId));
 
         /**
          * 정답을 맞출 확률 = 이미 알고 있을 확률  * 실수 하지 않을 확룰 + 모를 확률 * 찍어서 맞출 확률
@@ -52,7 +54,8 @@ public class BktService {
      * TODO: 유저, stage와 문제의 합불이 들어오면 해당 문제에 해당 하는 kc에 대한 숙련도 update
      */
     public void updateLearnedMastery(Long userId, Long kcId, Boolean isCorrect, Float correctRate) {
-        UserKcMastery userKcMastery = userKcMasteryRepository.findByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId);
+        UserKcMastery userKcMastery = userKcMasteryRepository.findFirstByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId)
+                .orElseThrow(() -> new IllegalArgumentException("UserKcMastery를 찾을 수 없습니다: userId=" + userId + ", kcId=" + kcId));
 
         float conditionalProbability = 0F;
         if (isCorrect) {
@@ -115,16 +118,18 @@ public class BktService {
         Optional<TrainedProblemHistories> latestProblemHistory =
                 trainedProblemHistoriesRepository.findFirstKCProbleHistories(userId, kcId);
 
-        // 2. 최신 candidateList 가져오기 (없으면 0)
-        int candidateList = latestProblemHistory.map(TrainedProblemHistories::getCandidateList).orElse(0);
-        log.info("candidateList 비트마스크: {} (binary: {})", candidateList, Integer.toBinaryString(candidateList));
+
+        String candidateListStr = latestProblemHistory.map(TrainedProblemHistories::getCandidateList).orElse("0");
+        BigInteger candidateList = new BigInteger(candidateListStr);
+
+        log.info("candidateList 비트마스크: {} (binary: {})", candidateListStr, candidateList.toString(2));
 
         // 3. candidateList에서 0인 비트(아직 출제되지 않은 문제) + 제외 목록에 없는 문제 찾기
         List<Phonemes> availablePhonemes = new ArrayList<>();
         for (int i = 0; i < kcPhonemes.size(); i++) {
             Phonemes phoneme = kcPhonemes.get(i);
             // i번째 비트가 0이고, 제외 목록에 없으면 사용 가능
-            if ((candidateList & (1 << i)) == 0 && !excludedPhonemeIds.contains(phoneme.getId())) {
+            if (!candidateList.testBit(i) && !excludedPhonemeIds.contains(phoneme.getId())) {
                 availablePhonemes.add(phoneme);
                 log.info("비트 {} (Phoneme: {})는 사용 가능", i, phoneme.getValue());
             }
@@ -145,29 +150,30 @@ public class BktService {
 
         // 6. 사용 가능한 Phoneme 중 랜덤 선택
         Phonemes selected = availablePhonemes.get(new Random().nextInt(availablePhonemes.size()));
+        log.info("선택된 Phoneme: {}", selected.getValue());
         return PhonemeWithKcIdAndCandidate.builder()
                 .phonemes(selected)
-                .candidateList(candidateList)
+                .candidateList(candidateListStr)
                 .KcId(kcId)
                 .build();
     }
 
-    public Integer getCandidateBitMask(Long userId, Long kcId) {
+    public String getCandidateBitMask(Long userId, Long kcId) {
         Optional<TrainedProblemHistories> latestProblemHistory =
                 trainedProblemHistoriesRepository.findFirstKCProbleHistories(userId, kcId);
 
         // 문제 이력이 없음
         if (latestProblemHistory.isEmpty()) {
-            return 0;
+            return "0";
         }
 
-        Integer candidateList = latestProblemHistory.get().getCandidateList();
+        String candidateList = latestProblemHistory.get().getCandidateList();
         if (candidateList == null) {
             log.info("candidateList가 null이어서 랜덤 선택");
-            return 0;
+            return "0";
         }
 
-        log.info("candidateList 비트마스크: {} (binary: {})", candidateList, Integer.toBinaryString(candidateList));
+        log.info("candidateList 비트마스크: {} (binary: {})", candidateList, new BigInteger(candidateList).toString(2));
 
         return candidateList;
     }
