@@ -1,7 +1,7 @@
 package com.readingbuddy.backend.auth.service;
 
-import com.readingbuddy.backend.auth.RefreshTokenRepository;
-import com.readingbuddy.backend.auth.domain.RefreshToken;
+import com.readingbuddy.backend.auth.repository.RefreshTokenRepository;
+import com.readingbuddy.backend.auth.entity.RefreshToken;
 import com.readingbuddy.backend.auth.dto.*;
 import com.readingbuddy.backend.auth.jwt.JWTUtil;
 import com.readingbuddy.backend.common.properties.JwtProperties;
@@ -58,7 +58,6 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 리프레시 토큰입니다."));
 
         User user = refreshToken.getUser();
-        validateRefreshToken(refreshToken, request.getUserId(), user.getId());
 
         String newAccessToken = createAccessToken(user);
         String newRefreshToken = createRefreshToken(user);
@@ -156,16 +155,7 @@ public class AuthService {
                 .user(user)
                 .issuedUserAgent(servletRequest.getHeader("User-Agent"))
                 .issuedIp(getIp(servletRequest))
-                .expired_at(expiredAt)
+                .expired_At(expiredAt)
                 .build());
-    }
-
-    private void validateRefreshToken(RefreshToken refreshToken, Long userId, Long userIdOfToken){
-        // 만료 시간 변조 가능성
-        // 요청 유저가 토큰 식별자와 일치하는지 확인
-        if (refreshToken.isExpired() || !userId.equals(userIdOfToken)) {
-            refreshTokenRepository.delete(refreshToken);
-            throw new IllegalArgumentException("유효하지 않은 리프레시 토큰입니다.");
-        }
     }
 }

@@ -1,4 +1,4 @@
-package com.readingbuddy.backend.auth.domain;
+package com.readingbuddy.backend.auth.entity;
 
 import com.readingbuddy.backend.domain.user.entity.User;
 import jakarta.persistence.*;
@@ -31,14 +31,14 @@ public class RefreshToken {
     private String issuedUserAgent;
 
     @Column(nullable = false)
-    private LocalDateTime expired_at;
+    private LocalDateTime expired_At;
 
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(this.expired_at);
+        return LocalDateTime.now().isAfter(this.expired_At);
     }
 
     public void rotate(String newToken, LocalDateTime newExpiredAt) {
         this.token = newToken;
-        this.expired_at = newExpiredAt;
+        this.expired_At = newExpiredAt;
     }
 }
