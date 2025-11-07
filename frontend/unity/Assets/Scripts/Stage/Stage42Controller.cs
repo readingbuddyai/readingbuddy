@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -47,6 +47,9 @@ public class Stage42Controller : MonoBehaviour
     public AudioSource audioSource;
     public AudioClip sfxStart;
     public AudioClip sfxNext;
+    [Range(0f, 1f)] public float slowVoiceVolume = 1.0f;
+    [Range(0f, 1f)] public float localClipVolume = 1.0f;
+    [Range(0f, 1f)] public float localSfxVolume = 1.0f;
 
     // 4.2 시나리오 대사 오디오
     public AudioClip clipIntroCompositeMagic;   // [4.2.1]
@@ -371,7 +374,7 @@ public class Stage42Controller : MonoBehaviour
         {
             // 순차 채우기: 현재 지정된 슬롯에만 채움
             if (slotIndex != _initialSlotIndex) return;
-            if (audioSource && sfxNext) audioSource.PlayOneShot(sfxNext);
+            if (audioSource && sfxNext) audioSource.PlayOneShot(sfxNext, Mathf.Clamp01(localSfxVolume));
             SetSlotText(slotIndex, symbol);
             SetSlotAlpha(slotIndex, 1f);
 
@@ -411,15 +414,15 @@ public class Stage42Controller : MonoBehaviour
         _attemptsPerSlot[slotIndex] = Mathf.Clamp(_attemptsPerSlot[slotIndex] + 1, 1, 3);
         if (!correct)
         {
-            if (audioSource && sfxNext) audioSource.PlayOneShot(sfxNext);
+            if (audioSource && sfxNext) audioSource.PlayOneShot(sfxNext, Mathf.Clamp01(localSfxVolume));
             if (_attemptsPerSlot[slotIndex] >= 3)
                 StartCoroutine(Co_FinalizeSlot(slotIndex, expected));
-            else if (clipThinkAgain)
-                StartCoroutine(PlayClip(clipThinkAgain)); // [4.2.7.3]
+            else
+                StartCoroutine(Co_ThinkAgainThenReplaySlowVoice()); // [4.2.7.3] + replay slow voice
             return;
         }
         // 정답으로 다시 채워넣은 경우에도 효과음 재생
-        if (audioSource && sfxNext) audioSource.PlayOneShot(sfxNext);
+        if (audioSource && sfxNext) audioSource.PlayOneShot(sfxNext, Mathf.Clamp01(localSfxVolume));
         SetSlotText(slotIndex, NormalizePhoneme(expected));
         SetSlotAlpha(slotIndex, 1f);
         _finalizedSlots[slotIndex] = true;
@@ -436,6 +439,14 @@ public class Stage42Controller : MonoBehaviour
         SetSlotAlpha(slotIndex, 1f);
         _finalizedSlots[slotIndex] = true;
         _awaitingUserArrangement = false;
+    }
+
+    private IEnumerator Co_ThinkAgainThenReplaySlowVoice()
+    {
+        if (clipThinkAgain)
+            yield return PlayClip(clipThinkAgain); // [4.2.7.3]
+        if (!string.IsNullOrEmpty(_currentSlowVoiceUrl))
+            yield return PlayVoiceUrl(_currentSlowVoiceUrl);
     }
 
     private void BeginInitialFill()
@@ -584,8 +595,11 @@ public class Stage42Controller : MonoBehaviour
         if (!clip || !audioSource) yield break;
         audioSource.Stop();
         audioSource.clip = clip;
+        float oldVol = audioSource.volume;
+        audioSource.volume = Mathf.Clamp01(localClipVolume);
         audioSource.Play();
         yield return new WaitWhile(() => audioSource.isPlaying);
+        audioSource.volume = oldVol;
     }
 
     private static AudioType GuessAudioType(string url)
@@ -603,6 +617,15 @@ public class Stage42Controller : MonoBehaviour
         // 1) 시도: '+'를 %2B로 인코딩한 경로
         string safeUrl = EncodePlusInPath(voiceUrl);
         bool played = false;
+        // slow voice volume override preparation
+        bool isSlow = false;
+        if (!string.IsNullOrEmpty(_currentSlowVoiceUrl))
+        {
+            string curSafe = EncodePlusInPath(_currentSlowVoiceUrl);
+            isSlow = string.Equals(curSafe, safeUrl, StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(_currentSlowVoiceUrl, voiceUrl, StringComparison.OrdinalIgnoreCase);
+        }
+        float originalVolume = audioSource.volume;
         if (logVerbose) Debug.Log($"[Stage42] GET audio {safeUrl}");
         using (var req = UnityWebRequestMultimedia.GetAudioClip(safeUrl, GuessAudioType(voiceUrl)))
         {
@@ -614,8 +637,10 @@ public class Stage42Controller : MonoBehaviour
                 var clip = DownloadHandlerAudioClip.GetContent(req);
                 audioSource.Stop();
                 audioSource.clip = clip;
+                if (isSlow) audioSource.volume = Mathf.Clamp01(slowVoiceVolume);
                 audioSource.Play();
                 yield return new WaitWhile(() => audioSource.isPlaying);
+                if (isSlow) audioSource.volume = originalVolume;
                 played = true;
             }
             else if (logVerbose)
@@ -640,8 +665,10 @@ public class Stage42Controller : MonoBehaviour
                 var clip2 = DownloadHandlerAudioClip.GetContent(req2);
                 audioSource.Stop();
                 audioSource.clip = clip2;
+                if (isSlow) audioSource.volume = Mathf.Clamp01(slowVoiceVolume);
                 audioSource.Play();
                 yield return new WaitWhile(() => audioSource.isPlaying);
+                if (isSlow) audioSource.volume = originalVolume;
             }
         }
     }
@@ -908,3 +935,7 @@ public class Stage42Controller : MonoBehaviour
         return s;
     }
 }
+
+
+
+
