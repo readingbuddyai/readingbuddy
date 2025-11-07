@@ -155,7 +155,7 @@ public class AuthService {
                 .user(user)
                 .issuedUserAgent(servletRequest.getHeader("User-Agent"))
                 .issuedIp(getIp(servletRequest))
-                .expired_At(expiredAt)
+                .expiredAt(expiredAt)
                 .build());
     }
 }

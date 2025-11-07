@@ -31,14 +31,14 @@ public class RefreshToken {
     private String issuedUserAgent;
 
     @Column(nullable = false)
-    private LocalDateTime expired_At;
+    private LocalDateTime expiredAt;
 
     public boolean isExpired() {
-        return LocalDateTime.now().isAfter(this.expired_At);
+        return LocalDateTime.now().isAfter(this.expiredAt);
     }
 
     public void rotate(String newToken, LocalDateTime newExpiredAt) {
         this.token = newToken;
-        this.expired_At = newExpiredAt;
+        this.expiredAt = newExpiredAt;
     }
 }
