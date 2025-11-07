@@ -5,6 +5,8 @@ import com.readingbuddy.backend.auth.entity.RefreshToken;
 import com.readingbuddy.backend.auth.dto.*;
 import com.readingbuddy.backend.auth.jwt.JWTUtil;
 import com.readingbuddy.backend.common.properties.JwtProperties;
+import com.readingbuddy.backend.domain.dashboard.repository.AttendanceHistoriesRepository;
+import com.readingbuddy.backend.domain.user.entity.AttendHistories;
 import com.readingbuddy.backend.domain.user.entity.User;
 import com.readingbuddy.backend.domain.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -28,6 +31,7 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final RefreshTokenRepository refreshTokenRepository;
     private final DeviceSessionManager deviceSessionManager;
+    private final AttendanceHistoriesRepository attendanceHistoriesRepository;
 
     @Transactional
     public TokenResponse login(LoginRequest request, HttpServletRequest servletRequest) {
@@ -37,6 +41,7 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("로그인 정보에 일치하는 회원이 없습니다.");
         }
+
 
         // 유효 시간 1시간
         String accessToken = createAccessToken(user);
@@ -82,8 +87,11 @@ public class AuthService {
         DeviceSessionInfo deviceSessionInfo = deviceSessionManager.getSession(deviceAuthCode);
 
         deviceSessionManager.authorizeDevice(deviceSessionInfo,user.getId());
+
+        checkAndCreateAttendance(user);
     }
 
+    @Transactional
     public TokenResponse checkDeviceAuthorized(DeviceCodeRequest request, HttpServletRequest servletRequest) {
         Long userId = deviceSessionManager.checkAuthorizedDevice(request.getDeviceAuthCode());
 
@@ -95,6 +103,12 @@ public class AuthService {
         saveRefreshToken(user, refreshToken, servletRequest);
 
         return createTokenResponse(accessToken, refreshToken);
+    }
+
+    public void checkAttendance(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("로그인 정보에 일치하는 회원이 없습니다."));
+        checkAndCreateAttendance(user);
     }
 
     private TokenResponse createTokenResponse(String accessToken, String refreshToken) {
@@ -158,4 +172,23 @@ public class AuthService {
                 .expiredAt(expiredAt)
                 .build());
     }
+
+    private void checkAndCreateAttendance(User user) {
+        LocalDate today = LocalDate.now();
+        Optional<AttendHistories> existingAttendance =
+                attendanceHistoriesRepository.findByUserIdAndDate(user.getId(), today);
+
+        if (existingAttendance.isPresent()) {
+            return;
+        }
+
+        AttendHistories newAttendance = AttendHistories.builder()
+                .user(user)
+                .attendDate(today)
+                .playtime(0)
+                .build();
+
+        attendanceHistoriesRepository.save(newAttendance);
+    }
+
 }
