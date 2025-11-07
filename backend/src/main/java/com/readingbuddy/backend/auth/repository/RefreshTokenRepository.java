@@ -1,6 +1,6 @@
-package com.readingbuddy.backend.auth;
+package com.readingbuddy.backend.auth.repository;
 
-import com.readingbuddy.backend.auth.domain.RefreshToken;
+import com.readingbuddy.backend.auth.entity.RefreshToken;
 import com.readingbuddy.backend.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
