@@ -56,30 +56,31 @@ public interface TrainedProblemHistoriesRepository extends JpaRepository<Trained
     List<Object[]> getWrongPhonemesRanking(@Param("userId") Long userId, @Param("limit") int limit);
 
     /**
-     * 사용자별 시도 횟수가 많은 음소 조회 (내림차순)
+     * 사용자별 시도 횟수가 많은 음소 조회 (내림차순) - Stage 1 만
      */
     @Query(value = """
-          SELECT
-              p.id as phonemeId,
-              p.value,
-              p.category,
-              SUM(max_attempts.max_attempt_number) as tryCnt
-          FROM (
-              SELECT
-                  tph.phoneme_id,
-                  tph.trained_stage_id,
-                  tph.problem_number,
-                  MAX(tph.attempt_number) as max_attempt_number
-              FROM trained_problem_histories tph
-              JOIN trained_stage_histories tsh ON tph.trained_stage_id = tsh.id
-              WHERE tsh.user_id = :userId
-              GROUP BY tph.phoneme_id, tph.trained_stage_id, tph.problem_number
-          ) max_attempts
-          JOIN phonemes p ON max_attempts.phoneme_id = p.id
-          GROUP BY p.id, p.value, p.category
-          ORDER BY tryCnt DESC
-          LIMIT :limit
-          """,
+        SELECT
+            p.id as phonemeId,
+            p.value,
+            p.category,
+            SUM(max_attempts.max_attempt_number) as tryCnt
+        FROM (
+            SELECT
+                tph.problem,
+                tph.trained_stage_id,
+                tph.problem_number,
+                MAX(tph.attempt_number) as max_attempt_number
+            FROM trained_problem_histories tph
+            JOIN trained_stage_histories tsh ON tph.trained_stage_id = tsh.id
+            WHERE tsh.user_id = :userId
+            AND tsh.stage LIKE '1%'
+            GROUP BY tph.problem, tph.trained_stage_id, tph.problem_number
+        ) max_attempts
+        JOIN phonemes p ON max_attempts.problem = p.value
+        GROUP BY p.id, p.value, p.category
+        ORDER BY tryCnt DESC
+        LIMIT :limit
+        """,
             nativeQuery = true)
     List<Object[]> getTryPhonemesRanking(@Param("userId") Long userId, @Param("limit") int limit);
 
