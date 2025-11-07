@@ -11,5 +11,5 @@ import lombok.*;
 public class PhonemeWithKcIdAndCandidate {
     private Phonemes phonemes;
     private Long KcId;
-    private Integer candidateList;  // 업데이트된 candidateList 비트마스크{
+    private String candidateList;  // 업데이트된 candidateList 비트마스크 (BigInteger String){
 }

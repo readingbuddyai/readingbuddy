@@ -50,7 +50,7 @@ public class TrainManager {
         this.stageSessions.remove(stageSessionId);
     }
 
-    public void setKcCandidateList(String stageSessionId, Long kcId, Integer candidateList) {
+    public void setKcCandidateList(String stageSessionId, Long kcId, String candidateList) {
         stageSessions.get(stageSessionId).getKcCandidateList().put(kcId, candidateList);
     }
 

@@ -13,6 +13,7 @@ import com.readingbuddy.backend.domain.train.repository.WordsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -73,11 +74,11 @@ public class ProblemGenerateService {
                     .toList();
 
             // 현재 candidateList 가져오기
-            int candidateList = bktService.getCandidateBitMask(userId, kcId);
+            String candidateList = bktService.getCandidateBitMask(userId, kcId);
 
             // 1. 사용 가능한 Letters 필터링 (비트마스크 기반)
             List<LetterWithIndex> availableLetters = filterAvailableLetters(letters, candidateList);
-            boolean wasReset = availableLetters.size() == letters.size() && candidateList != 0;
+            boolean wasReset = availableLetters.size() == letters.size() && !candidateList.equals("0");
 
             // 2. 랜덤으로 N개 선택 (부족하면 전체 letters에서 추가 선택)
             int problemCount = problemCounts[idx];
@@ -85,7 +86,7 @@ public class ProblemGenerateService {
 
             // 3. candidateList 업데이트 (부족해서 추가 선택한 경우 리셋)
             boolean needsReset = wasReset || selectedLetters.size() > availableLetters.size();
-            int updatedCandidateList = updateCandidateList(selectedLetters, candidateList, needsReset);
+            String updatedCandidateList = updateCandidateList(selectedLetters, candidateList, needsReset);
 
             // 4. Stage3Problem 생성 및 추가
             results.addAll(createStage3Problems(selectedLetters, kcId, updatedCandidateList));
@@ -97,14 +98,15 @@ public class ProblemGenerateService {
     /**
      * candidateList를 기반으로 사용 가능한 Letters 필터링
      * @param letters 전체 Letters 리스트
-     * @param candidateList 비트마스크
+     * @param candidateList 비트마스크 (BigInteger String)
      * @return 사용 가능한 LetterWithIndex 리스트
      */
-    private List<LetterWithIndex> filterAvailableLetters(List<Letters> letters, int candidateList) {
+    private List<LetterWithIndex> filterAvailableLetters(List<Letters> letters, String candidateList) {
+        BigInteger bitmask = new BigInteger(candidateList);
         List<LetterWithIndex> available = new ArrayList<>();
         for (int i = 0; i < letters.size(); i++) {
             // i번째 비트가 0이면 아직 출제되지 않은 문제
-            if ((candidateList & (1 << i)) == 0) {
+            if (!bitmask.testBit(i)) {
                 available.add(new LetterWithIndex(letters.get(i), i));
             }
         }
@@ -177,29 +179,29 @@ public class ProblemGenerateService {
     /**
      * 선택된 Letters의 인덱스를 candidateList에 반영
      * @param selectedLetters 선택된 LetterWithIndex 리스트
-     * @param candidateList 기존 candidateList
+     * @param candidateList 기존 candidateList (BigInteger String)
      * @param wasReset candidateList가 리셋되었는지 여부
-     * @return 업데이트된 candidateList
+     * @return 업데이트된 candidateList (BigInteger String)
      */
-    private int updateCandidateList(List<LetterWithIndex> selectedLetters, int candidateList, boolean wasReset) {
+    private String updateCandidateList(List<LetterWithIndex> selectedLetters, String candidateList, boolean wasReset) {
         // 리셋되었으면 0부터 시작
-        int updated = wasReset ? 0 : candidateList;
+        BigInteger updated = wasReset ? BigInteger.ZERO : new BigInteger(candidateList);
 
         for (LetterWithIndex letterWithIndex : selectedLetters) {
-            updated |= (1 << letterWithIndex.index);
+            updated = updated.setBit(letterWithIndex.index);
         }
 
-        return updated;
+        return updated.toString();
     }
 
     /**
      * LetterWithIndex 리스트로 Stage3Problem 리스트 생성
      * @param selectedLetters 선택된 LetterWithIndex 리스트
      * @param kcId Knowledge Component ID
-     * @param candidateList 업데이트된 candidateList
+     * @param candidateList 업데이트된 candidateList (BigInteger String)
      * @return Stage3Problem 리스트
      */
-    private List<ProblemResult> createStage3Problems(List<LetterWithIndex> selectedLetters, Long kcId, int candidateList) {
+    private List<ProblemResult> createStage3Problems(List<LetterWithIndex> selectedLetters, Long kcId, String candidateList) {
         List<ProblemResult> problems = new ArrayList<>();
         for (LetterWithIndex letterWithIndex : selectedLetters) {
             problems.add(new Stage3Problem(
@@ -217,10 +219,10 @@ public class ProblemGenerateService {
      * LetterWithIndex 리스트로 Stage4Problem 리스트 생성
      * @param selectedLetters 선택된 LetterWithIndex 리스트
      * @param kcId Knowledge Component ID
-     * @param candidateList 업데이트된 candidateList
+     * @param candidateList 업데이트된 candidateList (BigInteger String)
      * @return Stage4Problem 리스트
      */
-    private List<ProblemResult> createStage4Problems(List<LetterWithIndex> selectedLetters, Long kcId, int candidateList) {
+    private List<ProblemResult> createStage4Problems(List<LetterWithIndex> selectedLetters, Long kcId, String candidateList) {
         List<ProblemResult> problems = new ArrayList<>();
         for (LetterWithIndex letterWithIndex : selectedLetters) {
             Letters letter = letterWithIndex.letter;
@@ -264,18 +266,18 @@ public class ProblemGenerateService {
                     .toList();
 
             // 현재 candidateList 가져오기
-            int candidateList = bktService.getCandidateBitMask(userId, kcId);
+            String candidateList = bktService.getCandidateBitMask(userId, kcId);
 
             // 1. 사용 가능한 Letters 필터링 (비트마스크 기반)
             List<LetterWithIndex> availableLetters = filterAvailableLetters(letters, candidateList);
-            boolean wasReset = availableLetters.size() == letters.size() && candidateList != 0;
+            boolean wasReset = availableLetters.size() == letters.size() && !candidateList.equals("0");
 
             // 2. 랜덤으로 1개 선택 (부족하면 전체 letters에서 선택)
             List<LetterWithIndex> selectedLetters = selectRandomLetters(availableLetters, letters, problemPerKc);
 
             // 3. candidateList 업데이트 (부족해서 추가 선택한 경우 리셋)
             boolean needsReset = wasReset || selectedLetters.size() > availableLetters.size();
-            int updatedCandidateList = updateCandidateList(selectedLetters, candidateList, needsReset);
+            String updatedCandidateList = updateCandidateList(selectedLetters, candidateList, needsReset);
 
             // 4. Stage4Problem 생성 및 추가
             results.addAll(createStage4Problems(selectedLetters, kcId, updatedCandidateList));

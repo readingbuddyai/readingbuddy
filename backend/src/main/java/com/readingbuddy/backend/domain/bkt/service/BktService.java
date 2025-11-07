@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -120,21 +121,22 @@ public class BktService {
             log.info("문제 이력이 없어 랜덤 선택");
             return PhonemeWithKcIdAndCandidate.builder()
                     .phonemes(kcPhonemes.get(new Random().nextInt(kcPhonemes.size())))
-                    .candidateList(0)
+                    .candidateList("0")
                     .KcId(kcId)
                     .build();
         }
 
         // 4. 최신 candidateList 가져오기
-        Integer candidateList = latestProblemHistory.get().getCandidateList();
+        String candidateListStr = latestProblemHistory.get().getCandidateList();
+        BigInteger candidateList = new BigInteger(candidateListStr);
 
-        log.info("candidateList 비트마스크: {} (binary: {})", candidateList, Integer.toBinaryString(candidateList));
+        log.info("candidateList 비트마스크: {} (binary: {})", candidateListStr, candidateList.toString(2));
 
         // 5. candidateList에서 0인 비트(아직 출제되지 않은 문제) 찾기
         List<Phonemes> availablePhonemes = new ArrayList<>();
         for (int i = 0; i < kcPhonemes.size(); i++) {
             // i번째 비트가 0이면 아직 출제되지 않은 문제
-            if ((candidateList & (1 << i)) == 0) {
+            if (!candidateList.testBit(i)) {
                 availablePhonemes.add(kcPhonemes.get(i));
                 log.info("비트 {} (Phoneme: {})는 아직 출제되지 않음", i, kcPhonemes.get(i).getValue());
             }
@@ -150,27 +152,27 @@ public class BktService {
         log.info("선택된 Phoneme: {}", selected.getValue());
         return PhonemeWithKcIdAndCandidate.builder()
                 .phonemes(selected)
-                .candidateList(candidateList)
+                .candidateList(candidateListStr)
                 .KcId(kcId)
                 .build();
     }
 
-    public Integer getCandidateBitMask(Long userId, Long kcId) {
+    public String getCandidateBitMask(Long userId, Long kcId) {
         Optional<TrainedProblemHistories> latestProblemHistory =
                 trainedProblemHistoriesRepository.findFirstKCProbleHistories(userId, kcId);
 
         // 문제 이력이 없음
         if (latestProblemHistory.isEmpty()) {
-            return 0;
+            return "0";
         }
 
-        Integer candidateList = latestProblemHistory.get().getCandidateList();
+        String candidateList = latestProblemHistory.get().getCandidateList();
         if (candidateList == null) {
             log.info("candidateList가 null이어서 랜덤 선택");
-            return 0;
+            return "0";
         }
 
-        log.info("candidateList 비트마스크: {} (binary: {})", candidateList, Integer.toBinaryString(candidateList));
+        log.info("candidateList 비트마스크: {} (binary: {})", candidateList, new BigInteger(candidateList).toString(2));
 
         return candidateList;
     }
