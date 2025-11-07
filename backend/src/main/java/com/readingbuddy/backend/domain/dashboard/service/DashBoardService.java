@@ -18,7 +18,15 @@ import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesR
 import com.readingbuddy.backend.domain.user.entity.AttendHistories;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.stream.Collectors;
+import com.readingbuddy.backend.domain.dashboard.dto.response.KcMasteryTrendResponse;
+import com.readingbuddy.backend.domain.dashboard.dto.response.StageMasteryResponse;
+import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
+import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
+import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
+import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +35,8 @@ public class DashBoardService {
     private final TrainedStageHistoriesRepository trainedStageHistoriesRepository;
     private final AttendanceHistoriesRepository attendanceHistoriesRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
+    private final UserKcMasteryRepository userKcMasteryRepository;
+    private final KnowledgeComponentRepository knowledgeComponentRepository;
 
     /**
      * 사용자별 해당 스테이지의 통계 정보 조회
@@ -232,5 +242,115 @@ public class DashBoardService {
                          .build())
                  .collect(Collectors.toList());
      }
+
+    /**
+     * 특정 KC의 숙련도 p_l 변화 추이 조회
+     * @param userId 사용자 ID
+     * @param kcId Knowledge Component ID
+     * @param startDate 조회 시작 날짜
+     * @param endDate 조회 종료 날짜
+     * @return KC 숙련도 변화 추이
+     */
+    public KcMasteryTrendResponse getKcMasteryTrend(Long userId, Long kcId, LocalDate startDate, LocalDate endDate) {
+        // KC 정보 조회
+        KnowledgeComponent kc = knowledgeComponentRepository.findById(kcId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Knowledge Component ID입니다: " + kcId));
+
+        // LocalDate를 LocalDateTime으로 변환
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+        // 해당 사용자의 KC 숙련도 변화 이력 조회 (시간순, 기간 필터링)
+        List<UserKcMastery> masteryHistory = userKcMasteryRepository
+                .findByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtAsc(
+                        userId, kcId, startDateTime, endDateTime);
+
+        // MasteryPoint 리스트로 변환
+        List<KcMasteryTrendResponse.MasteryPoint> masteryTrend = masteryHistory.stream()
+                .map(mastery -> KcMasteryTrendResponse.MasteryPoint.builder()
+                        .p_l(mastery.getPLearn())
+                        .p_t(mastery.getPTrain())
+                        .p_g(mastery.getPGuess())
+                        .p_s(mastery.getPSlip())
+                        .updatedAt(mastery.getUpdatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        return KcMasteryTrendResponse.builder()
+                .kcId(kcId)
+                .kcCategory(kc.getCategory().name())
+                .stage(kc.getStage())
+                .masteryTrend(masteryTrend)
+                .build();
+    }
+
+    /**
+     * 특정 stage에 대한 현재 p_l 조회
+     * @param userId 사용자 ID
+     * @param stage 스테이지 정보
+     * @param startDate 조회 시작 날짜
+     * @param endDate 조회 종료 날짜
+     * @return stage별 KC 숙련도 목록
+     */
+    public StageMasteryResponse getStageMastery(Long userId, String stage, LocalDate startDate, LocalDate endDate) {
+        // 해당 stage에 속한 모든 KC 조회
+        List<KnowledgeComponent> kcs = knowledgeComponentRepository.findByStage(stage);
+
+        if (kcs.isEmpty()) {
+            throw new IllegalArgumentException("해당 stage에 대한 Knowledge Component가 존재하지 않습니다: " + stage);
+        }
+
+        // LocalDate를 LocalDateTime으로 변환
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+        // 각 KC의 해당 기간 내 최신 숙련도 조회
+        List<StageMasteryResponse.KcMastery> kcMasteries = kcs.stream()
+                .map(kc -> {
+                    Optional<UserKcMastery> latestMastery = userKcMasteryRepository
+                            .findFirstByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
+                                    userId, kc.getId(), startDateTime, endDateTime);
+
+                    // 숙련도 데이터가 없는 경우 기본값 (초기 상태)
+                    if (latestMastery.isEmpty()) {
+                        return StageMasteryResponse.KcMastery.builder()
+                                .kcId(kc.getId())
+                                .kcCategory(kc.getCategory().name())
+                                .pLearn(0.0f)
+                                .pTrain(0.0f)
+                                .pGuess(0.0f)
+                                .pSlip(0.0f)
+                                .updatedAt(null)
+                                .build();
+                    }
+
+                    UserKcMastery mastery = latestMastery.get();
+                    return StageMasteryResponse.KcMastery.builder()
+                            .kcId(kc.getId())
+                            .kcCategory(kc.getCategory().name())
+                            .pLearn(mastery.getPLearn())
+                            .pTrain(mastery.getPTrain())
+                            .pGuess(mastery.getPGuess())
+                            .pSlip(mastery.getPSlip())
+                            .updatedAt(mastery.getUpdatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 평균 숙련도 계산
+        double averageMastery = kcMasteries.stream()
+                .mapToDouble(StageMasteryResponse.KcMastery::getPLearn)
+                .average()
+                .orElse(0.0);
+
+        // 소수점 4자리까지 반올림
+        averageMastery = Math.round(averageMastery * 10000.0) / 10000.0;
+
+        return StageMasteryResponse.builder()
+                .stage(stage)
+                .kcMasteries(kcMasteries)
+                .averageMastery(averageMastery)
+                .build();
+    }
 
 }

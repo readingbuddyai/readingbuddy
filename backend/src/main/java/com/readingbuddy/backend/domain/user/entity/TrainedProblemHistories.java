@@ -48,5 +48,8 @@ public class TrainedProblemHistories {
     private String audioUrl;  // 응답 (개수, 음소, 음절)
 
     @Column(nullable = false)
-    private LocalDateTime solvedAt;  // 문제 푼 시간
+    private LocalDateTime solvedAt;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String candidateList;
 }
