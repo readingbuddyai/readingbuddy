@@ -1,0 +1,16 @@
+        }
+
+        if (!string.IsNullOrWhiteSpace(stageSessionId))
+            yield return CompleteStageSession();
+
+        // [4.2.11] 완성 주문 외우기 → 3초 녹음 업로드
+        // 문제별로 처리됨: 스테이지 종료 시에는 생략
+
+        // 마무리 멘트
+        if (clipFinishCongrats) yield return PlayClip(clipFinishCongrats); // [4.2.8]
+        if (clipYouAreWizard) yield return PlayClip(clipYouAreWizard);     // [4.2.9]
+        if (clipNextTraining) yield return PlayClip(clipNextTraining);     // [4.2.10]
+    }
+
+    private IEnumerator CorrectionFlow42()
+    {
