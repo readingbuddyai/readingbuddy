@@ -42,8 +42,6 @@ public class AuthService {
             throw new IllegalArgumentException("로그인 정보에 일치하는 회원이 없습니다.");
         }
 
-        // 출석 체크
-        checkAndCreateAttendance(user);
 
         // 유효 시간 1시간
         String accessToken = createAccessToken(user);
@@ -90,6 +88,8 @@ public class AuthService {
         DeviceSessionInfo deviceSessionInfo = deviceSessionManager.getSession(deviceAuthCode);
 
         deviceSessionManager.authorizeDevice(deviceSessionInfo,user.getId());
+
+        checkAndCreateAttendance(user);
     }
 
     @Transactional
@@ -104,6 +104,12 @@ public class AuthService {
         saveRefreshToken(user, refreshToken, servletRequest);
 
         return createTokenResponse(accessToken, refreshToken);
+    }
+
+    public void checkAttendance(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("로그인 정보에 일치하는 회원이 없습니다."));
+        checkAndCreateAttendance(user);
     }
 
     private TokenResponse createTokenResponse(String accessToken, String refreshToken) {
@@ -194,4 +200,5 @@ public class AuthService {
 
         attendanceHistoriesRepository.save(newAttendance);
     }
+
 }

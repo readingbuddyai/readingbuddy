@@ -90,4 +90,19 @@ public class UserController {
                     .body(ApiResponse.error(e.getMessage()));
         }
     }
+
+    @Operation(summary = "출석 체크", description = "자정이 지나면 해당 API를 이용하여 출석체크를 합니다. ")
+    @PostMapping("/attend")
+    public ResponseEntity<ApiResponse<Void>> checkAttendance(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+        try{
+            Long userId = customUserDetails.getId();
+            authService.checkAttendance(userId);
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(ApiResponse.success("출석이 완료 되었습니다.",null));
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
 }
