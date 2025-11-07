@@ -17,10 +17,10 @@ public class Stage1_1Problem extends ProblemResult {
     private final String imageUrl;
     private final List<OptionDto> options;
     private final Long kcId;  // Knowledge Component ID
-    private final Integer candidateList;
+    private final String candidateList;  // BigInteger String
 
 
-    public Stage1_1Problem(String problemWord, Long phonemeId, String voiceUrl, String imageUrl, List<OptionDto> options, Long kcId, Integer candidateList, Integer candidateList1) {
+    public Stage1_1Problem(String problemWord, Long phonemeId, String voiceUrl, String imageUrl, List<OptionDto> options, Long kcId, String candidateList, String candidateList1) {
         super(problemWord);
         this.phonemeId = phonemeId;
         this.voiceUrl = voiceUrl;
