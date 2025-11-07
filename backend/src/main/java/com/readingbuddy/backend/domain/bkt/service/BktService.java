@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -42,7 +43,6 @@ public class BktService {
     public Float getCorrectAnswerRate(Long userId, Long kcId) {
         UserKcMastery userKcMastery = userKcMasteryRepository.findFirstByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId)
                 .orElseThrow(() -> new IllegalArgumentException("UserKcMastery를 찾을 수 없습니다: userId=" + userId + ", kcId=" + kcId));
-
         /**
          * 정답을 맞출 확률 = 이미 알고 있을 확률  * 실수 하지 않을 확룰 + 모를 확률 * 찍어서 맞출 확률
           */
@@ -70,6 +70,8 @@ public class BktService {
         UserKcMastery updatedKcMastery = userKcMastery.toBuilder()
                 .id(null)
                 .pLearn(updatedLearnedMastery)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         userKcMasteryRepository.save(updatedKcMastery);
