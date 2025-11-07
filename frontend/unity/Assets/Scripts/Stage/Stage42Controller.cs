@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using UnityEngine.SceneManagement;
 using TMPro;
 
 // Stage 4.2 Controller (합성 마법)
@@ -42,6 +43,10 @@ public class Stage42Controller : MonoBehaviour
     public float guideMoveDuration = 1.5f;
     public bool enableGuideMoveBetweenQuestions = false;
     private bool _guideMoved;
+
+    [Header("End Panel (Level1-style)")]
+    public Button againButtonPrefab;
+    public Button lobbyButtonPrefab;
 
     [Header("오디오 재생")]
     public AudioSource audioSource;
@@ -240,6 +245,9 @@ public class Stage42Controller : MonoBehaviour
         // After all training lines, complete the stage session
         if (!string.IsNullOrWhiteSpace(stageSessionId))
             yield return CompleteStageSession();
+
+        // Show end panel for user choice (restart/lobby)
+        ShowEndPanel();
     }
 
     private IEnumerator CorrectionFlow42()
@@ -441,6 +449,127 @@ public class Stage42Controller : MonoBehaviour
         _awaitingUserArrangement = false;
     }
 
+    private void ShowEndPanel()
+    {
+        RectTransform canvasRoot = null;
+        var cvComp = (guideRect ? guideRect.GetComponentInParent<Canvas>() : null);
+        if (cvComp)
+            canvasRoot = cvComp.transform as RectTransform;
+        else
+        {
+            var cv = new GameObject("EndCanvas").AddComponent<Canvas>();
+            cv.renderMode = RenderMode.ScreenSpaceOverlay;
+            cv.sortingOrder = 5000;
+            cv.gameObject.AddComponent<CanvasScaler>();
+            cv.gameObject.AddComponent<GraphicRaycaster>();
+            canvasRoot = cv.transform as RectTransform;
+        }
+
+        // overlay
+        var overlay = new GameObject("EndOverlay", typeof(RectTransform), typeof(Image));
+        var rt = overlay.GetComponent<RectTransform>();
+        rt.SetParent(canvasRoot, false);
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        var img = overlay.GetComponent<Image>(); img.color = new Color(0,0,0,0.6f);
+
+        // panel
+        var panel = new GameObject("EndPanel", typeof(RectTransform), typeof(Image));
+        var prt = panel.GetComponent<RectTransform>();
+        prt.SetParent(rt, false);
+        prt.sizeDelta = new Vector2(1200f, 800f);
+        prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
+        prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.anchoredPosition = Vector2.zero;
+        panel.GetComponent<Image>().color = new Color(1,1,1,0.1f);
+
+        // title text: "학습이 끝났습니다"
+        var titleGO = new GameObject("Title", typeof(RectTransform));
+        var titleRT = titleGO.GetComponent<RectTransform>();
+        titleRT.SetParent(prt, false);
+        titleRT.anchorMin = new Vector2(0.5f, 1f);
+        titleRT.anchorMax = new Vector2(0.5f, 1f);
+        titleRT.pivot = new Vector2(0.5f, 1f);
+        titleRT.anchoredPosition = new Vector2(0f, -80f);
+        titleRT.sizeDelta = new Vector2(1000f, 180f);
+        var titleTMP = titleGO.AddComponent<TMP_Text>();
+        titleTMP.text = "학습이 끝났습니다";
+        titleTMP.alignment = TextAlignmentOptions.Center;
+        titleTMP.fontSize = 96f;
+        titleTMP.color = Color.white;
+
+        // helper to make button
+        Button ResolveButton(Button prefab, string[] resourcePaths, out bool isCustom)
+        {
+            if (prefab) { isCustom = true; return prefab; }
+            // try Resources paths
+            foreach (var p in resourcePaths)
+            {
+                var b = Resources.Load<Button>(p);
+                if (b) { isCustom = true; return b; }
+                var go = Resources.Load<GameObject>(p);
+                if (go)
+                {
+                    var childBtn = go.GetComponentInChildren<Button>(true) ?? go.GetComponent<Button>();
+                    if (childBtn) { isCustom = true; return childBtn; }
+                }
+            }
+            isCustom = false; return null;
+        }
+
+        Button MakeBtn(Button prefab, string text, Vector2 pos)
+        {
+            Button b;
+            if (prefab)
+            {
+                b = Instantiate(prefab, prt);
+            }
+            else
+            {
+                var go = new GameObject("Button", typeof(RectTransform), typeof(Image), typeof(Button));
+                var brt = go.GetComponent<RectTransform>(); brt.SetParent(prt, false);
+                go.GetComponent<Image>().color = new Color(0.2f,0.2f,0.2f,0.9f);
+                var tgo = new GameObject("Text", typeof(RectTransform));
+                var trt = tgo.GetComponent<RectTransform>(); trt.SetParent(brt, false);
+                trt.anchorMin = Vector2.zero; trt.anchorMax = Vector2.one; trt.offsetMin = Vector2.zero; trt.offsetMax = Vector2.zero;
+                var tmp = tgo.AddComponent<TMP_Text>(); tmp.text = text; tmp.alignment = TextAlignmentOptions.Center; tmp.fontSize = 72f; tmp.color = Color.white;
+                b = go.GetComponent<Button>();
+            }
+            var r = b.GetComponent<RectTransform>();
+            r.sizeDelta = new Vector2(600f, 240f);
+            r.anchorMin = r.anchorMax = new Vector2(0.5f, 0.5f);
+            r.pivot = new Vector2(0.5f, 0.5f);
+            r.anchoredPosition = pos;
+            return b;
+        }
+
+        // Try resolve buttons from Resources/UI if prefabs not set
+        bool againCustom;
+        var againResolved = ResolveButton(againButtonPrefab, new[]{
+            "UI/againbutton","UI/AgainButton","againbutton","AgainButton"
+        }, out againCustom);
+        var again = MakeBtn(againResolved, againCustom ? string.Empty : "다시 학습하기", new Vector2(-330f, -200f));
+        again.onClick.AddListener(() => { Destroy(overlay); RestartStage(); });
+
+        bool lobbyCustom;
+        var lobbyResolved = ResolveButton(lobbyButtonPrefab, new[]{
+            "UI/lobbybutton","UI/LobbyButton","lobbybutton","LobbyButton"
+        }, out lobbyCustom);
+        var lobby = MakeBtn(lobbyResolved, lobbyCustom ? string.Empty : "로비로 가기", new Vector2(330f, -200f));
+        lobby.onClick.AddListener(() => { Destroy(overlay); GoToLobby(); });
+    }
+
+    private void RestartStage()
+    {
+        var s = SceneManager.GetActiveScene();
+        if (s.IsValid()) SceneManager.LoadScene(s.name);
+    }
+
+    private void GoToLobby()
+    {
+        try { SceneManager.LoadScene("Lobby"); }
+        catch { Debug.LogWarning("[Stage42] Lobby scene not found."); }
+    }
+
     private IEnumerator Co_ThinkAgainThenReplaySlowVoice()
     {
         if (clipThinkAgain)
@@ -504,7 +633,7 @@ public class Stage42Controller : MonoBehaviour
     }
 
     private void SetProgressLabel(int index, int total)
-    { if (progressText) progressText.text = $"{index} / {total}"; }
+    { if (progressText) progressText.text = $"{index}/{total}"; }
 
     private void ClearPhonemeBoxes()
     {
