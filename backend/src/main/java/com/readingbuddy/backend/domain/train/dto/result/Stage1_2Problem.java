@@ -18,9 +18,9 @@ public class Stage1_2Problem extends ProblemResult {
     private final String voiceUrl;
     private final List<OptionDto> options;
     private final Long kcId;  // Knowledge Component ID
-    private final Integer candidateList;  // 업데이트된 candidateList 비트마스크
+    private final String candidateList;  // 업데이트된 candidateList 비트마스크 (BigInteger String)
 
-    public Stage1_2Problem(String problemWord, Long phonemeId, String targetPhoneme, String imageUrl, String voiceUrl, List<OptionDto> options, Long kcId, Integer candidateList) {
+    public Stage1_2Problem(String problemWord, Long phonemeId, String targetPhoneme, String imageUrl, String voiceUrl, List<OptionDto> options, Long kcId, String candidateList) {
         super(problemWord);
         this.phonemeId = phonemeId;
         this.targetPhoneme = targetPhoneme;

@@ -14,7 +14,6 @@ import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.dto.result.Stage3Problem;
 import com.readingbuddy.backend.domain.train.dto.result.Stage4Problem;
 import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
-import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
@@ -92,12 +91,12 @@ public class TrainedStageService {
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
         // 세션에서 해당 문제의 KC ID와 candidateList 조회
-        Integer candidateList = 0;
+        String candidateList = "0";
         Long kcId = null;
         if (stageSessionInfo.getProblemKcMap() != null && stageSessionInfo.getKcCandidateList() != null) {
             kcId = stageSessionInfo.getProblemKcMap().get(request.getProblemNumber());
             if (kcId != null) {
-                candidateList = stageSessionInfo.getKcCandidateList().getOrDefault(kcId, 0);
+                candidateList = stageSessionInfo.getKcCandidateList().getOrDefault(kcId, "0");
             }
         }
 

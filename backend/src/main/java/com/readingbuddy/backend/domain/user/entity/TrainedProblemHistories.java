@@ -50,6 +50,6 @@ public class TrainedProblemHistories {
     @Column(nullable = false)
     private LocalDateTime solvedAt;
 
-    @Column(nullable = false)
-    private Integer candidateList;
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String candidateList;
 }

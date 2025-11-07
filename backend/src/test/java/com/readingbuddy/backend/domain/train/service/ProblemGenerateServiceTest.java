@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -98,7 +99,7 @@ class ProblemGenerateServiceTest {
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(anyLong())).thenReturn(lettersKcMaps);
-        when(bktService.getCandidateBitMask(anyLong(), anyLong())).thenReturn(0);  // 아직 출제된 문제 없음
+        when(bktService.getCandidateBitMask(anyLong(), anyLong())).thenReturn("0");  // 아직 출제된 문제 없음
 
         // when
         List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
@@ -152,7 +153,7 @@ class ProblemGenerateServiceTest {
         }
 
         // 0번과 1번 인덱스가 이미 출제됨 (비트마스크: 0b00011 = 3)
-        int existingCandidateList = 0b00011;
+        String existingCandidateList = "3";
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(lettersKcMaps);
@@ -172,12 +173,14 @@ class ProblemGenerateServiceTest {
         // candidateList가 업데이트되었는지 확인
         for (Stage3Problem problem : stage3Problems) {
             assertNotNull(problem.getCandidateList());
-            assertTrue(problem.getCandidateList() > existingCandidateList,
+            BigInteger currentList = new BigInteger(problem.getCandidateList());
+            BigInteger existingList = new BigInteger(existingCandidateList);
+            assertTrue(currentList.compareTo(existingList) > 0,
                 "candidateList가 업데이트되어야 함");
         }
 
         // 모든 문제의 candidateList가 동일해야 함 (같은 KC의 문제들)
-        int firstCandidateList = stage3Problems.get(0).getCandidateList();
+        String firstCandidateList = stage3Problems.get(0).getCandidateList();
         assertTrue(stage3Problems.stream()
                 .allMatch(p -> p.getCandidateList().equals(firstCandidateList)));
     }
@@ -203,7 +206,7 @@ class ProblemGenerateServiceTest {
         }
 
         // 3개 모두 출제됨 (비트마스크: 0b111 = 7)
-        int fullCandidateList = 0b111;
+        String fullCandidateList = "7";
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(lettersKcMaps);
@@ -224,7 +227,8 @@ class ProblemGenerateServiceTest {
         for (Stage3Problem problem : stage3Problems) {
             assertNotNull(problem.getCandidateList());
             // 리셋되어 새로운 비트마스크가 설정됨
-            assertTrue(problem.getCandidateList() >= 0);
+            BigInteger candidateList = new BigInteger(problem.getCandidateList());
+            assertTrue(candidateList.compareTo(BigInteger.ZERO) >= 0);
         }
     }
 
@@ -247,7 +251,7 @@ class ProblemGenerateServiceTest {
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(lettersKcMaps);
-        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(0);
+        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
         List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
@@ -287,7 +291,7 @@ class ProblemGenerateServiceTest {
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(lettersKcMaps);
-        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(0);
+        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
         List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
@@ -322,7 +326,7 @@ class ProblemGenerateServiceTest {
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(new ArrayList<>());
-        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(0);
+        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
         List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
@@ -351,7 +355,7 @@ class ProblemGenerateServiceTest {
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(lettersKcMaps);
-        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(0);
+        when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
         List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
@@ -373,7 +377,8 @@ class ProblemGenerateServiceTest {
             assertTrue(problem.getAnswerCnt() > 0, "answerCnt는 양수여야 함");
 
             // candidateList는 0 이상이어야 함
-            assertTrue(problem.getCandidateList() >= 0, "candidateList는 0 이상이어야 함");
+            BigInteger candidateList = new BigInteger(problem.getCandidateList());
+            assertTrue(candidateList.compareTo(BigInteger.ZERO) >= 0, "candidateList는 0 이상이어야 함");
 
             // problemVoiceUrl은 빈 문자열이 아니어야 함
             assertFalse(problem.getProblemVoiceUrl().isEmpty(), "problemVoiceUrl은 빈 문자열이 아니어야 함");
@@ -400,7 +405,7 @@ class ProblemGenerateServiceTest {
 
         // candidateList: 인덱스 2, 3, 4가 이미 출제됨 (비트마스크: 0b11100 = 28)
         // available은 인덱스 0, 1만 (2개만 available)
-        int candidateListWith3Used = 0b11100;  // 28
+        String candidateListWith3Used = "28";  // 0b11100
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(lettersKcMaps);
@@ -422,12 +427,13 @@ class ProblemGenerateServiceTest {
             assertNotNull(problem.getCandidateList());
             // 새로운 라운드 시작으로 candidateList가 새로 설정됨
             // 3개의 비트가 켜져있어야 함 (3개 문제 선택)
-            int bitCount = Integer.bitCount(problem.getCandidateList());
+            BigInteger candidateList = new BigInteger(problem.getCandidateList());
+            int bitCount = candidateList.bitCount();
             assertEquals(3, bitCount, "3개 문제를 선택했으므로 3개의 비트가 켜져있어야 함");
         }
 
         // 모든 문제가 같은 candidateList를 가져야 함
-        int firstCandidateList = stage3Problems.get(0).getCandidateList();
+        String firstCandidateList = stage3Problems.get(0).getCandidateList();
         assertTrue(stage3Problems.stream()
                 .allMatch(p -> p.getCandidateList().equals(firstCandidateList)),
                 "같은 KC의 문제들은 같은 candidateList를 가져야 함");
@@ -462,7 +468,7 @@ class ProblemGenerateServiceTest {
 
         // candidateList: 인덱스 1, 2, 3, 4가 이미 출제됨 (비트마스크: 0b11110 = 30)
         // available은 인덱스 0만 (1개만 available)
-        int candidateListWith4Used = 0b11110;  // 30
+        String candidateListWith4Used = "30";  // 0b11110
 
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(kcList);
         when(lettersKcMapRepository.findByKnowledgeComponentId(testKc1.getId())).thenReturn(lettersKcMaps);
@@ -482,7 +488,8 @@ class ProblemGenerateServiceTest {
         // candidateList가 리셋되고 3개의 비트가 켜져있어야 함
         for (Stage3Problem problem : stage3Problems) {
             assertNotNull(problem.getCandidateList());
-            int bitCount = Integer.bitCount(problem.getCandidateList());
+            BigInteger candidateList = new BigInteger(problem.getCandidateList());
+            int bitCount = candidateList.bitCount();
             assertEquals(3, bitCount, "3개 문제를 선택했으므로 3개의 비트가 켜져있어야 함");
         }
 
