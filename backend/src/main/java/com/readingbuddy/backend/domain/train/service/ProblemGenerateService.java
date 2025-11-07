@@ -48,21 +48,21 @@ public class ProblemGenerateService {
         List<ProblemResult> results = null;
 
         if (stage.equals("3")) {
-            results = generateStage3(userId);
+            results = generateStage3(userId, cnt);
         } else if (stage.equals("4.1") || stage.equals("4.2")) {
-            results = generateStage4(userId, stage);
+            results = generateStage4(userId, stage, cnt);
         }
         return results;
     }
 
-    public List<ProblemResult> generateStage3(Long userId) {
+    public List<ProblemResult> generateStage3(Long userId, Integer cnt) {
         List<ProblemResult> results = new ArrayList<>();
 
         // 정답률이 낮은 순으로 정렬된 KC 목록 가져오기
         List<KcWithCorrectRate> kcList = bktService.getLowestCorrectRateKcsByStage(userId, "3");
 
         // KC별 문제 개수: 첫 번째 KC는 3개, 두 번째 KC는 2개
-        int[] problemCounts = {3, 2};
+        int[] problemCounts = {cnt / 2 + 1, cnt / 2};
 
         for (int idx = 0; idx < Math.min(kcList.size(), problemCounts.length); idx++) {
             KcWithCorrectRate kcWithRate = kcList.get(idx);
@@ -246,14 +246,14 @@ public class ProblemGenerateService {
         return problems;
     }
 
-    public List<ProblemResult> generateStage4(Long userId, String stage) {
+    public List<ProblemResult> generateStage4(Long userId, String stage, Integer cnt) {
         List<ProblemResult> results = new ArrayList<>();
 
         // 정답률이 낮은 순으로 정렬된 KC 목록 가져오기
         List<KcWithCorrectRate> kcList = bktService.getLowestCorrectRateKcsByStage(userId, stage);
 
-        // Stage 4: KC당 1개씩, 최대 5개 KC
-        int maxKcCount = 5;
+        // Stage 4: KC당 1개씩, 최대 Cnt KC
+        int maxKcCount = cnt;
         int problemPerKc = 1;
 
         for (int idx = 0; idx < Math.min(kcList.size(), maxKcCount); idx++) {
