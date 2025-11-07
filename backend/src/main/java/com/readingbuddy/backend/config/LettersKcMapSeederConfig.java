@@ -147,7 +147,7 @@ public class LettersKcMapSeederConfig {
                             }
                         }
 
-                        if (components.jung > 0) {
+                        if (components.jong > 0) {
                             kcIds.add(23L);
                         } else {
                             kcIds.add(24L);
