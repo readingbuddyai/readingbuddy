@@ -70,13 +70,13 @@ public class UserService {
 
     private void validateEmailIsUnique(String email) {
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException();
+            throw new IllegalArgumentException("유효하지 않은 이메일 형식입니다.");
         }
     }
 
     private void validateNicknameIsUnique(String nickname) {
         if (userRepository.existsByNickname(nickname)) {
-            throw new RuntimeException();
+            throw new IllegalArgumentException("이미 존재하는 닉네임입니다.");
         }
     }
 
