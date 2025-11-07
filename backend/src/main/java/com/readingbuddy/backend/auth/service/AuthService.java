@@ -5,6 +5,8 @@ import com.readingbuddy.backend.auth.domain.RefreshToken;
 import com.readingbuddy.backend.auth.dto.*;
 import com.readingbuddy.backend.auth.jwt.JWTUtil;
 import com.readingbuddy.backend.common.properties.JwtProperties;
+import com.readingbuddy.backend.domain.dashboard.repository.AttendanceHistoriesRepository;
+import com.readingbuddy.backend.domain.user.entity.AttendHistories;
 import com.readingbuddy.backend.domain.user.entity.User;
 import com.readingbuddy.backend.domain.user.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -28,6 +31,7 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final RefreshTokenRepository refreshTokenRepository;
     private final DeviceSessionManager deviceSessionManager;
+    private final AttendanceHistoriesRepository attendanceHistoriesRepository;
 
     @Transactional
     public TokenResponse login(LoginRequest request, HttpServletRequest servletRequest) {
@@ -37,6 +41,9 @@ public class AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("로그인 정보에 일치하는 회원이 없습니다.");
         }
+
+        // 출석 체크
+        checkAndCreateAttendance(user);
 
         // 유효 시간 1시간
         String accessToken = createAccessToken(user);
@@ -85,6 +92,7 @@ public class AuthService {
         deviceSessionManager.authorizeDevice(deviceSessionInfo,user.getId());
     }
 
+    @Transactional
     public TokenResponse checkDeviceAuthorized(DeviceCodeRequest request, HttpServletRequest servletRequest) {
         Long userId = deviceSessionManager.checkAuthorizedDevice(request.getDeviceAuthCode());
 
@@ -167,5 +175,23 @@ public class AuthService {
             refreshTokenRepository.delete(refreshToken);
             throw new IllegalArgumentException("유효하지 않은 리프레시 토큰입니다.");
         }
+    }
+
+    private void checkAndCreateAttendance(User user) {
+        LocalDate today = LocalDate.now();
+        Optional<AttendHistories> existingAttendance =
+                attendanceHistoriesRepository.findByUserIdAndDate(user.getId(), today);
+
+        if (existingAttendance.isPresent()) {
+            return;
+        }
+
+        AttendHistories newAttendance = AttendHistories.builder()
+                .user(user)
+                .attendDate(today)
+                .playtime(0)
+                .build();
+
+        attendanceHistoriesRepository.save(newAttendance);
     }
 }
