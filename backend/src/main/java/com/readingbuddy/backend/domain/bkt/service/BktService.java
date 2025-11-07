@@ -39,7 +39,8 @@ public class BktService {
      * TODO: 유저, kc가 들어오면 해당 kc에 대한 정답률 반환
      */
     public Float getCorrectAnswerRate(Long userId, Long kcId) {
-        UserKcMastery userKcMastery = userKcMasteryRepository.findByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId);
+        UserKcMastery userKcMastery = userKcMasteryRepository.findFirstByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId)
+                .orElseThrow(() -> new IllegalArgumentException("UserKcMastery를 찾을 수 없습니다: userId=" + userId + ", kcId=" + kcId));
 
         /**
          * 정답을 맞출 확률 = 이미 알고 있을 확률  * 실수 하지 않을 확룰 + 모를 확률 * 찍어서 맞출 확률
@@ -52,7 +53,8 @@ public class BktService {
      * TODO: 유저, stage와 문제의 합불이 들어오면 해당 문제에 해당 하는 kc에 대한 숙련도 update
      */
     public void updateLearnedMastery(Long userId, Long kcId, Boolean isCorrect, Float correctRate) {
-        UserKcMastery userKcMastery = userKcMasteryRepository.findByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId);
+        UserKcMastery userKcMastery = userKcMasteryRepository.findFirstByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kcId)
+                .orElseThrow(() -> new IllegalArgumentException("UserKcMastery를 찾을 수 없습니다: userId=" + userId + ", kcId=" + kcId));
 
         float conditionalProbability = 0F;
         if (isCorrect) {
