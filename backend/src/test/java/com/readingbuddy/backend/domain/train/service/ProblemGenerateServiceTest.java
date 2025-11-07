@@ -102,7 +102,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(anyLong(), anyLong())).thenReturn("0");  // 아직 출제된 문제 없음
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -160,7 +160,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(existingCandidateList);
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -213,7 +213,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(fullCandidateList);
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -254,7 +254,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -294,7 +294,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -309,7 +309,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getLowestCorrectRateKcsByStage(testUserId, "3")).thenReturn(new ArrayList<>());
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -329,7 +329,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -358,7 +358,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn("0");
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         List<Stage3Problem> stage3Problems = results.stream()
@@ -412,7 +412,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(candidateListWith3Used);
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
@@ -475,7 +475,7 @@ class ProblemGenerateServiceTest {
         when(bktService.getCandidateBitMask(testUserId, testKc1.getId())).thenReturn(candidateListWith4Used);
 
         // when
-        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId);
+        List<ProblemResult> results = problemGenerateService.generateStage3(testUserId, 5);
 
         // then
         assertNotNull(results);
