@@ -104,7 +104,7 @@ public class BktService {
     /**
      * TODO: 유저와 stage 가 들어오면 해당 stage에 대한 kc들의 숙련도가 충분한지 출력
      */
-    public PhonemeWithKcIdAndCandidate selectPhonemeUsingBitMask(Long userId, Long kcId) {
+    public PhonemeWithKcIdAndCandidate selectPhonemeUsingBitMask(Long userId, Long kcId, Set<Long> excludedPhonemeIds) {
         // 1. 선택된 KC에 해당하는 모든 Phonemes 조회
         List<Phonemes> kcPhonemes = phonemesKcMapRepository.findByKnowledgeComponent_Id(kcId)
                 .stream()
@@ -115,39 +115,36 @@ public class BktService {
         Optional<TrainedProblemHistories> latestProblemHistory =
                 trainedProblemHistoriesRepository.findFirstKCProbleHistories(userId, kcId);
 
-        // 3. 문제 이력이 없으면 처음 문제를 푸는 것이므로 랜덤 선택
-        if (latestProblemHistory.isEmpty()) {
-            log.info("문제 이력이 없어 랜덤 선택");
-            return PhonemeWithKcIdAndCandidate.builder()
-                    .phonemes(kcPhonemes.get(new Random().nextInt(kcPhonemes.size())))
-                    .candidateList(0)
-                    .KcId(kcId)
-                    .build();
-        }
-
-        // 4. 최신 candidateList 가져오기
-        Integer candidateList = latestProblemHistory.get().getCandidateList();
-
+        // 2. 최신 candidateList 가져오기 (없으면 0)
+        int candidateList = latestProblemHistory.map(TrainedProblemHistories::getCandidateList).orElse(0);
         log.info("candidateList 비트마스크: {} (binary: {})", candidateList, Integer.toBinaryString(candidateList));
 
-        // 5. candidateList에서 0인 비트(아직 출제되지 않은 문제) 찾기
+        // 3. candidateList에서 0인 비트(아직 출제되지 않은 문제) + 제외 목록에 없는 문제 찾기
         List<Phonemes> availablePhonemes = new ArrayList<>();
         for (int i = 0; i < kcPhonemes.size(); i++) {
-            // i번째 비트가 0이면 아직 출제되지 않은 문제
-            if ((candidateList & (1 << i)) == 0) {
-                availablePhonemes.add(kcPhonemes.get(i));
-                log.info("비트 {} (Phoneme: {})는 아직 출제되지 않음", i, kcPhonemes.get(i).getValue());
+            Phonemes phoneme = kcPhonemes.get(i);
+            // i번째 비트가 0이고, 제외 목록에 없으면 사용 가능
+            if ((candidateList & (1 << i)) == 0 && !excludedPhonemeIds.contains(phoneme.getId())) {
+                availablePhonemes.add(phoneme);
+                log.info("비트 {} (Phoneme: {})는 사용 가능", i, phoneme.getValue());
             }
         }
 
-        // 모든 비트를 사용했다면 Random 가져오기
+        // 4. 그래도 없으면 전체 Phoneme에서 제외 목록만 고려
         if (availablePhonemes.isEmpty()) {
-            availablePhonemes.add(kcPhonemes.get(new Random().nextInt(kcPhonemes.size())));
+            availablePhonemes = kcPhonemes.stream()
+                    .filter(p -> !excludedPhonemeIds.contains(p.getId()))
+                    .collect(Collectors.toList());
         }
 
-        // 사용 가능한 Phoneme 중 랜덤 선택
+        // 5. 최종적으로 사용 가능한 Phoneme이 없으면 랜덤 선택 (중복 허용)
+        if (availablePhonemes.isEmpty()) {
+            log.error("사용 가능한 Phoneme이 전혀 없음. 중복을 허용하여 랜덤 선택");
+            availablePhonemes = kcPhonemes;
+        }
+
+        // 6. 사용 가능한 Phoneme 중 랜덤 선택
         Phonemes selected = availablePhonemes.get(new Random().nextInt(availablePhonemes.size()));
-        log.info("선택된 Phoneme: {}", selected.getValue());
         return PhonemeWithKcIdAndCandidate.builder()
                 .phonemes(selected)
                 .candidateList(candidateList)

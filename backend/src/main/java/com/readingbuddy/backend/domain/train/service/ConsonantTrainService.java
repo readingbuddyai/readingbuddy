@@ -173,14 +173,16 @@ public class ConsonantTrainService {
             }
         }
 
-        // 3. Count 만큼 문제 생성
+        // 3. Count 만큼 문제 생성 (중복 방지)
+        Set<Long> selectedPhonemeIds = new HashSet<>();
+
         for (int i = 0; i < count; i++) {
             List<KnowledgeComponent> levelFilteredKcs = null;
 
             // 3-1. 수준별로 고르게 지식단위 문제 편성. 수준에 해당하는 지식단위(들)을 뽑아옴
-            if (count % 3 == 0) {
+            if (i % 3 == 0) {
                 levelFilteredKcs = filterByLevel("EASY", stageKcs, kcCorrectRateMap);
-            } else if (count % 3 == 1) {
+            } else if (i % 3 == 1) {
                 levelFilteredKcs = filterByLevel("MEDIUM", stageKcs, kcCorrectRateMap);
             } else {
                 levelFilteredKcs = filterByLevel("HARD", stageKcs, kcCorrectRateMap);
@@ -194,11 +196,12 @@ public class ConsonantTrainService {
             // 3-3. 지식단위들에서 랜덤 선택
             KnowledgeComponent selectedKc = levelFilteredKcs.get(random.nextInt(levelFilteredKcs.size()));
 
-            // 3-4. 비트마스킹을 이용해 선택된 지식단위에서 문제 가져오기
-            PhonemeWithKcIdAndCandidate answerConsonant = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId());
-            // 3-5. Phonemes와 KC ID를 함께 저장
-            phonemeWithKcs.add(answerConsonant);
+            // 3-4. 비트마스킹을 이용해 선택된 지식단위에서 문제 가져오기 (이미 선택된 Phoneme 제외)
+            PhonemeWithKcIdAndCandidate answerConsonant = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId(), selectedPhonemeIds);
 
+            // 3-5. 선택된 Phoneme ID 추가
+            selectedPhonemeIds.add(answerConsonant.getPhonemes().getId());
+            phonemeWithKcs.add(answerConsonant);
         }
         return phonemeWithKcs;
     }

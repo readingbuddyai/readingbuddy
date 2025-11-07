@@ -13,8 +13,6 @@ import com.readingbuddy.backend.domain.train.entity.Words;
 import com.readingbuddy.backend.domain.train.repository.PhonemesRepository;
 import com.readingbuddy.backend.domain.train.repository.WordsRepository;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -183,7 +181,9 @@ public class VowelTrainService {
             }
         }
 
-        // 3. Count 만큼 문제 생성
+        // 3. Count 만큼 문제 생성 (중복 방지)
+        Set<Long> selectedPhonemeIds = new HashSet<>();
+
         for (int i = 0; i < count; i++) {
             List<KnowledgeComponent> levelFilteredKcs = null;
 
@@ -204,10 +204,11 @@ public class VowelTrainService {
             // 3-3. 지식단위들에서 랜덤 선택
             KnowledgeComponent selectedKc = levelFilteredKcs.get(random.nextInt(levelFilteredKcs.size()));
 
-            // 3-4. 비트마스킹을 이용해 선택된 지식단위에서 문제 가져오기
-            PhonemeWithKcIdAndCandidate answerVowel = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId());
+            // 3-4. 비트마스킹을 이용해 선택된 지식단위에서 문제 가져오기 (이미 선택된 Phoneme 제외)
+            PhonemeWithKcIdAndCandidate answerVowel = bktService.selectPhonemeUsingBitMask(userId, selectedKc.getId(), selectedPhonemeIds);
 
-            // 3-5. Phonemes와 KC ID를 함께 저장
+            // 3-5. 선택된 Phoneme ID 추가
+            selectedPhonemeIds.add(answerVowel.getPhonemes().getId());
             phonemeWithKcs.add(answerVowel);
         }
         return phonemeWithKcs;
