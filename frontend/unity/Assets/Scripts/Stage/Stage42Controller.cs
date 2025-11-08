@@ -12,8 +12,8 @@ public class Stage42Controller : MonoBehaviour
 {
     [Header("API 설정")]
     public string baseUrl = "https://readingbuddyai.co.kr";
-    public string stageSet = "4";       // GET /api/train/set?stage=4&count=N
-    public string stageTwoPart = "4";    // POST /api/train/stage/* & check/voice
+    public string stageSet = "4.2";       // GET /api/train/set?stage=4&count=N
+    public string stageTwoPart = "4.2";    // POST /api/train/stage/* & check/voice
     public int count = 5;
     public string authToken = "";
 
@@ -174,7 +174,8 @@ public class Stage42Controller : MonoBehaviour
         yield return PlayClip(clipIntroListenAndChoose);  // [4.2.2]
         yield return PlayClip(clipIntroMakeStrongSpell);  // [4.2.3]
 
-        if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
+        // Ensure session for set API (stageSessionId is required by server)
+        if (string.IsNullOrWhiteSpace(stageSessionId))
             yield return StartStageSession();
 
         // 문제 세트 요청
@@ -947,7 +948,7 @@ public class Stage42Controller : MonoBehaviour
 
     private IEnumerator FetchQuestions(Action<List<QuestionDto>> onDone)
     {
-        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stageSet)}&count={count}");
+        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stageSet)}&count={count}&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}");
         if (logVerbose) Debug.Log($"[Stage42] GET {url}");
         using (var req = UnityWebRequest.Get(url))
         {

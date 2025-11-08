@@ -5399,10 +5399,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseUrl: https://readingbuddyai.co.kr
-  stageSet: 4
-  stageTwoPart: 4
+  stageSet: 4.1
+  stageTwoPart: 4.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjM5MzgwOSwiZXhwIjoxNzYyNDgwMjA5fQ.M2gpoFNeGptR7BjR6ELhGn4lD4bI_28u109B1EcNqcyWqd-6i1GkSi3pzjpiRbBm
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjUwMzQ4MywiZXhwIjoxNzYyNTg5ODgzfQ.aNInqH9xFdCYx-Zhae7saU1yv6kPkFq674NXaPOTn1PCH_6P2v3d28AeHzfoqIBN
   stageSessionId: 
   progressText: {fileID: 0}
   guideImage: {fileID: 291308516}
@@ -5436,10 +5436,10 @@ MonoBehaviour:
   clipPromptFinalPiece: {fileID: 8300000, guid: c898eae2d7b371f41b22a14bee9660fd, type: 3}
   clipAllShine: {fileID: 8300000, guid: 9bdfe13917627dd419d8eb0ecef52481, type: 3}
   clipNeedMorePower: {fileID: 8300000, guid: ac2c10568c04e39428c18ca83f2165e5, type: 3}
-  clipFindCorrect: {fileID: 8300000, guid: 3e6d603e7f166b242a81fb9ed086a72d, type: 3}
+  clipFindCorrect: {fileID: 8300000, guid: b4785e92b78f22e4a925a57718114c0e, type: 3}
   clipGoodThatsIt: {fileID: 8300000, guid: 6dd21759551265049b06febc034bdd9a, type: 3}
   clipTryAgain: {fileID: 8300000, guid: 43ca22544455b0d43af82a71385c3c83, type: 3}
-  clipFinalizeSpell: {fileID: 8300000, guid: 40a38173ec36f674f9303d062b06bf30, type: 3}
+  clipFinalizeSpell: {fileID: 8300000, guid: 03e58870993dcc14b982e7d26e3adc8e, type: 3}
   recordSeconds: 3
   recordSampleRate: 44100
   dimAlpha: 0.4
