@@ -9,6 +9,12 @@ using TMPro;
 using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions;
 using System.Text;
+using UnityEngine.Video;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
+#endif
+using UnityEngine.XR;
 
 // Stage 1.1 진행 컨트롤러
 // - GET: /api/train/set?stage=1.1.1&count=5
@@ -49,6 +55,25 @@ using System.Text;
     public Image mainImage;              // 중앙 큰 이미지
     public RectTransform optionsContainer; // 하단 옵션 버튼 부모
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
+
+    [Header("Intro Tutorial")]
+    public Sprite introTutorialImage;
+    public AudioClip introTutorialVoiceClip;
+    public GameObject introTutorialMicIndicator;
+    public List<IntroOption> introOptions = new List<IntroOption>();
+    public IntroOptionCursor introOptionCursor;
+    public GameObject introTutorialVideoObject;
+    public VideoPlayer introTutorialVideoPlayer;
+    [Header("Intro Tutorial Controls")]
+    public bool requireTriggerAfterTutorial = true;
+    [Range(0.05f, 1f)]
+    public float tutorialTriggerThreshold = 0.6f;
+    [Tooltip("에디터 테스트용 키 입력. XR 입력이 없을 때 이 키를 눌러도 튜토리얼이 끝납니다.")]
+    public KeyCode tutorialFallbackKey = KeyCode.Space;
+    [Tooltip("튜토리얼 클립 사이 대기 시간(초)")]
+    [Min(0f)]
+    public float tutorialClipGapSeconds = 0.9f;
+
     [Header("Mic Indicator")]
     [Tooltip("[1.1.4] 종료 직후부터 녹음 3초 동안 표시될 마이크 아이콘 오브젝트")]
     public GameObject micIndicator;
@@ -60,8 +85,19 @@ using System.Text;
     public AudioClip sfxNext;            // (다음 문제로 넘어가는 효과음)
 
     // 도입 대사
-    public AudioClip introClip1;         // [1.1.1] 안녕, 꼬마 마법사!
-    public AudioClip introClip2;         // [1.1.2] 지금부터 ‘모음 주문’ 수업을 시작할 거야!
+    public AudioClip introClip1;         // [1.1.1] 안녕~ 꼬마 마법사!
+    public AudioClip introClip2;         // [1.1.2] 지금부터 ‘마법 주문’ 수업을 시작할 거야!
+    public AudioClip introClip3;         // [1.1.2.1] 내가 먼저 해볼테니, 잘 봐야해!
+    public AudioClip introClip4;         // [1.1.2.2] 자, 이렇게 앞에 마법 그림이 떠오르면,
+    public AudioClip introClip5;         // [1.1.2.3] 들리는 소리에 맞춰서, 주문을 따라 외우면 돼!
+    public AudioClip introDemoClip1;     // [1.1.2.4] (준비된 audioClip_1)
+    public AudioClip introClip6;         // [1.1.2.5] 내가 먼저 해볼게!
+    public AudioClip introDemoClip2;     // [1.1.2.6] (준비된 audioClip_2)
+    public AudioClip introClip7;         // [1.1.2.7] 그 다음, 아래에서 주문이랑 똑같은 그림을 클릭!
+    public AudioClip introClip8;         // [1.1.2.8] 여기까지, 첫 번째 마법수업!
+    public AudioClip introClip9;         // [1.1.2.9] 어때? 어렵지 않지?
+    public AudioClip introClip10;        // [1.1.2.10] 나와 함께 마법사가 될 준비가 됐다면,
+    public AudioClip introClip11;        // [1.1.2.11] 오른손의 버튼을 꾹 눌러줘!
 
     // 각 문제 흐름 대사
     public AudioClip clipSeeAndChant;    // [1.1.3] 앞에 떠오른 마법 그림을 잘 보고...
@@ -93,6 +129,11 @@ using System.Text;
         private Vector2 _guideFinalPos;
         private Vector2 _guideFinalSize;
         private int _currentProblemNumber = 0; // 현재 문제 번호 (attempt 로깅용)
+#if ENABLE_INPUT_SYSTEM
+        private AxisControl _rightTriggerAxis;
+        private ButtonControl _rightTriggerButton;
+#endif
+        private static readonly List<UnityEngine.XR.InputDevice> RightHandDevices = new List<UnityEngine.XR.InputDevice>();
 
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
@@ -136,6 +177,8 @@ using System.Text;
         [Header("진단/로그")]
         [Tooltip("수신한 문제 전체를 상세 로그로 출력합니다.")]
         public bool logQuestionsVerbose = true;
+        [Tooltip("튜토리얼 등 세부 진행 로그를 출력합니다.")]
+        public bool verboseLogging = false;
         [Tooltip("이미지 로드 실패 시 자리표시 이미지를 중앙에 표시합니다.")]
         public bool showPlaceholderOnImageFail = true;
 
@@ -148,6 +191,23 @@ using System.Text;
         public int id;
         public string value;
         public string unicode;
+    }
+
+    [Serializable]
+    public class IntroOption
+    {
+        public string label;
+        public bool isCorrect;
+    }
+
+    [Serializable]
+    public class IntroOptionCursor
+    {
+        public GameObject handCursor;
+        public RectTransform wrongOptionTransform;
+        public RectTransform correctOptionTransform;
+        public float wrongHoverSeconds = 1f;
+        public float correctHoverSeconds = 1f;
     }
 
     [Serializable]
@@ -290,6 +350,7 @@ using System.Text;
 
         // 0-1) 도입 대사 (가이드 이미지는 고정, 이동은 sfxNext 타이밍에 수행)
         yield return RunIntroSequence();
+        yield return RunIntroTutorial();
         if (guideImage && _guideMoveCo == null && (!_guideMoved || !guideMoveOnlyOnce))
         {
             Debug.Log("[Stage11] Guide move: trigger after intro");
@@ -309,6 +370,8 @@ using System.Text;
 
         // 문제 요청
         string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}");
+        if (!string.IsNullOrWhiteSpace(stageSessionId))
+            url += $"&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}";
         using (var req = UnityWebRequest.Get(url))
         {
             ApplyCommonHeaders(req);
@@ -450,13 +513,8 @@ using System.Text;
     private IEnumerator StartStageSession()
     {
         // Use query parameters (e.g., /api/train/stage/start?stage=1.1&totalProblems=5)
-        string stageForStart = stage;
-        if (!string.IsNullOrEmpty(stage))
-        {
-            var parts = stage.Split('.');
-            if (parts.Length >= 2) stageForStart = parts[0] + "." + parts[1];
-        }
-        string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageForStart)}&totalProblems={count}");
+        string stageParam = UnityWebRequest.EscapeURL(stage); // API가 전체 단계(1.1.1 등)를 요구
+        string url = ComposeUrl($"/api/train/stage/start?stage={stageParam}&totalProblems={count}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
@@ -1278,6 +1336,289 @@ using System.Text;
         // 도입 대사 재생(연속)
         yield return PlayClip(introClip1);
         yield return PlayClip(introClip2);
+        yield return PlayClip(introClip3);
+    }
+
+    private IEnumerator RunIntroTutorial()
+    {
+        bool useVideo = introTutorialVideoObject != null && introTutorialVideoPlayer != null;
+        bool usedImage = false;
+
+        if (progressText != null)
+            progressText.text = "튜토리얼";
+        var pt = EnsureProgressText();
+        if (pt != null)
+            pt.text = "튜토리얼";
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Preparing intro tutorial visuals");
+
+        if (useVideo)
+        {
+            introTutorialVideoObject.SetActive(true);
+
+            if (!introTutorialVideoPlayer.isPrepared)
+            {
+                introTutorialVideoPlayer.Prepare();
+                while (!introTutorialVideoPlayer.isPrepared)
+                {
+                    if (verboseLogging)
+                        Debug.Log("[Stage11][Intro] Waiting for video to prepare...");
+                    yield return null;
+                }
+            }
+
+            introTutorialVideoPlayer.time = 0d;
+            introTutorialVideoPlayer.Stop();
+        }
+        else if (introTutorialImage != null && mainImage != null)
+        {
+            mainImage.sprite = introTutorialImage;
+            mainImage.enabled = true;
+            usedImage = true;
+        }
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.2");
+        yield return PlayClip(introClip4);
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.3");
+        yield return PlayClip(introClip5);
+        if (tutorialClipGapSeconds > 0f)
+            yield return new WaitForSeconds(tutorialClipGapSeconds);
+
+        if (useVideo)
+        {
+            if (verboseLogging)
+                Debug.Log("[Stage11][Intro] Start tutorial video");
+            introTutorialVideoPlayer.time = 0d;
+            introTutorialVideoPlayer.Play();
+        }
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.4 (demo)");
+        yield return PlayClip(introDemoClip1);
+        if (tutorialClipGapSeconds > 0f)
+            yield return new WaitForSeconds(tutorialClipGapSeconds);
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.5");
+        yield return PlayClip(introClip6);
+        if (tutorialClipGapSeconds > 0f)
+            yield return new WaitForSeconds(tutorialClipGapSeconds);
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.6 (demo)");
+        yield return PlayClip(introDemoClip2);
+        if (tutorialClipGapSeconds > 0f)
+            yield return new WaitForSeconds(tutorialClipGapSeconds);
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.7");
+        yield return PlayClip(introClip7);
+
+        if (optionsContainer != null)
+        {
+            optionsContainer.gameObject.SetActive(true);
+            if (verboseLogging)
+                Debug.Log("[Stage11][Intro] Options visible");
+            SetupIntroOptions();
+
+            if (introOptionCursor != null && introOptionCursor.handCursor != null)
+            {
+                introOptionCursor.handCursor.SetActive(true);
+
+                if (introOptionCursor.wrongOptionTransform != null)
+                {
+                    if (verboseLogging)
+                        Debug.Log("[Stage11][Intro] Cursor on wrong option");
+                    introOptionCursor.handCursor.transform.position = introOptionCursor.wrongOptionTransform.position;
+                    yield return new WaitForSeconds(introOptionCursor.wrongHoverSeconds);
+                }
+
+                if (introOptionCursor.correctOptionTransform != null)
+                {
+                    if (verboseLogging)
+                        Debug.Log("[Stage11][Intro] Cursor on correct option");
+                    introOptionCursor.handCursor.transform.position = introOptionCursor.correctOptionTransform.position;
+                    yield return new WaitForSeconds(introOptionCursor.correctHoverSeconds);
+                }
+
+                introOptionCursor.handCursor.SetActive(false);
+            }
+
+            if (verboseLogging)
+                Debug.Log("[Stage11][Intro] Play correct SFX");
+            yield return PlayClip(sfxCorrectClip);
+
+            optionsContainer.gameObject.SetActive(false);
+        }
+
+        if (useVideo)
+        {
+            if (verboseLogging)
+                Debug.Log("[Stage11][Intro] Stop tutorial video");
+            introTutorialVideoPlayer.Stop();
+            introTutorialVideoObject.SetActive(false);
+        }
+        else if (usedImage && mainImage != null)
+        {
+            mainImage.enabled = false;
+            mainImage.sprite = null;
+        }
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.8");
+        yield return PlayClip(introClip8);
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.9");
+        yield return PlayClip(introClip9);
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.10");
+        yield return PlayClip(introClip10);
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Play clip 1.1.2.11");
+        yield return PlayClip(introClip11);
+
+        if (verboseLogging && requireTriggerAfterTutorial)
+            Debug.Log("[Stage11][Intro] Waiting for right trigger input to continue");
+        yield return WaitForRightTriggerPress();
+
+        if (progressText != null)
+            progressText.text = string.Empty;
+        var progressTmp = EnsureProgressText();
+        if (progressTmp != null)
+            progressTmp.text = string.Empty;
+
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Tutorial end");
+    }
+
+    private void SetupIntroOptions()
+    {
+        if (optionsContainer == null || optionButtonPrefab == null)
+            return;
+
+        ClearOptionButtons();
+
+        RectTransform firstWrong = null;
+        RectTransform firstCorrect = null;
+
+        foreach (var option in introOptions)
+        {
+            var btn = Instantiate(optionButtonPrefab, optionsContainer);
+            btn.interactable = false;
+
+            var tmpText = btn.GetComponentInChildren<TMP_Text>();
+            if (tmpText != null)
+                tmpText.text = option.label;
+            else
+            {
+                var uguiText = btn.GetComponentInChildren<Text>();
+                if (uguiText != null)
+                    uguiText.text = option.label;
+            }
+
+            var rect = btn.GetComponent<RectTransform>();
+            if (option.isCorrect)
+                firstCorrect = rect;
+            else if (firstWrong == null)
+                firstWrong = rect;
+        }
+
+        if (introOptionCursor != null)
+        {
+            if (introOptionCursor.correctOptionTransform == null)
+                introOptionCursor.correctOptionTransform = firstCorrect;
+            if (introOptionCursor.wrongOptionTransform == null)
+                introOptionCursor.wrongOptionTransform = firstWrong;
+        }
+    }
+
+    private void ClearOptionButtons()
+    {
+        if (optionsContainer == null)
+            return;
+
+        foreach (Transform child in optionsContainer)
+            Destroy(child.gameObject);
+    }
+
+    private IEnumerator WaitForRightTriggerPress()
+    {
+        if (!requireTriggerAfterTutorial)
+            yield break;
+
+        bool wasPressed = CheckRightTriggerPressed();
+        if (wasPressed)
+        {
+            if (verboseLogging)
+                Debug.Log("[Stage11][Intro] Waiting for trigger release before monitoring press");
+            while (CheckRightTriggerPressed())
+                yield return null;
+            wasPressed = false;
+        }
+
+        while (true)
+        {
+            bool pressed = CheckRightTriggerPressed();
+            if (pressed && !wasPressed)
+            {
+                if (verboseLogging)
+                    Debug.Log("[Stage11][Intro] Right trigger detected");
+                break;
+            }
+            wasPressed = pressed;
+            yield return null;
+        }
+
+        // ensure button release so 다음 입력에서 중복 방지
+        while (CheckRightTriggerPressed())
+            yield return null;
+    }
+
+#if ENABLE_INPUT_SYSTEM
+    private void ResolveRightTriggerControls()
+    {
+        if (_rightTriggerAxis == null || _rightTriggerAxis.device == null || !_rightTriggerAxis.device.added)
+            _rightTriggerAxis = InputSystem.FindControl("<XRController>{RightHand}/trigger") as AxisControl;
+        if (_rightTriggerButton == null || _rightTriggerButton.device == null || !_rightTriggerButton.device.added)
+            _rightTriggerButton = InputSystem.FindControl("<XRController>{RightHand}/triggerPressed") as ButtonControl;
+    }
+#endif
+
+    private bool CheckRightTriggerPressed()
+    {
+        float threshold = Mathf.Clamp01(tutorialTriggerThreshold);
+
+#if ENABLE_INPUT_SYSTEM
+        ResolveRightTriggerControls();
+        if (_rightTriggerAxis != null && _rightTriggerAxis.ReadValue() >= threshold)
+            return true;
+        if (_rightTriggerButton != null && _rightTriggerButton.isPressed)
+            return true;
+#endif
+
+        RightHandDevices.Clear();
+        InputDevices.GetDevicesAtXRNode(XRNode.RightHand, RightHandDevices);
+        for (int i = 0; i < RightHandDevices.Count; i++)
+        {
+            var device = RightHandDevices[i];
+            if (!device.isValid) continue;
+            if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out bool triggerButton) && triggerButton)
+                return true;
+            if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.trigger, out float triggerValue) && triggerValue >= threshold)
+                return true;
+        }
+
+        if (tutorialFallbackKey != KeyCode.None && Input.GetKey(tutorialFallbackKey))
+            return true;
+
+        return false;
     }
 
     private IEnumerator MoveGuideAndScaleOverTime(float duration)
