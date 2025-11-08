@@ -432,6 +432,35 @@ MonoBehaviour:
     correctOptionTransform: {fileID: 0}
     wrongHoverSeconds: 1
     correctHoverSeconds: 2
+    cursorMoveSeconds: 0.35
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enableCorrectPulse: 1
+    correctPulseScale: 1.3
+    correctPulseDuration: 1
+    correctPulseLoops: 2
   introTutorialPanelAnimator: {fileID: 8777454411221847081}
   introTutorialPanel: {fileID: 8777454411221847078}
   requireTriggerAfterTutorial: 1
@@ -1126,6 +1155,10 @@ PrefabInstance:
       propertyPath: m_Color.r
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4024463348774836021, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4086632909834952389, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_SizeDelta.x
       value: 2000
@@ -1386,6 +1419,8 @@ MonoBehaviour:
   animator: {fileID: 8777454411221847080}
   showTrigger: Show
   hideTrigger: Hide
+  deactivateOnHide: 1
+  hideDeactivateDelay: 0.25
   canvasGroup: {fileID: 0}
   fadeDuration: 0.3
   fadeCurve:

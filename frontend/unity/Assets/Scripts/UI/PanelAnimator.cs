@@ -76,8 +76,24 @@ namespace Stage.UI
 
         private void Play(bool show, bool immediate)
         {
-            if (!targetObject.activeSelf)
-                targetObject.SetActive(true);
+            if (show)
+            {
+                if (!targetObject.activeSelf)
+                    targetObject.SetActive(true);
+            }
+            else
+            {
+                // Already inactive ⇒ nothing to hide
+                if (!targetObject.activeSelf)
+                {
+                    if (_animationRoutine != null)
+                    {
+                        StopCoroutine(_animationRoutine);
+                        _animationRoutine = null;
+                    }
+                    return;
+                }
+            }
 
             if (_animationRoutine != null)
             {

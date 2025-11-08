@@ -212,6 +212,13 @@ using Stage.UI;
         public RectTransform correctOptionTransform;
         public float wrongHoverSeconds = 1f;
         public float correctHoverSeconds = 1f;
+        public float cursorMoveSeconds = 0.35f;
+        public AnimationCurve cursorMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [Header("Correct Pulse")]
+        public bool enableCorrectPulse = true;
+        public float correctPulseScale = 1.1f;
+        public float correctPulseDuration = 0.35f;
+        public int correctPulseLoops = 1;
     }
 
     [Serializable]
@@ -256,7 +263,7 @@ using Stage.UI;
         {
             optionsContainer.gameObject.SetActive(false);
         }
-        HideIntroPanel(true);
+        HideIntroPanel();
         if (micIndicator)
         {
             micIndicator.SetActive(false);
@@ -1316,7 +1323,7 @@ using Stage.UI;
                 Destroy(child.gameObject);
             optionsContainer.gameObject.SetActive(false);
         }
-        HideIntroPanel(true);
+        HideIntroPanel();
         if (mainImage)
         {
             mainImage.enabled = false;
@@ -1393,12 +1400,12 @@ using Stage.UI;
         bool usedImage = false;
 
         if (progressText != null)
-            progressText.text = "튜토리얼";
+            progressText.text = string.Empty;
         var pt = EnsureProgressText();
         if (pt != null)
-            pt.text = "튜토리얼";
+            pt.text = string.Empty;
 
-        ShowIntroPanel(true);
+        ShowIntroPanel();
         if (verboseLogging)
             Debug.Log("[Stage11][Intro] Tutorial panel ON (1.1.2.1)");
 
@@ -1450,25 +1457,39 @@ using Stage.UI;
 
             if (introOptionCursor != null && introOptionCursor.handCursor != null)
             {
-                introOptionCursor.handCursor.SetActive(true);
+                var cursorGo = introOptionCursor.handCursor;
+                cursorGo.SetActive(true);
 
                 if (introOptionCursor.wrongOptionTransform != null)
                 {
                     if (verboseLogging)
-                        Debug.Log("[Stage11][Intro] Cursor on wrong option");
-                    introOptionCursor.handCursor.transform.position = introOptionCursor.wrongOptionTransform.position;
-                    yield return new WaitForSeconds(introOptionCursor.wrongHoverSeconds);
+                        Debug.Log("[Stage11][Intro] Cursor moving to wrong option");
+                    yield return MoveCursorSmooth(cursorGo.transform, introOptionCursor.wrongOptionTransform,
+                        introOptionCursor.cursorMoveSeconds, introOptionCursor.cursorMoveCurve);
+                    if (introOptionCursor.wrongHoverSeconds > 0f)
+                        yield return new WaitForSeconds(introOptionCursor.wrongHoverSeconds);
                 }
 
                 if (introOptionCursor.correctOptionTransform != null)
                 {
                     if (verboseLogging)
-                        Debug.Log("[Stage11][Intro] Cursor on correct option");
-                    introOptionCursor.handCursor.transform.position = introOptionCursor.correctOptionTransform.position;
-                    yield return new WaitForSeconds(introOptionCursor.correctHoverSeconds);
+                        Debug.Log("[Stage11][Intro] Cursor moving to correct option");
+                    yield return MoveCursorSmooth(cursorGo.transform, introOptionCursor.correctOptionTransform,
+                        introOptionCursor.cursorMoveSeconds, introOptionCursor.cursorMoveCurve);
+
+                    if (introOptionCursor.enableCorrectPulse)
+                    {
+                        yield return PulseOption(introOptionCursor.correctOptionTransform,
+                            introOptionCursor.correctPulseScale,
+                            introOptionCursor.correctPulseDuration,
+                            introOptionCursor.correctPulseLoops);
+                    }
+
+                    if (introOptionCursor.correctHoverSeconds > 0f)
+                        yield return new WaitForSeconds(introOptionCursor.correctHoverSeconds);
                 }
 
-                introOptionCursor.handCursor.SetActive(false);
+                cursorGo.SetActive(false);
             }
 
             if (verboseLogging)
@@ -1490,7 +1511,6 @@ using Stage.UI;
 
         if (verboseLogging)
             Debug.Log("[Stage11][Intro] Play clip 1.1.2.8");
-    HideIntroPanel();
         yield return PlayClip(introClip8);
 
         if (verboseLogging)
@@ -1643,6 +1663,71 @@ using Stage.UI;
             return true;
 
         return false;
+    }
+
+    private IEnumerator MoveCursorSmooth(Transform cursorTransform, RectTransform target, float moveSeconds, AnimationCurve curve)
+    {
+        if (!cursorTransform || !target)
+            yield break;
+
+        Vector3 start = cursorTransform.position;
+        Vector3 end = target.position;
+
+        if (moveSeconds <= 0f)
+        {
+            cursorTransform.position = end;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < moveSeconds)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / moveSeconds);
+            float eased = curve != null ? curve.Evaluate(t) : t;
+            cursorTransform.position = Vector3.Lerp(start, end, eased);
+            yield return null;
+        }
+
+        cursorTransform.position = end;
+    }
+
+    private IEnumerator PulseOption(RectTransform rect, float scaleMultiplier, float totalDuration, int loops)
+    {
+        if (!rect || loops <= 0 || totalDuration <= 0f || Mathf.Approximately(scaleMultiplier, 1f))
+            yield break;
+
+        Vector3 originalScale = rect.localScale;
+        float halfDuration = totalDuration / (loops * 2f);
+        for (int i = 0; i < loops; i++)
+        {
+            yield return LerpRectScale(rect, originalScale, originalScale * scaleMultiplier, halfDuration);
+            yield return LerpRectScale(rect, originalScale * scaleMultiplier, originalScale, halfDuration);
+        }
+        rect.localScale = originalScale;
+    }
+
+    private IEnumerator LerpRectScale(RectTransform rect, Vector3 from, Vector3 to, float duration)
+    {
+        if (!rect)
+            yield break;
+
+        if (duration <= 0f)
+        {
+            rect.localScale = to;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            rect.localScale = Vector3.Lerp(from, to, t);
+            yield return null;
+        }
+
+        rect.localScale = to;
     }
 
     private IEnumerator MoveGuideAndScaleOverTime(float duration)
