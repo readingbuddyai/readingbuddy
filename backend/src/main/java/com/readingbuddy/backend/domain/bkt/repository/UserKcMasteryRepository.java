@@ -1,6 +1,8 @@
 package com.readingbuddy.backend.domain.bkt.repository;
 
+import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
+import com.readingbuddy.backend.domain.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -26,4 +28,7 @@ public interface UserKcMasteryRepository extends JpaRepository<UserKcMastery, Lo
     // 특정 기간 내 KC의 최신 숙련도 조회
     Optional<UserKcMastery> findFirstByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long userId, Long knowledgeComponentId, LocalDateTime startDateTime, LocalDateTime endDateTime);
+
+    // User와 KnowledgeComponent 엔티티로 숙련도 변화 추이 조회 (시간순 정렬)
+    List<UserKcMastery> findByUserAndKnowledgeComponentOrderByCreatedAtAsc(User user, KnowledgeComponent knowledgeComponent);
 }

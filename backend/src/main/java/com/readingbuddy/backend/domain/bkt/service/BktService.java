@@ -12,6 +12,7 @@ import com.readingbuddy.backend.domain.train.entity.Phonemes;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
 
+import com.readingbuddy.backend.domain.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,11 @@ public class BktService {
     private final KnowledgeComponentRepository knowledgeComponentRepository;
     private final PhonemesKcMapRepository phonemesKcMapRepository;
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
+    private final double BASE_SPEED = 1.0;
+    // p_train = 0.1
+    private final double BASE_P_TRAIN_LOGIT = -2.1972245773362196;
+    // 변화량 스케일링 0.3 (30%만 반영)
+    private final double DELTA_SCALING = 0.3;
     /**
      * TODO: 유저와 stage 가 들어오면 해당 stage에 대한 kc들의 숙련도 출력 (부족한 부분까지 sorting) 해서 주기
      */
@@ -67,9 +73,11 @@ public class BktService {
 
         Float updatedLearnedMastery = conditionalProbability + (1 - conditionalProbability) * userKcMastery.getPTrain();
 
+        Float updatedTrainedMastery= predictPersonalizedPLearn(userKcMastery.getUser(),userKcMastery.getKnowledgeComponent());
         UserKcMastery updatedKcMastery = userKcMastery.toBuilder()
                 .id(null)
                 .pLearn(updatedLearnedMastery)
+                .pTrain(updatedTrainedMastery)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -178,5 +186,73 @@ public class BktService {
         log.info("candidateList 비트마스크: {} (binary: {})", candidateList, new BigInteger(candidateList).toString(2));
 
         return candidateList;
+    }
+
+    public Float predictPersonalizedPLearn(User user, KnowledgeComponent kc) {
+        double learnSpeedFactor = estimateLearnSpeed(user, kc);
+
+        log.info("learn speed {}",learnSpeedFactor);
+        double combinedLogit = BASE_P_TRAIN_LOGIT + Math.log(learnSpeedFactor);
+
+        return sigmoid(combinedLogit);
+    }
+
+    // 특정 user, KC의 과거 기록으로 학습 속도 추정
+    private double estimateLearnSpeed(User user, KnowledgeComponent kc) {
+        List<UserKcMastery> records = userKcMasteryRepository.findByUserAndKnowledgeComponentOrderByCreatedAtAsc(user, kc);
+
+        if (records.size() < 5) {
+            return BASE_SPEED; // 기록이 충분하지 않으면 기본 속도
+        }
+
+        int validCount = 0;
+        double totalDelta = 0.0;
+
+        for (int i = 1; i < records.size(); i++) {
+            double prevP = records.get(i - 1).getPLearn();
+            double currP = records.get(i).getPLearn();
+
+            // 1: 유효성 검증 - 이미 마스터했으면 학습 속도 추정 불가
+            if (prevP >= 0.99 || currP >= 0.99) {
+                continue;
+            }
+
+            double prevLogit = logit(prevP);
+            double currLogit = logit(currP);
+            double delta = currLogit - prevLogit;
+
+            // 3: 유효한 변화량만 수집 (증가/감소 모두 포함, 너무 큰 변화는 노이즈로 간주)
+            if (Math.abs(delta) < 5.0) {  // 양수/음수 모두 처리
+                totalDelta += delta;
+                validCount++;
+            }
+        }
+
+        // 유효한 데이터가 없으면 기본 속도 반환
+        if (validCount == 0) {
+            return BASE_SPEED;
+        }
+
+        // 평균 변화량 계산
+        double avgDelta = totalDelta / validCount;
+
+        // 학습 속도 계산 (exponential scaling을 완화)
+        // exp(avgDelta) 대신 더 부드러운 증가를 위해 스케일링 적용
+        log.info("avg delta {}",avgDelta);
+        double learnSpeedFactor = Math.exp(avgDelta * DELTA_SCALING);
+        // 학습 속도가 너무 빠르거나 느리지 않도록 제한
+        return Math.max(0.5, Math.min(learnSpeedFactor, 2.0));
+    }
+
+    // 로그 오즈 변환
+    private double logit(double p) {
+        if (p <= 0.0) p = 1e-6;
+        if (p >= 1.0) p = 1 - 1e-6;
+        return Math.log(p / (1 - p));
+    }
+
+    // 시그모이드 (역변환)
+    private float sigmoid(double x) {
+        return (float) (1.0 / (1.0 + Math.exp(-x)));
     }
 }
