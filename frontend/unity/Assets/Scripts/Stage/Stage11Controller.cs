@@ -9,12 +9,12 @@ using TMPro;
 using UnityEngine.SceneManagement;
 using System.Text.RegularExpressions;
 using System.Text;
-using UnityEngine.Video;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 #endif
 using UnityEngine.XR;
+using Stage.UI;
 
 // Stage 1.1 진행 컨트롤러
 // - GET: /api/train/set?stage=1.1.1&count=5
@@ -58,12 +58,13 @@ using UnityEngine.XR;
 
     [Header("Intro Tutorial")]
     public Sprite introTutorialImage;
-    public AudioClip introTutorialVoiceClip;
     public GameObject introTutorialMicIndicator;
     public List<IntroOption> introOptions = new List<IntroOption>();
     public IntroOptionCursor introOptionCursor;
-    public GameObject introTutorialVideoObject;
-    public VideoPlayer introTutorialVideoPlayer;
+    [Tooltip("튜토리얼 패널 연출용 컴포넌트 (선택)")]
+    public PanelAnimator introTutorialPanelAnimator;
+    [Tooltip("PanelAnimator가 없을 때 직접 제어할 패널 오브젝트")]
+    public GameObject introTutorialPanel;
     [Header("Intro Tutorial Controls")]
     public bool requireTriggerAfterTutorial = true;
     [Range(0.05f, 1f)]
@@ -104,6 +105,9 @@ using UnityEngine.XR;
     public AudioClip clipYourTurn;       // [1.1.4] 이제 너 차례야, 주문을 들려줘!
     public AudioClip clipGreat;          // [1.1.5] 우와~ 정말 멋지게 외웠는걸!
     public AudioClip clipChoose;         // [1.1.6] 두 개 중 어떤 소리였는지 맞춰볼래?
+    [Tooltip("[1.1.3]과 voiceUrl 사이 대기 시간(초)")]
+    [Min(0f)]
+    public float questionVoiceDelaySeconds = 0.9f;
 
     // 정답/오답 피드백
     public AudioClip sfxCorrectClip;     // [1.1.7.1] 완벽해!
@@ -252,6 +256,7 @@ using UnityEngine.XR;
         {
             optionsContainer.gameObject.SetActive(false);
         }
+        HideIntroPanel(true);
         if (micIndicator)
         {
             micIndicator.SetActive(false);
@@ -662,6 +667,9 @@ using UnityEngine.XR;
 
         // 1) [1.1.3] 안내 대사
         yield return PlayClip(clipSeeAndChant);
+
+        if (questionVoiceDelaySeconds > 0f)
+            yield return new WaitForSeconds(questionVoiceDelaySeconds);
 
         // voiceUrl 재생
         yield return PlayVoiceUrl(q.voiceUrl);
@@ -1308,6 +1316,7 @@ using UnityEngine.XR;
                 Destroy(child.gameObject);
             optionsContainer.gameObject.SetActive(false);
         }
+        HideIntroPanel(true);
         if (mainImage)
         {
             mainImage.enabled = false;
@@ -1339,9 +1348,24 @@ using UnityEngine.XR;
         yield return PlayClip(introClip3);
     }
 
+    private void ShowIntroPanel(bool immediate = false)
+    {
+        if (introTutorialPanelAnimator != null)
+            introTutorialPanelAnimator.Show(immediate);
+        else if (introTutorialPanel != null)
+            introTutorialPanel.SetActive(true);
+    }
+
+    private void HideIntroPanel(bool immediate = false)
+    {
+        if (introTutorialPanelAnimator != null)
+            introTutorialPanelAnimator.Hide(immediate);
+        else if (introTutorialPanel != null)
+            introTutorialPanel.SetActive(false);
+    }
+
     private IEnumerator RunIntroTutorial()
     {
-        bool useVideo = introTutorialVideoObject != null && introTutorialVideoPlayer != null;
         bool usedImage = false;
 
         if (progressText != null)
@@ -1350,28 +1374,11 @@ using UnityEngine.XR;
         if (pt != null)
             pt.text = "튜토리얼";
 
+        ShowIntroPanel(true);
         if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Preparing intro tutorial visuals");
+            Debug.Log("[Stage11][Intro] Tutorial panel ON (1.1.2.1)");
 
-        if (useVideo)
-        {
-            introTutorialVideoObject.SetActive(true);
-
-            if (!introTutorialVideoPlayer.isPrepared)
-            {
-                introTutorialVideoPlayer.Prepare();
-                while (!introTutorialVideoPlayer.isPrepared)
-                {
-                    if (verboseLogging)
-                        Debug.Log("[Stage11][Intro] Waiting for video to prepare...");
-                    yield return null;
-                }
-            }
-
-            introTutorialVideoPlayer.time = 0d;
-            introTutorialVideoPlayer.Stop();
-        }
-        else if (introTutorialImage != null && mainImage != null)
+        if (introTutorialImage != null && mainImage != null)
         {
             mainImage.sprite = introTutorialImage;
             mainImage.enabled = true;
@@ -1387,14 +1394,6 @@ using UnityEngine.XR;
         yield return PlayClip(introClip5);
         if (tutorialClipGapSeconds > 0f)
             yield return new WaitForSeconds(tutorialClipGapSeconds);
-
-        if (useVideo)
-        {
-            if (verboseLogging)
-                Debug.Log("[Stage11][Intro] Start tutorial video");
-            introTutorialVideoPlayer.time = 0d;
-            introTutorialVideoPlayer.Play();
-        }
 
         if (verboseLogging)
             Debug.Log("[Stage11][Intro] Play clip 1.1.2.4 (demo)");
@@ -1452,17 +1451,14 @@ using UnityEngine.XR;
                 Debug.Log("[Stage11][Intro] Play correct SFX");
             yield return PlayClip(sfxCorrectClip);
 
+            HideIntroPanel();
+            if (verboseLogging)
+                Debug.Log("[Stage11][Intro] Tutorial panel OFF after correct SFX (1.1.2.7)");
+
             optionsContainer.gameObject.SetActive(false);
         }
 
-        if (useVideo)
-        {
-            if (verboseLogging)
-                Debug.Log("[Stage11][Intro] Stop tutorial video");
-            introTutorialVideoPlayer.Stop();
-            introTutorialVideoObject.SetActive(false);
-        }
-        else if (usedImage && mainImage != null)
+        if (usedImage && mainImage != null)
         {
             mainImage.enabled = false;
             mainImage.sprite = null;
@@ -1487,6 +1483,9 @@ using UnityEngine.XR;
         if (verboseLogging && requireTriggerAfterTutorial)
             Debug.Log("[Stage11][Intro] Waiting for right trigger input to continue");
         yield return WaitForRightTriggerPress();
+        ShowIntroPanel();
+        if (verboseLogging)
+            Debug.Log("[Stage11][Intro] Tutorial panel ON (after trigger)");
 
         if (progressText != null)
             progressText.text = string.Empty;
