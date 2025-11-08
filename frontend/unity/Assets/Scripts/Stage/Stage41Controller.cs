@@ -19,11 +19,11 @@ using TMPro;
 public class Stage41Controller : MonoBehaviour
 {
     [Header("API 설정")]
-    public string baseUrl = "";
-    [Tooltip("set에 사용할 stage 값 (4)")]
-    public string stageSet = "4";
+    public string baseUrl = "https://readingbuddyai.co.kr";
+    [Tooltip("set에 사용할 stage 값 (4.1)")]
+    public string stageSet = "4.1";
     [Tooltip("start/voice/attempt/complete 등에 사용할 stage 값 (4)")]
-    public string stageTwoPart = "4";
+    public string stageTwoPart = "4.1";
     public int count = 5;
     [Tooltip("Authorization: Bearer {token}")]
     public string authToken = "";
@@ -549,7 +549,7 @@ public class Stage41Controller : MonoBehaviour
 
     private IEnumerator FetchQuestions(Action<List<QuestionDto>> onDone)
     {
-        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stageSet)}&count={count}");
+        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stageSet)}&count={count}&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}");
         using (var req = UnityWebRequest.Get(url))
         {
             ApplyCommonHeaders(req);
