@@ -5402,7 +5402,7 @@ MonoBehaviour:
   stageSet: 4.1
   stageTwoPart: 4.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjUwMzQ4MywiZXhwIjoxNzYyNTg5ODgzfQ.aNInqH9xFdCYx-Zhae7saU1yv6kPkFq674NXaPOTn1PCH_6P2v3d28AeHzfoqIBN
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNTc0NDE3LCJleHAiOjE3NjI2NjA4MTd9.yAoRBw3CsiTqY7mAIQUXEP-_ZGZKXGnoGI9l9UcoQl0jhEDNHC_66D7nPM8KEj-t
   stageSessionId: 
   progressText: {fileID: 0}
   guideImage: {fileID: 291308516}
