@@ -1351,17 +1351,41 @@ using Stage.UI;
     private void ShowIntroPanel(bool immediate = false)
     {
         if (introTutorialPanelAnimator != null)
+        {
+            if (verboseLogging)
+                Debug.Log($"[Stage11][Intro] ShowIntroPanel via PanelAnimator (immediate={immediate})");
             introTutorialPanelAnimator.Show(immediate);
+        }
         else if (introTutorialPanel != null)
+        {
             introTutorialPanel.SetActive(true);
+            if (verboseLogging)
+                Debug.Log($"[Stage11][Intro] ShowIntroPanel via SetActive (immediate={immediate})");
+        }
+        else if (verboseLogging)
+        {
+            Debug.LogWarning("[Stage11][Intro] ShowIntroPanel called but no panel assigned");
+        }
     }
 
     private void HideIntroPanel(bool immediate = false)
     {
         if (introTutorialPanelAnimator != null)
+        {
+            if (verboseLogging)
+                Debug.Log($"[Stage11][Intro] HideIntroPanel via PanelAnimator (immediate={immediate})");
             introTutorialPanelAnimator.Hide(immediate);
+        }
         else if (introTutorialPanel != null)
+        {
             introTutorialPanel.SetActive(false);
+            if (verboseLogging)
+                Debug.Log($"[Stage11][Intro] HideIntroPanel via SetActive (immediate={immediate})");
+        }
+        else if (verboseLogging)
+        {
+            Debug.LogWarning("[Stage11][Intro] HideIntroPanel called but no panel assigned");
+        }
     }
 
     private IEnumerator RunIntroTutorial()
@@ -1466,6 +1490,7 @@ using Stage.UI;
 
         if (verboseLogging)
             Debug.Log("[Stage11][Intro] Play clip 1.1.2.8");
+    HideIntroPanel();
         yield return PlayClip(introClip8);
 
         if (verboseLogging)

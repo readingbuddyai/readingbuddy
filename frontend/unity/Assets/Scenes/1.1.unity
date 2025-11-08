@@ -431,7 +431,7 @@ MonoBehaviour:
     wrongOptionTransform: {fileID: 0}
     correctOptionTransform: {fileID: 0}
     wrongHoverSeconds: 1
-    correctHoverSeconds: 3
+    correctHoverSeconds: 2
   introTutorialPanelAnimator: {fileID: 8777454411221847081}
   introTutorialPanel: {fileID: 8777454411221847078}
   requireTriggerAfterTutorial: 1

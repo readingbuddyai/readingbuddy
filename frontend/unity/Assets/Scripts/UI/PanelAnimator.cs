@@ -23,6 +23,8 @@ namespace Stage.UI
         [SerializeField] private Animator animator;
         [SerializeField] private string showTrigger = "Show";
         [SerializeField] private string hideTrigger = "Hide";
+        [SerializeField] private bool deactivateOnHide = true;
+        [SerializeField, Min(0f)] private float hideDeactivateDelay = 0.25f;
 
         [Header("CanvasGroup Fade Mode")]
         [SerializeField] private CanvasGroup canvasGroup;
@@ -74,7 +76,7 @@ namespace Stage.UI
 
         private void Play(bool show, bool immediate)
         {
-            if (!gameObject.activeInHierarchy)
+            if (!targetObject.activeSelf)
                 targetObject.SetActive(true);
 
             if (_animationRoutine != null)
@@ -110,6 +112,16 @@ namespace Stage.UI
                 animator.Play(0, 0, show ? 1f : 0f);
                 animator.Update(0f);
                 targetObject.SetActive(show);
+                if (!show && deactivateOnHide)
+                {
+                    // ensure pending deactivate coroutine cleared
+                    if (_animationRoutine != null)
+                    {
+                        StopCoroutine(_animationRoutine);
+                        _animationRoutine = null;
+                    }
+                    targetObject.SetActive(false);
+                }
             }
             else
             {
@@ -118,13 +130,33 @@ namespace Stage.UI
                     targetObject.SetActive(true);
                     if (!string.IsNullOrEmpty(showTrigger))
                         animator.SetTrigger(showTrigger);
+                    if (_animationRoutine != null)
+                    {
+                        StopCoroutine(_animationRoutine);
+                        _animationRoutine = null;
+                    }
                 }
                 else
                 {
                     if (!string.IsNullOrEmpty(hideTrigger))
+                    {
                         animator.SetTrigger(hideTrigger);
+                        if (deactivateOnHide)
+                        {
+                            if (hideDeactivateDelay <= 0f)
+                            {
+                                targetObject.SetActive(false);
+                            }
+                            else
+                            {
+                                _animationRoutine = StartCoroutine(DeactivateAfterDelay(hideDeactivateDelay));
+                            }
+                        }
+                    }
                     else
+                    {
                         targetObject.SetActive(false);
+                    }
                 }
             }
         }
@@ -183,6 +215,13 @@ namespace Stage.UI
             if (!show)
                 targetObject.SetActive(false);
 
+            _animationRoutine = null;
+        }
+
+        private IEnumerator DeactivateAfterDelay(float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            targetObject.SetActive(false);
             _animationRoutine = null;
         }
     }
