@@ -472,6 +472,10 @@ PrefabInstance:
       propertyPath: m_InteractionLayers.m_Bits
       value: 4294967295
       objectReference: {fileID: 0}
+    - target: {fileID: 3953447676205011179, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_ModelPrefab
+      value: 
+      objectReference: {fileID: 4827784119085518854, guid: 181278d7e3cb81044bc337bd59e1e0f8, type: 3}
     - target: {fileID: 5285114283119352416, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_CameraYOffset
       value: 3
@@ -480,6 +484,10 @@ PrefabInstance:
       propertyPath: m_RequestedTrackingOriginMode
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6166598233623766984, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_ModelPrefab
+      value: 
+      objectReference: {fileID: 1849818669134798198, guid: 8bfb29f137b45874488810952a159a97, type: 3}
     - target: {fileID: 6870335344805348516, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_Name
       value: '[XR]'
