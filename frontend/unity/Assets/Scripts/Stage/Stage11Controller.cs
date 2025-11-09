@@ -75,6 +75,16 @@ using Stage.UI;
     [Min(0f)]
     public float tutorialClipGapSeconds = 0.9f;
 
+    [Header("Guide Character (Level 1)")]
+    [Tooltip("패널이 꺼져 있을 때 표시할 3D 캐릭터 오브젝트")]
+    public GameObject guide3DCharacter;
+    [Tooltip("패널을 켜기 직전에 캐릭터를 미리 숨길 선행 시간(초)")]
+    [Min(0f)] public float guideHideLeadSeconds = 0.5f;
+    [Tooltip("패널이 꺼진 직후 캐릭터를 다시 보이게 할 지")]
+    public bool showGuideWhenPanelOff = true;
+    [Tooltip("패널 OFF 직후 캐릭터 표시까지 추가 지연(초)")]
+    [Min(0f)] public float guideShowDelayAfterPanelOff = 0f;
+
     [Header("Mic Indicator")]
     [Tooltip("[1.1.4] 종료 직후부터 녹음 3초 동안 표시될 마이크 아이콘 오브젝트")]
     public GameObject micIndicator;
@@ -268,6 +278,9 @@ using Stage.UI;
         {
             micIndicator.SetActive(false);
         }
+        // 시작 시: 패널이 꺼져 있으므로 캐릭터는 보이도록
+        if (guide3DCharacter)
+            guide3DCharacter.SetActive(true);
         StartCoroutine(RunStage());
     }
 
@@ -1355,8 +1368,20 @@ using Stage.UI;
         yield return PlayClip(introClip3);
     }
 
+    private Coroutine _coShowPanel;
     private void ShowIntroPanel(bool immediate = false)
     {
+        // 패널을 켜기 직전에 캐릭터를 숨기는 리드 타임 적용
+        if (guide3DCharacter && guideHideLeadSeconds > 0f && !immediate)
+        {
+            if (_coShowPanel != null) StopCoroutine(_coShowPanel);
+            _coShowPanel = StartCoroutine(Co_ShowPanelWithGuideHide(immediate));
+            return;
+        }
+
+        if (guide3DCharacter)
+            guide3DCharacter.SetActive(false);
+
         if (introTutorialPanelAnimator != null)
         {
             if (verboseLogging)
@@ -1368,6 +1393,32 @@ using Stage.UI;
             introTutorialPanel.SetActive(true);
             if (verboseLogging)
                 Debug.Log($"[Stage11][Intro] ShowIntroPanel via SetActive (immediate={immediate})");
+        }
+        else if (verboseLogging)
+        {
+            Debug.LogWarning("[Stage11][Intro] ShowIntroPanel called but no panel assigned");
+        }
+    }
+
+    private IEnumerator Co_ShowPanelWithGuideHide(bool immediate)
+    {
+        // 1) 캐릭터 숨김
+        if (guide3DCharacter) guide3DCharacter.SetActive(false);
+        // 2) 리드 타임 대기 후 실제 패널 표시
+        yield return new WaitForSeconds(guideHideLeadSeconds);
+        _coShowPanel = null;
+
+        if (introTutorialPanelAnimator != null)
+        {
+            if (verboseLogging)
+                Debug.Log($"[Stage11][Intro] ShowIntroPanel via PanelAnimator (delayed, lead={guideHideLeadSeconds})");
+            introTutorialPanelAnimator.Show(immediate);
+        }
+        else if (introTutorialPanel != null)
+        {
+            introTutorialPanel.SetActive(true);
+            if (verboseLogging)
+                Debug.Log($"[Stage11][Intro] ShowIntroPanel via SetActive (delayed, lead={guideHideLeadSeconds})");
         }
         else if (verboseLogging)
         {
@@ -1393,6 +1444,21 @@ using Stage.UI;
         {
             Debug.LogWarning("[Stage11][Intro] HideIntroPanel called but no panel assigned");
         }
+
+        // 패널 OFF 직후 캐릭터 표시
+        if (guide3DCharacter && showGuideWhenPanelOff)
+        {
+            if (guideShowDelayAfterPanelOff > 0f)
+                StartCoroutine(Co_ShowGuideAfterDelay(guideShowDelayAfterPanelOff));
+            else
+                guide3DCharacter.SetActive(true);
+        }
+    }
+
+    private IEnumerator Co_ShowGuideAfterDelay(float seconds)
+    {
+        yield return new WaitForSeconds(seconds);
+        if (guide3DCharacter) guide3DCharacter.SetActive(true);
     }
 
     private IEnumerator RunIntroTutorial()
