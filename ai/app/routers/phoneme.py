@@ -1,12 +1,13 @@
 from fastapi import APIRouter, UploadFile, Form, HTTPException
 from app.services.inference import transcribe_stream, normalize_target_to_jamo
+from app.services.utils_audio import detect_audio_format
 from app.core.config import settings
 from app.schemas import JamoCheckResponse, SyllableCheckResponse, WordCheckResponse, ErrorResponse
 
 router = APIRouter(prefix="/check", tags=["Pronunciation"])
 
 def validate_audio_file(file: UploadFile):
-    """오디오 파일 유효성 검사"""
+    """오디오 파일 유효성 검사 (확장자 + 매직 바이트)"""
     if not file:
         raise HTTPException(status_code=400, detail="오디오 파일이 없습니다.")
 
@@ -22,6 +23,17 @@ def validate_audio_file(file: UploadFile):
     # Content-Type 확인 (선택적)
     if file.content_type and not file.content_type.startswith("audio/"):
         raise HTTPException(status_code=400, detail="오디오 파일만 업로드 가능합니다.")
+
+    # 매직 바이트로 실제 파일 포맷 검증 (보안 강화)
+    file_content = file.file.read(16)  # 첫 16바이트만 읽기
+    file.file.seek(0)  # 파일 포인터 리셋
+
+    detected_format = detect_audio_format(file_content)
+    if detected_format == "unknown":
+        raise HTTPException(
+            status_code=400,
+            detail="지원하지 않는 오디오 포맷입니다. 파일 내용을 확인할 수 없습니다."
+        )
 
 # =================================
 # 자모 단위

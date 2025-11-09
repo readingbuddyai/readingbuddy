@@ -3,6 +3,7 @@ import time
 import numpy as np
 from fastapi import UploadFile, HTTPException
 from transformers import Wav2Vec2Processor, Wav2Vec2ForCTC
+from peft import PeftModel
 from app.services.utils_audio import load_audio_to_mono_16k, chunk_audio
 from app.core.config import settings
 import logging
@@ -45,15 +46,29 @@ TO_CODA = {
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-MODEL_PATH = str(settings.get_model_path())
+BASE_MODEL_PATH = str(settings.get_base_model_path())
+LORA_MODEL_PATH = str(settings.get_lora_model_path())
+USE_LORA = settings.USE_LORA
 
-# 모델 로드 (SafeTensor / PyTorch)
+# 모델 로드 (베이스 모델 + LoRA)
 try:
-    processor = Wav2Vec2Processor.from_pretrained(MODEL_PATH)
-    model = Wav2Vec2ForCTC.from_pretrained(MODEL_PATH)
+    # 베이스 모델 로드
+    logger.info(f"베이스 모델 로딩 중: {BASE_MODEL_PATH}")
+    processor = Wav2Vec2Processor.from_pretrained(BASE_MODEL_PATH)
+    model = Wav2Vec2ForCTC.from_pretrained(BASE_MODEL_PATH)
+
+    # LoRA 어댑터 로드
+    if USE_LORA:
+        logger.info(f"LoRA 어댑터 로딩 중: {LORA_MODEL_PATH}")
+        model = PeftModel.from_pretrained(model, LORA_MODEL_PATH, is_trainable=False)
+        model = model.merge_and_unload()  # LoRA를 베이스 모델에 병합
+        logger.info("LoRA 어댑터가 베이스 모델에 병합되었습니다")
+
     model.to(DEVICE)
     model.eval()
-    logger.info(f"SafeTensor 모델 로드 성공: {MODEL_PATH} (device={DEVICE})")
+
+    model_type = "LoRA 적용 모델" if USE_LORA else "베이스 모델"
+    logger.info(f"{model_type} 로드 성공 (device={DEVICE})")
 
     # 웜업 추론 (콜드 런 오버헤드 제거)
     logger.info("웜업 추론 시작...")
@@ -126,11 +141,11 @@ def infer_chunk_safetensor(waveform: np.ndarray, sr: int = 16000):
         decode_time = time.time() - t_decode
 
         # 세부 시간 로그 출력
-        print(f"[전처리] Processor: {prep_time:.4f}초")
-        print(f"[PyTorch 추론] 순수 모델: {infer_time:.4f}초")
-        print(f"[Argmax] 연산: {argmax_time:.4f}초")
-        print(f"[디코딩] Vocab 변환: {decode_time:.4f}초")
-        print(f"[합계] {prep_time + infer_time + argmax_time + decode_time:.4f}초")
+        logger.debug(f"[전처리] Processor: {prep_time:.4f}초")
+        logger.debug(f"[PyTorch 추론] 순수 모델: {infer_time:.4f}초")
+        logger.debug(f"[Argmax] 연산: {argmax_time:.4f}초")
+        logger.debug(f"[디코딩] Vocab 변환: {decode_time:.4f}초")
+        logger.debug(f"[합계] {prep_time + infer_time + argmax_time + decode_time:.4f}초")
 
         return text
     except Exception as e:
@@ -167,29 +182,27 @@ def transcribe_stream(file: UploadFile):
         audio_length = len(wave) / sr
 
         # 3단계: 추론
-        print(f"\n{'='*60}")
-        print(f"[추론 시작] 오디오 길이: {audio_length:.2f}초")
-        print(f"{'='*60}")
+        logger.info(f"추론 시작 - 오디오 길이: {audio_length:.2f}초")
 
         t3 = time.time()
         if audio_length <= 5.0:
-            print(f"모드: 전체 추론 (청크 분리 없음)")
+            logger.info("모드: 전체 추론 (청크 분리 없음)")
             result = infer_chunk_safetensor(wave, sr)
 
             t_postprocess = time.time()
             decoded = result  # 자모 시퀀스 그대로 반환
             postprocess_time = time.time() - t_postprocess
-            print(f"[후처리] 문자열 처리: {postprocess_time:.4f}초")
+            logger.debug(f"[후처리] 문자열 처리: {postprocess_time:.4f}초")
         else:
-            print(f"모드: 청크 분리 추론")
+            logger.info("모드: 청크 분리 추론")
             t_chunk = time.time()
             chunks = chunk_audio(wave, sr, chunk_size=1.0, overlap=0.2)
             chunk_time = time.time() - t_chunk
-            print(f"[청크 분할] {len(chunks)}개 생성: {chunk_time:.4f}초")
+            logger.info(f"청크 분할: {len(chunks)}개 생성 ({chunk_time:.4f}초)")
 
             results = []
             for i, chunk in enumerate(chunks):
-                print(f"\n[청크 {i+1}/{len(chunks)}]")
+                logger.debug(f"청크 {i+1}/{len(chunks)} 처리 중")
                 result = infer_chunk_safetensor(chunk, sr)
                 results.append(result)
 
@@ -197,13 +210,10 @@ def transcribe_stream(file: UploadFile):
             # 청크 결과를 공백으로 합치기
             decoded = " ".join(results).strip()
             postprocess_time = time.time() - t_postprocess
-            print(f"\n[후처리] 문자열 처리: {postprocess_time:.4f}초")
+            logger.debug(f"후처리: 문자열 처리 ({postprocess_time:.4f}초)")
 
         total_inference_time = time.time() - t3
-        print(f"\n{'='*60}")
-        print(f"[추론 완료] 총 시간: {total_inference_time:.4f}초")
-        print(f"{'='*60}\n")
-        logger.info(f"모델 추론: {total_inference_time:.3f}초")
+        logger.info(f"추론 완료 - 총 시간: {total_inference_time:.4f}초")
 
         # 전체 시간
         elapsed_time = time.time() - start_time

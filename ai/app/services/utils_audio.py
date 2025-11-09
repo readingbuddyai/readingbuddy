@@ -4,6 +4,9 @@ from fastapi import HTTPException, UploadFile
 from app.core.config import settings
 import tempfile
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 def detect_audio_format(file_content: bytes) -> str:
     """파일 내용의 매직 바이트로 오디오 포맷 감지"""
@@ -80,12 +83,12 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
     detected_format = detect_audio_format(file_content) if file_content else "unknown"
     is_webm = detected_format in ["webm", "ogg"]
 
-    print(f"[파일 처리] filename={filename}, detected_format={detected_format}, is_webm={is_webm}, content_size={len(file_content) if file_content else 0}")
+    logger.debug(f"파일 처리 - filename={filename}, format={detected_format}, webm={is_webm}, size={len(file_content) if file_content else 0}")
 
     try:
         # WebM/OGG 포맷인 경우 pydub으로 변환
         if is_webm:
-            print(f"[WebM 감지] pydub으로 변환 중...")
+            logger.info("WebM/OGG 포맷 감지 - pydub으로 변환 중")
 
             # 임시 파일로 저장
             with tempfile.NamedTemporaryFile(delete=False, suffix='.webm') as tmp_input:
@@ -103,7 +106,7 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
 
                 # soundfile로 읽기
                 data, sr = sf.read(wav_io)
-                print(f"[WebM 변환 성공] SR: {sr}, Shape: {data.shape}")
+                logger.info(f"WebM 변환 성공 - SR: {sr}, Shape: {data.shape}")
 
             finally:
                 # 임시 파일 삭제
@@ -115,9 +118,9 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
                 try:
                     # soundfile로 먼저 시도 (WAV, FLAC, OGG/Vorbis)
                     data, sr = sf.read(io.BytesIO(file_content))
-                    print(f"[soundfile 성공] format={detected_format}, SR: {sr}, Shape: {data.shape}")
+                    logger.debug(f"soundfile 로드 성공 - format={detected_format}, SR: {sr}, Shape: {data.shape}")
                 except Exception as sf_error:
-                    print(f"[soundfile 실패] {sf_error}, pydub으로 재시도...")
+                    logger.info(f"soundfile 실패, pydub으로 재시도 - {sf_error}")
                     # soundfile이 실패하면 pydub으로 시도 (MP3, M4A 등)
                     with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{detected_format}') as tmp_input:
                         tmp_input.write(file_content)
@@ -129,7 +132,7 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
                         audio.export(wav_io, format='wav')
                         wav_io.seek(0)
                         data, sr = sf.read(wav_io)
-                        print(f"[pydub fallback 성공] SR: {sr}, Shape: {data.shape}")
+                        logger.info(f"pydub fallback 성공 - SR: {sr}, Shape: {data.shape}")
                     finally:
                         if os.path.exists(tmp_input_path):
                             os.unlink(tmp_input_path)
@@ -142,7 +145,7 @@ def load_audio_to_mono_16k(file_obj) -> np.ndarray:
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[오디오 읽기 오류] {type(e).__name__}: {str(e)}")
+        logger.error(f"오디오 읽기 오류 - {type(e).__name__}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=400,
             detail=f"오디오 파일을 읽을 수 없습니다: {str(e)}"

@@ -70,6 +70,7 @@ temp/
 
 # AI Model files (large)
 models/
+final_model/
 */models/
 *.bin
 *.pt
@@ -121,7 +122,6 @@ save_model_local.py
 
 benchmark_*.py
 compare_*.py
-test_*.py
 *_GUIDE.md
 benchmark_analysis.md
 
