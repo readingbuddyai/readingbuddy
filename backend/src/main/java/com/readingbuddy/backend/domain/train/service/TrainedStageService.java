@@ -7,6 +7,7 @@ import com.readingbuddy.backend.domain.bkt.repository.TrainProblemHistoriesKcMap
 import com.readingbuddy.backend.domain.bkt.service.BktService;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
+import com.readingbuddy.backend.domain.train.dto.response.LastPlayedStageResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
 import com.readingbuddy.backend.domain.train.dto.result.*;
@@ -131,8 +132,9 @@ public class TrainedStageService {
 
         // 저장한 session 업데이트
         // 시도 횟수가 커진다면, 전체 try count를 올립니다.
-        if (request.getAttemptNumber() > 1) stage.updateTryCount();
+        stage.updateTryCount();
         if (Boolean.TRUE.equals(request.getIsCorrect())) stage.updateCorrectCount();
+        else if (Boolean.FALSE.equals(request.getIsCorrect())) stage.updateWrongCount();
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
@@ -156,13 +158,11 @@ public class TrainedStageService {
         StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
 
         if(stageSessionInfo==null){
-            throw new IllegalArgumentException("세션을 찾을 수 없습니다."+stageSessionId);
+            throw new IllegalArgumentException("세션을 찾을 수 없습니다." + stageSessionId);
         }
 
         TrainedStageHistories stage = trainedStageHistoriesRepository.findById(stageSessionInfo.getTrainedStageHistoriesId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
-
-        stage.updateWrongCount();
 
         Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
 
@@ -232,5 +232,26 @@ public class TrainedStageService {
                 stageSessionInfo.getKcCandidateList().put(stage1_2Problem.getKcId(), stage1_2Problem.getCandidateList());
             }
         }
+    }
+
+    /**
+     * 마지막으로 플레이한 스테이지 조회
+     */
+    public LastPlayedStageResponse getLastPlayedStage(Long userId) {
+        TrainedStageHistories lastStage = trainedStageHistoriesRepository
+                .findFirstByUserIdOrderByStartedAtDesc(userId)
+                .orElse(null);
+
+        if (lastStage == null) {
+            return LastPlayedStageResponse.builder()
+                    .stage("마지막으로 플레이한 스테이지가 없습니다")
+                    .playedAt(null)
+                    .build();
+        }
+
+        return LastPlayedStageResponse.builder()
+                .stage(lastStage.getStage())
+                .playedAt(lastStage.getStartedAt())
+                .build();
     }
 }

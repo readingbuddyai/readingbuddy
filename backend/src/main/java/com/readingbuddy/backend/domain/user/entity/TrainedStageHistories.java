@@ -71,6 +71,6 @@ public class TrainedStageHistories {
 
     @Transactional
     public void updateWrongCount() {
-        this.wrongCount = TOTAL_COUNT - this.correctCount;
+        this.wrongCount = this.wrongCount + 1;
     }
 }

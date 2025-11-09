@@ -223,4 +223,22 @@ public class TrainController {
                     .body(ApiResponse.error("스테이지 완료 처리 중 오류가 발생했습니다: " + e.getMessage()));
         }
     }
+
+    /**
+     * 마지막으로 플레이한 stage
+     */
+    @GetMapping("/last/stage")
+    public ResponseEntity<ApiResponse<LastPlayedStageResponse>> getLastPlayedStage(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+        try {
+            Long userId = customUserDetails.getId();
+            LastPlayedStageResponse response = trainedStageService.getLastPlayedStage(userId);
+            return ResponseEntity.ok(ApiResponse.success("마지막 플레이 스테이지를 조회했습니다.", response));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("마지막 플레이 스테이지 조회 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
 }
