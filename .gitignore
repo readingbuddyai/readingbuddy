@@ -65,8 +65,8 @@ temp/
 *.ogg
 *.flac
 *.m4a
-!tests/**/*.wav
-!tests/**/*.mp3
+!ai/tests/**/*.wav
+!ai/tests/**/*.mp3
 
 # AI Model files (large)
 models/
@@ -110,8 +110,8 @@ Desktop.ini
 *.backup
 
 # Custom scripts
-record_audio.py
-save_model_local.py
+ai/record_audio.py
+ai/save_model_local.py
 
 # Claude Code
 .claude
@@ -120,13 +120,11 @@ save_model_local.py
 *.pem
 *.key
 
-benchmark_*.py
-compare_*.py
-*_GUIDE.md
-benchmark_analysis.md
-
-*.wav
-*.mp3
-!tests/**/*.wav 
+ai/benchmark_*.py
+ai/compare_*.py
+ai/*_GUIDE.md
+ai/benchmark_analysis.md 
 
 frontend/
+
+.claude

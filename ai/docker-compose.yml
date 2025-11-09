@@ -11,7 +11,9 @@ services:
     gpus: all
 
     environment:
-      - MODEL_PATH=${MODEL_PATH:-./models/slplab_wav2vec2_korean}
+      - BASE_MODEL_PATH=${BASE_MODEL_PATH:-./models/base/slplab_wav2vec2_korean}
+      - LORA_MODEL_PATH=${LORA_MODEL_PATH:-./models/lora/final_model}
+      - USE_LORA=${USE_LORA:-True}
       - HOST=${HOST:-0.0.0.0}
       - PORT=${PORT:-8000}
       - MAX_AUDIO_LENGTH_SECONDS=${MAX_AUDIO_LENGTH_SECONDS:-30}
