@@ -21,8 +21,12 @@ test-ai:
     - pip install --no-cache-dir -r requirements.txt
   script:
     - echo "Running tests..."
-    - pytest tests/ -v --tb=short --junitxml=../test-results.xml || true
+    - pytest tests/ -v --tb=short --junitxml=../test-results.xml -s || echo "Tests failed but continuing..."
     - echo "Tests completed!"
+    - echo "Checking if test-results.xml exists..."
+    - ls -la ../test-results.xml || echo "test-results.xml not found!"
+    - pwd
+    - ls -la ..
   artifacts:
     paths:
       - test-results.xml
@@ -76,10 +80,23 @@ deploy-ai:
         docker compose up -d
 
         echo "Waiting for service to start..."
-        sleep 15
+        sleep 30
 
-        echo "Health check..."
-        curl -fsS http://localhost:8000/health/
+        echo "Health check with retries..."
+        for i in {1..10}; do
+          echo "Attempt $i/10..."
+          if curl -fsS http://localhost:8000/health/; then
+            echo "Health check passed!"
+            break
+          fi
+          if [ $i -eq 10 ]; then
+            echo "Health check failed after 10 attempts"
+            docker logs ai-server --tail 50
+            exit 1
+          fi
+          echo "Retrying in 5 seconds..."
+          sleep 5
+        done
 
         echo "AI server deployed successfully!"
       EOF
