@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -151,7 +152,7 @@ public class TrainedStageService {
     }
 
     /**
-     * Stage 완료 - 부족한 음성 리스트 전달
+     * Stage 완료 - 부족한 음성 리스트 전달 (틀린 문제 번호만)
      */
     public StageCompleteResponse completeStage(String stageSessionId) {
         // 세션 조회
@@ -164,7 +165,11 @@ public class TrainedStageService {
         TrainedStageHistories stage = trainedStageHistoriesRepository.findById(stageSessionInfo.getTrainedStageHistoriesId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
 
-        Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
+        // isProblemCorrect가 false인 문제 번호만 필터링
+        Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().entrySet().stream()
+                .filter(entry -> Boolean.FALSE.equals(entry.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(java.util.stream.Collectors.toSet());
 
         return StageCompleteResponse.builder()
                 .stageSessionId(stageSessionId)
