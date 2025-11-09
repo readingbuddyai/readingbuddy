@@ -25,4 +25,9 @@ public interface TrainedStageHistoriesRepository extends JpaRepository<TrainedSt
      */
     List<TrainedStageHistories> findByUserIdAndStage(Long userId, String stage);
 
+    /**
+     * 마지막 플레이한 스테이지 조회
+     */
+    Optional<TrainedStageHistories> findFirstByUserIdOrderByStartedAtDesc(Long userId);
+
 }
