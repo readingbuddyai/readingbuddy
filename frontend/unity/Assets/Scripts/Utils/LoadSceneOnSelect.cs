@@ -52,6 +52,7 @@ public class LoadSceneOnSelect : MonoBehaviour
         _isLoading = true;
         interactable.enabled = false;
         Debug.Log($"[LoadSceneOnSelect] Loading → {targetSceneName}");
+        Utils.GlobalSfxManager.Instance?.PlaySceneTransitionSfx();
         StartCoroutine(LoadRoutine());
     }
 
