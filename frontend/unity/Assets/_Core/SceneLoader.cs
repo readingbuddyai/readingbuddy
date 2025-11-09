@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using Utils;
 
 public class SceneLoader : MonoBehaviour
 {
@@ -22,6 +23,7 @@ public class SceneLoader : MonoBehaviour
     // 씬 전환 함수
     public void LoadScene(string sceneName)
     {
+        GlobalSfxManager.Instance?.PlaySceneTransitionSfx();
         StartCoroutine(LoadSceneRoutine(sceneName));
     }
 
