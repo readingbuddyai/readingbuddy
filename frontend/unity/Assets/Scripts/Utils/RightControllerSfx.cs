@@ -11,12 +11,17 @@ using CommonUsagesXR = UnityEngine.XR.CommonUsages;
 namespace Utils
 {
     /// <summary>
-    /// 오른손 XR 컨트롤러 입력(트리거/조이스틱)을 감지해 효과음을 재생하는 유틸 컴포넌트.
-    /// Stage11Controller 등 다양한 스테이지에서 재사용할 수 있도록 별도 분리.
+    /// XR 컨트롤러 입력(트리거/조이스틱)을 감지해 효과음을 재생하고 진동을 보내는 유틸 컴포넌트.
+    /// 인스펙터에서 Left/Right를 선택할 수 있습니다.
     /// </summary>
     public class RightControllerSfx : MonoBehaviour
     {
+        public enum HandSide { Left, Right }
+
         [Header("General")]
+        [Tooltip("효과음을 적용할 XR 컨트롤러 (Left/Right)")]
+        public HandSide handSide = HandSide.Right;
+
         [Tooltip("true면 오른손 컨트롤러 입력에 맞춰 효과음을 재생합니다.")]
         public bool enableSfx = true;
 
@@ -50,12 +55,12 @@ namespace Utils
         public KeyCode triggerFallbackKey = KeyCode.Space;
 
 #if ENABLE_INPUT_SYSTEM
-        private AxisControl _rightTriggerAxis;
-        private ButtonControl _rightTriggerButton;
-        private StickControl _rightThumbstick;
+        private AxisControl _triggerAxis;
+        private ButtonControl _triggerButton;
+        private StickControl _thumbstick;
 #endif
 
-        private static readonly List<InputDeviceXR> RightHandDevices = new List<InputDeviceXR>();
+        private static readonly List<InputDeviceXR> XrDevices = new List<InputDeviceXR>();
 
         private bool _triggerWasPressed;
         private bool _thumbstickWasActive;
@@ -71,7 +76,7 @@ namespace Utils
             if (!enableSfx)
                 return;
 
-            bool triggerPressed = CheckRightTriggerPressed();
+            bool triggerPressed = CheckTriggerPressed();
             bool triggerJustPressed = triggerPressed && !_triggerWasPressed;
             bool triggerFallbackPressed = triggerFallbackKey != KeyCode.None && Input.GetKeyDown(triggerFallbackKey);
 
@@ -87,7 +92,7 @@ namespace Utils
             if (triggerFallbackPressed)
                 _triggerWasPressed = true;
 
-            bool thumbstickActive = CheckRightThumbstickEngaged();
+            bool thumbstickActive = CheckThumbstickEngaged();
             if (thumbstickActive && !_thumbstickWasActive)
                 PlayOneShot(thumbstickClip);
 
@@ -102,21 +107,21 @@ namespace Utils
             audioSource.PlayOneShot(clip);
         }
 
-        private bool CheckRightTriggerPressed()
+        private bool CheckTriggerPressed()
         {
 #if ENABLE_INPUT_SYSTEM
             ResolveInputSystemControls();
-            if (_rightTriggerButton != null && _rightTriggerButton.isPressed)
+            if (_triggerButton != null && _triggerButton.isPressed)
                 return true;
-            if (_rightTriggerAxis != null && _rightTriggerAxis.ReadValue() >= 0.99f)
+            if (_triggerAxis != null && _triggerAxis.ReadValue() >= 0.99f)
                 return true;
 #endif
 
-            RightHandDevices.Clear();
-            InputDevices.GetDevicesAtXRNode(XRNode.RightHand, RightHandDevices);
-            for (int i = 0; i < RightHandDevices.Count; i++)
+            XrDevices.Clear();
+            InputDevices.GetDevicesAtXRNode(ToXRNode(handSide), XrDevices);
+            for (int i = 0; i < XrDevices.Count; i++)
             {
-                var device = RightHandDevices[i];
+                var device = XrDevices[i];
                 if (!device.isValid) continue;
                 if (device.TryGetFeatureValue(CommonUsagesXR.triggerButton, out bool triggerButton) && triggerButton)
                     return true;
@@ -127,26 +132,26 @@ namespace Utils
             return false;
         }
 
-        private bool CheckRightThumbstickEngaged()
+        private bool CheckThumbstickEngaged()
         {
             float threshold = Mathf.Clamp01(thumbstickActivationThreshold);
             float sqrThreshold = threshold * threshold;
 
 #if ENABLE_INPUT_SYSTEM
             ResolveInputSystemControls();
-            if (_rightThumbstick != null)
+            if (_thumbstick != null)
             {
-                Vector2 value = _rightThumbstick.ReadValue();
+                Vector2 value = _thumbstick.ReadValue();
                 if (value.sqrMagnitude >= sqrThreshold)
                     return true;
             }
 #endif
 
-            RightHandDevices.Clear();
-            InputDevices.GetDevicesAtXRNode(XRNode.RightHand, RightHandDevices);
-            for (int i = 0; i < RightHandDevices.Count; i++)
+            XrDevices.Clear();
+            InputDevices.GetDevicesAtXRNode(ToXRNode(handSide), XrDevices);
+            for (int i = 0; i < XrDevices.Count; i++)
             {
-                var device = RightHandDevices[i];
+                var device = XrDevices[i];
                 if (!device.isValid) continue;
                 if (device.TryGetFeatureValue(CommonUsagesXR.primary2DAxis, out Vector2 axisValue) && axisValue.sqrMagnitude >= sqrThreshold)
                     return true;
@@ -158,12 +163,17 @@ namespace Utils
 #if ENABLE_INPUT_SYSTEM
         private void ResolveInputSystemControls()
         {
-            if (_rightTriggerAxis == null || _rightTriggerAxis.device == null || !_rightTriggerAxis.device.added)
-                _rightTriggerAxis = InputSystem.FindControl("<XRController>{RightHand}/trigger") as AxisControl;
-            if (_rightTriggerButton == null || _rightTriggerButton.device == null || !_rightTriggerButton.device.added)
-                _rightTriggerButton = InputSystem.FindControl("<XRController>{RightHand}/triggerPressed") as ButtonControl;
-            if (_rightThumbstick == null || _rightThumbstick.device == null || !_rightThumbstick.device.added)
-                _rightThumbstick = InputSystem.FindControl("<XRController>{RightHand}/thumbstick") as StickControl;
+            string handTag = handSide == HandSide.Right ? "RightHand" : "LeftHand";
+            string triggerPath = $"<XRController>{{{handTag}}}/trigger";
+            string triggerPressedPath = $"<XRController>{{{handTag}}}/triggerPressed";
+            string thumbstickPath = $"<XRController>{{{handTag}}}/thumbstick";
+
+            if (_triggerAxis == null || _triggerAxis.device == null || !_triggerAxis.device.added)
+                _triggerAxis = InputSystem.FindControl(triggerPath) as AxisControl;
+            if (_triggerButton == null || _triggerButton.device == null || !_triggerButton.device.added)
+                _triggerButton = InputSystem.FindControl(triggerPressedPath) as ButtonControl;
+            if (_thumbstick == null || _thumbstick.device == null || !_thumbstick.device.added)
+                _thumbstick = InputSystem.FindControl(thumbstickPath) as StickControl;
         }
 #endif
 
@@ -177,11 +187,11 @@ namespace Utils
             if (amplitude <= 0f || duration <= 0f)
                 return;
 
-            RightHandDevices.Clear();
-            InputDevices.GetDevicesAtXRNode(XRNode.RightHand, RightHandDevices);
-            for (int i = 0; i < RightHandDevices.Count; i++)
+            XrDevices.Clear();
+            InputDevices.GetDevicesAtXRNode(ToXRNode(handSide), XrDevices);
+            for (int i = 0; i < XrDevices.Count; i++)
             {
-                var device = RightHandDevices[i];
+                var device = XrDevices[i];
                 if (!device.isValid) continue;
                 if (!device.TryGetHapticCapabilities(out HapticCapabilities capabilities) || !capabilities.supportsImpulse)
                     continue;
@@ -189,6 +199,11 @@ namespace Utils
                 device.SendHapticImpulse(0u, amplitude, duration);
                 break;
             }
+        }
+
+        private static XRNode ToXRNode(HandSide side)
+        {
+            return side == HandSide.Right ? XRNode.RightHand : XRNode.LeftHand;
         }
     }
 }

@@ -535,6 +535,12 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 881405433}
     m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6396006809746445100, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1315545392}
+    - targetCorrespondingSourceObject: {fileID: 6396006809746445100, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1315545391}
     - targetCorrespondingSourceObject: {fileID: 651767611178000880, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 388209128}
@@ -564,6 +570,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 22daf1e8380f9a842bcede5abd74ff54, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  handSide: 1
   enableSfx: 1
   audioSource: {fileID: 388209129}
   triggerClip: {fileID: 8300000, guid: d501d55d83e50ce498255d14a777315a, type: 3}
@@ -816,6 +823,7 @@ MonoBehaviour:
   sceneTransitionVolume: 1
   startupVolume: 1
   playStartupOnAwake: 1
+  skipFirstSceneTransitionSfx: 1
 --- !u!1 &593586661
 GameObject:
   m_ObjectHideFlags: 0
@@ -1280,9 +1288,12 @@ MonoBehaviour:
   audioSource: {fileID: 1005735815}
   defaultFadeSeconds: 0.6
   bgmLibrary:
-  - key: 
-    clip: {fileID: 0}
-    volume: 0
+  - key: MainFlow
+    clip: {fileID: 8300000, guid: 7ee6c2dc9df3c1f438c09ed6a55e5a63, type: 3}
+    volume: 0.6
+  - key: RoomTheme
+    clip: {fileID: 8300000, guid: ccb567fc560aeb849b4d8e1f5a60a997, type: 3}
+    volume: 0.6
 --- !u!1 &1010385921
 GameObject:
   m_ObjectHideFlags: 0
@@ -1552,6 +1563,129 @@ Canvas:
   m_SortingLayerID: 0
   m_SortingOrder: 0
   m_TargetDisplay: 0
+--- !u!1 &1315545384 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6396006809746445100, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+  m_PrefabInstance: {fileID: 388209125}
+  m_PrefabAsset: {fileID: 0}
+--- !u!82 &1315545391
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1315545384}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 0}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!114 &1315545392
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1315545384}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 22daf1e8380f9a842bcede5abd74ff54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  handSide: 0
+  enableSfx: 1
+  audioSource: {fileID: 1315545391}
+  triggerClip: {fileID: 8300000, guid: d501d55d83e50ce498255d14a777315a, type: 3}
+  thumbstickClip: {fileID: 8300000, guid: 079a13e7c625e2846904e5f95a49fa15, type: 3}
+  enableTriggerHaptics: 1
+  triggerHapticsAmplitude: 0.6
+  triggerHapticsDuration: 0.15
+  thumbstickActivationThreshold: 0.35
+  triggerFallbackKey: 32
 --- !u!1 &1352708302
 GameObject:
   m_ObjectHideFlags: 0
