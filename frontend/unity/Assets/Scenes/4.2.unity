@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 19d225e13b1a4ff4f966970b4a308a0a, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -2469,7 +2469,7 @@ MonoBehaviour:
   stageSet: 4.2
   stageTwoPart: 4.2
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjUwMzQ4MywiZXhwIjoxNzYyNTg5ODgzfQ.aNInqH9xFdCYx-Zhae7saU1yv6kPkFq674NXaPOTn1PCH_6P2v3d28AeHzfoqIBN
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNTc0NDE3LCJleHAiOjE3NjI2NjA4MTd9.yAoRBw3CsiTqY7mAIQUXEP-_ZGZKXGnoGI9l9UcoQl0jhEDNHC_66D7nPM8KEj-t
   stageSessionId: 
   progressText: {fileID: 1445873331}
   guideImage: {fileID: 1483861607}
