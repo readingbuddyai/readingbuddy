@@ -1,21 +1,3 @@
-#!/usr/bin/env python3
-"""
-=====================================================================
-Reading Buddy - Stage 4.1, 4.2 Monitoring Test Script
-=====================================================================
-훈련 Stage 4.1과 4.2를 테스트하고 Grafana/Prometheus로 모니터링하기 위한 스크립트
-
-주요 기능:
-1. 백엔드 API 자동 호출 및 테스트
-2. Prometheus 메트릭 수집 및 노출
-3. API 성능 측정 (응답 시간, 성공률 등)
-4. 부하 테스트 지원
-
-작성자: SSAFY 13기
-날짜: 2024-11
-=====================================================================
-"""
-
 import requests
 import time
 import logging
@@ -23,10 +5,6 @@ from datetime import datetime
 from prometheus_client import Counter, Histogram, Gauge, start_http_server
 from colorama import Fore, Style, init
 import config
-
-# ============================================================
-# 초기 설정
-# ============================================================
 
 # Colorama 초기화 (터미널 색상 출력)
 init(autoreset=True)
@@ -38,10 +16,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ============================================================
 # Prometheus 메트릭 정의
-# ============================================================
-# Grafana에서 시각화할 메트릭들을 정의합니다
+# Grafana에서 시각화할 메트릭들을 정의
 
 # Counter: API 요청 총 횟수를 카운트 (누적값)
 # Labels: stage(4.1/4.2), endpoint(start/set/complete), status(success/fail)
@@ -74,20 +50,8 @@ problem_count = Counter(
     ['stage']
 )
 
-
-# ============================================================
 # TrainTester 클래스
-# ============================================================
 class TrainTester:
-    """
-    훈련 Stage 4.1, 4.2를 테스트하는 메인 클래스
-
-    주요 메서드:
-    - login(): 로그인하여 JWT 토큰 획득
-    - start_stage(): 스테이지 시작 API 호출
-    - get_problem_set(): 문제 세트 생성 API 호출
-    - test_stage(): 전체 스테이지 테스트 플로우 실행
-    """
 
     def __init__(self):
         """
@@ -104,10 +68,8 @@ class TrainTester:
             '4.2': {'success': 0, 'fail': 0}
         }
 
-    # --------------------------------------------------------
-    # UI 출력 헬퍼 메서드들
-    # --------------------------------------------------------
 
+    # UI 출력 헬퍼 메서드들
     def print_header(self, text):
         """예쁜 헤더를 출력합니다"""
         print(f"\n{Fore.CYAN}{'='*60}")
@@ -126,16 +88,11 @@ class TrainTester:
         """정보 메시지를 노란색으로 출력합니다"""
         print(f"{Fore.YELLOW}ℹ {text}{Style.RESET_ALL}")
 
-    # --------------------------------------------------------
-    # API 호출 메서드들
-    # --------------------------------------------------------
 
+    # API 호출 메서드들
     def login(self):
         """
-        백엔드 서버에 로그인하여 JWT 토큰을 획득합니다
-
-        Returns:
-            bool: 로그인 성공 여부
+        백엔드 서버에 로그인하여 JWT 토큰을 획득
         """
         self.print_header("로그인 시작")
 
@@ -173,14 +130,7 @@ class TrainTester:
 
     def start_stage(self, stage, total_problems):
         """
-        스테이지를 시작하고 세션 ID를 획득합니다
-
-        Args:
-            stage (str): 스테이지 번호 ('4.1' 또는 '4.2')
-            total_problems (int): 생성할 문제 개수
-
-        Returns:
-            str: 스테이지 세션 ID (실패 시 None)
+        스테이지를 시작하고 세션 ID를 획득
         """
         self.print_info(f"Stage {stage} 시작 중... (문제 수: {total_problems})")
 
@@ -242,19 +192,11 @@ class TrainTester:
 
     def get_problem_set(self, stage, count, stage_session_id):
         """
-        문제 세트를 생성합니다 (핵심 테스트 대상)
-
-        Args:
-            stage (str): 스테이지 번호 ('4.1' 또는 '4.2')
-            count (int): 생성할 문제 개수
-            stage_session_id (str): 스테이지 세션 ID
-
-        Returns:
-            list: 생성된 문제 리스트 (실패 시 None)
+        문제 세트를 생성
         """
         self.print_info(f"Stage {stage} 문제 생성 중... (개수: {count})")
 
-        # 응답 시간 측정 시작 - 이 부분이 Grafana에서 중요!
+        # 응답 시간 측정 시작 - 이 부분이 Grafana에서 중요
         start_time = time.time()
 
         try:
@@ -332,19 +274,7 @@ class TrainTester:
 
     def test_stage(self, stage, count):
         """
-        특정 스테이지의 전체 플로우를 테스트합니다
-
-        테스트 순서:
-        1. 스테이지 시작 (세션 ID 획득)
-        2. 문제 세트 생성
-        3. 성공률 메트릭 업데이트
-
-        Args:
-            stage (str): 스테이지 번호 ('4.1' 또는 '4.2')
-            count (int): 생성할 문제 개수
-
-        Returns:
-            bool: 테스트 성공 여부
+        특정 스테이지의 전체 플로우를 테스트
         """
         self.print_header(f"훈련 Stage {stage} 테스트")
 
@@ -353,7 +283,7 @@ class TrainTester:
         if not stage_session_id:
             return False
 
-        # 2단계: 문제 세트 생성 (핵심!)
+        # 2단계: 문제 세트 생성
         problems = self.get_problem_set(stage, count, stage_session_id)
         if not problems:
             return False
@@ -368,15 +298,11 @@ class TrainTester:
 
         return True
 
-    # --------------------------------------------------------
-    # 테스트 시나리오 메서드들
-    # --------------------------------------------------------
 
+    # 테스트 시나리오 메서드들
     def run_basic_test(self):
         """
         기본 기능 테스트: Stage 4.1과 4.2를 각각 1회씩 테스트
-
-        Grafana에서 API가 정상 작동하는지 확인하기 위한 테스트
         """
         self.print_header("기본 기능 테스트 시작")
 
@@ -390,11 +316,6 @@ class TrainTester:
     def run_load_test(self):
         """
         부하 테스트: API를 반복 호출하여 성능 측정
-
-        목적:
-        - 서버가 연속된 요청을 잘 처리하는지 확인
-        - 응답 시간의 변화 추이를 Grafana에서 관찰
-        - 메모리 누수, 성능 저하 등을 모니터링
         """
         self.print_header("부하 테스트 시작")
         iterations = config.TEST_CONFIG['load_test_iterations']
@@ -417,10 +338,7 @@ class TrainTester:
 
     def print_summary(self):
         """
-        테스트 결과 요약을 출력합니다
-
-        각 스테이지별 성공/실패 통계와
-        Grafana/Prometheus 접속 정보를 표시
+        테스트 결과 요약을 출력
         """
         self.print_header("테스트 결과 요약")
 
@@ -453,25 +371,12 @@ class TrainTester:
         print(f"  사용법: Prometheus 데이터소스에서 위 메트릭들을 쿼리하여 그래프 생성\n")
 
 
-# ============================================================
+
 # 메인 함수
-# ============================================================
 def main():
     """
     프로그램의 진입점
-
-    실행 순서:
-    1. Prometheus 메트릭 서버 시작
-    2. 사용자 로그인
-    3. 테스트 메뉴 표시 및 실행
     """
-    # 타이틀 출력
-    print(f"{Fore.CYAN}")
-    print("╔═══════════════════════════════════════════════════════════╗")
-    print("║     Reading Buddy - Stage 4 Monitoring Test Script      ║")
-    print("║              Grafana/Prometheus Integration              ║")
-    print("╚═══════════════════════════════════════════════════════════╝")
-    print(f"{Style.RESET_ALL}")
 
     # Prometheus 메트릭 서버 시작
     # 이 서버가 메트릭을 HTTP로 노출하면 Prometheus가 주기적으로 수집함
@@ -519,9 +424,7 @@ def main():
             print(f"{Fore.RED}잘못된 선택입니다. 다시 선택해주세요.{Style.RESET_ALL}")
 
 
-# ============================================================
 # 프로그램 시작
-# ============================================================
 if __name__ == '__main__':
     try:
         main()
