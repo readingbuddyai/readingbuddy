@@ -7,6 +7,7 @@ import com.readingbuddy.backend.domain.bkt.repository.TrainProblemHistoriesKcMap
 import com.readingbuddy.backend.domain.bkt.service.BktService;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.response.AttemptResponse;
+import com.readingbuddy.backend.domain.train.dto.response.LastPlayedStageResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageCompleteResponse;
 import com.readingbuddy.backend.domain.train.dto.response.StageStartResponse;
 import com.readingbuddy.backend.domain.train.dto.result.*;
@@ -232,5 +233,26 @@ public class TrainedStageService {
                 stageSessionInfo.getKcCandidateList().put(stage1_2Problem.getKcId(), stage1_2Problem.getCandidateList());
             }
         }
+    }
+
+    /**
+     * 마지막으로 플레이한 스테이지 조회
+     */
+    public LastPlayedStageResponse getLastPlayedStage(Long userId) {
+        TrainedStageHistories lastStage = trainedStageHistoriesRepository
+                .findFirstByUserIdOrderByStartedAtDesc(userId)
+                .orElse(null);
+
+        if (lastStage == null) {
+            return LastPlayedStageResponse.builder()
+                    .stage("마지막으로 플레이한 스테이지가 없습니다")
+                    .playedAt(null)
+                    .build();
+        }
+
+        return LastPlayedStageResponse.builder()
+                .stage(lastStage.getStage())
+                .playedAt(lastStage.getStartedAt())
+                .build();
     }
 }
