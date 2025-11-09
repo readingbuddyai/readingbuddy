@@ -132,8 +132,9 @@ public class TrainedStageService {
 
         // 저장한 session 업데이트
         // 시도 횟수가 커진다면, 전체 try count를 올립니다.
-        if (request.getAttemptNumber() > 1) stage.updateTryCount();
+        stage.updateTryCount();
         if (Boolean.TRUE.equals(request.getIsCorrect())) stage.updateCorrectCount();
+        else if (Boolean.FALSE.equals(request.getIsCorrect())) stage.updateWrongCount();
 
         return AttemptResponse.builder()
                 .attemptId(attempt.getId())
@@ -157,13 +158,11 @@ public class TrainedStageService {
         StageSessionInfo stageSessionInfo = trainManager.getStageSession(stageSessionId);
 
         if(stageSessionInfo==null){
-            throw new IllegalArgumentException("세션을 찾을 수 없습니다."+stageSessionId);
+            throw new IllegalArgumentException("세션을 찾을 수 없습니다." + stageSessionId);
         }
 
         TrainedStageHistories stage = trainedStageHistoriesRepository.findById(stageSessionInfo.getTrainedStageHistoriesId())
                 .orElseThrow(() -> new IllegalArgumentException("세션을 찾을 수 없습니다: " + stageSessionId));
-
-        stage.updateWrongCount();
 
         Set<Integer> voiceResult = stageSessionInfo.getIsProblemCorrect().keySet();
 
