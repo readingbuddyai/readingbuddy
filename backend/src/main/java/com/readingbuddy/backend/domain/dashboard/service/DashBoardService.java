@@ -101,37 +101,30 @@ public class DashBoardService {
     }
 
     /**
-     * 사용자별 해당 스테이지의 평균 시도 횟수 조회
+     * 사용자별 해당 스테이지의 problem_number별 평균 시도 횟수 조회
      * @param userId 사용자 ID
      * @param stage 스테이지 정보
-     * @return 스테이지 평균 시도 횟수
+     * @return 스테이지의 problem_number별 평균 시도 횟수
      */
     public StageTryAvgResponse getStageTryAverage(Long userId, String stage) {
-        // 해당 사용자의 특정 스테이지에 대한 모든 기록 조회
+        // 해당 사용자의 특정 스테이지에 대한 모든 기록 조회 (세션 수 계산용)
         List<TrainedStageHistories> histories = trainedStageHistoriesRepository.findByUserIdAndStage(userId, stage);
 
-        // 세션이 없는 경우
-        if (histories.isEmpty()) {
+        // problem_number별 평균 시도 횟수 조회
+        Double averageTryCount = trainedStageHistoriesRepository.getAverageTryCountPerProblem(userId, stage);
+
+        // 데이터가 없는 경우
+        if (averageTryCount == null) {
             return StageTryAvgResponse.builder()
                     .stage(stage)
                     .averageTryCount(0.0)
-                    .totalSessions(0)
+                    .totalSessions(histories.size())
                     .build();
         }
 
-        // 평균 계산
-        int totalTryCount = 0;
-        for (TrainedStageHistories history : histories) {
-            if (history.getTryCount() != null) {
-                totalTryCount += history.getTryCount();
-            }
-        }
-
-        double average = (double) totalTryCount / histories.size();
-
         return StageTryAvgResponse.builder()
                 .stage(stage)
-                .averageTryCount(Math.round(average * 100.0) / 100.0) // 소수점 2자리까지
+                .averageTryCount(Math.round(averageTryCount * 100.0) / 100.0) // 소수점 2자리까지
                 .totalSessions(histories.size())
                 .build();
     }
