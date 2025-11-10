@@ -57,7 +57,7 @@ public class TrainedStageService {
         TrainedStageHistories createStage = TrainedStageHistories.builder()
                 .user(user)
                 .stage(stage)
-                .problemCount(totalProblems)
+                .totalCount(totalProblems)
                 .correctCount(0)
                 .wrongCount(0)
                 .tryCount(0)
@@ -71,7 +71,7 @@ public class TrainedStageService {
         return StageStartResponse.builder()
                 .stageSessionId(stageSessionId)
                 .stage(createStage.getStage())
-                .totalProblems(createStage.getProblemCount())
+                .totalProblems(createStage.getTotalCount())
                 .startAt(createStage.getStartedAt())
                 .build();
     }
