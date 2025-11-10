@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.service;
 
+import com.readingbuddy.backend.common.util.function.HangulChecker;
 import com.readingbuddy.backend.domain.train.dto.response.VoiceCheckResponse;
 import com.readingbuddy.backend.domain.train.dto.result.StageSessionInfo;
 import lombok.RequiredArgsConstructor;
@@ -61,10 +62,9 @@ public class TrainManager {
         StageSessionInfo stageSessionInfo = stageSessions.get(stageSessionId);
 
         String path = "/check";
-        if (stage.matches("^1(\\.\\d+)*$")) path += "/jamo";
-        else if (stage.equals("2")) path += "/word";
-        else if (stage.equals("3")) path += "/syllable";
-        else if (stage.equals("4")) path += "/syllable";
+        if (HangulChecker.classify(target).equals("JAMO_ONLY")) path += "/jamo";
+        else if (HangulChecker.classify(target).equals("SYLLABLE_ONLY")) path += "/syllable";
+        else if (target.length() >= 2) path += "/word";
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         try {
