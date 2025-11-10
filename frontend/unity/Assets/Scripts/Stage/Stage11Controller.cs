@@ -36,6 +36,8 @@ using Stage.UI;
         [Header("API 설정")]
         public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
         public string stage = "1.1.1";
+        [Tooltip("stage/start, check/voice 등 2레벨 스테이지 파라미터가 필요한 요청에 사용됩니다. 비워두면 stage 값이 사용됩니다.")]
+        public string stageTwoPart = "1.1";
         public int count = 5;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰
@@ -58,7 +60,6 @@ using Stage.UI;
 
     [Header("Intro Tutorial")]
     public Sprite introTutorialImage;
-    public GameObject introTutorialMicIndicator;
     public List<IntroOption> introOptions = new List<IntroOption>();
     public IntroOptionCursor introOptionCursor;
     [Tooltip("튜토리얼 패널 연출용 컴포넌트 (선택)")]
@@ -123,10 +124,23 @@ using Stage.UI;
     public AudioClip sfxCorrectClip;     // [1.1.7.1] 완벽해!
     public AudioClip sfxWrongClip;       // [1.1.7.2] 아이쿠! 다시 한 번 집중해 볼까?
 
+    [Header("추가 학습 시나리오")]
+    public AudioClip clipRemedialNeedPractice;          // [1.1.8.1] 부족한 발음 안내
+    public AudioClip clipRemedialPracticeIntro;         // [1.1.8.1.1] 연습 제안
+    public AudioClip clipRemedialFirstEncourage;        // [1.1.8.1.2] 첫 번째 격려
+    public AudioClip clipRemedialSecondEncourage;       // [1.1.8.1.3] 두 번째 격려
+    public AudioClip clipRemedialPerfect;               // [1.1.8.2] 완벽 안내
+    public AudioClip clipRemedialNextLesson;            // [1.0.1] 다음 수업 안내
+    [Tooltip("격려 음성 이후 대기 시간(초). 아이의 응답을 기다리는 느낌을 줍니다.")]
+    public float remedialEncouragePauseSeconds = 3f;
+
+    [Header("추가 학습 리소스")]
+    [Tooltip("voiceResult 항목과 매칭될 보충 학습 리소스(이미지/오디오). key는 stage/complete 응답값과 비교합니다.")]
+    public List<RemedialPracticeResource> remedialResources = new List<RemedialPracticeResource>();
+
     [Header("마이크 설정")]
     public int recordSeconds = 3;        // 발음 녹음 시간
     public int recordSampleRate = 44100; // 발음 샘플레이트
-        public bool micDuringChoice = true;  // 선택 단계에서도 마이크 ON
         [Range(0,5)] public int maxWrongAttempts = 2; // 오답 허용 횟수 (기본 2)
 
         [Header("가이드 이미지(도입/전환 연출)")]
@@ -143,6 +157,9 @@ using Stage.UI;
         private Vector2 _guideFinalPos;
         private Vector2 _guideFinalSize;
         private int _currentProblemNumber = 0; // 현재 문제 번호 (attempt 로깅용)
+        private readonly List<string> _remedialPhonemes = new List<string>();
+        private readonly HashSet<string> _remedialPhonemeSet = new HashSet<string>(StringComparer.Ordinal);
+        private readonly List<QuestionDto> _lastQuestions = new List<QuestionDto>();
 #if ENABLE_INPUT_SYSTEM
         private AxisControl _rightTriggerAxis;
         private ButtonControl _rightTriggerButton;
@@ -232,6 +249,19 @@ using Stage.UI;
     }
 
     [Serializable]
+    public class RemedialPracticeResource
+    {
+        [Tooltip("stage/complete 응답의 voiceResult 항목과 매칭할 값 (예: phonemeId 혹은 'ㅏ')")]
+        public string key;
+        [Tooltip("보충 학습에 사용할 이미지(없으면 기존 문제 이미지 활용)")]
+        public Sprite image;
+        [Tooltip("보충 학습에 사용할 로컬 오디오 클립(없으면 remote URL 또는 기존 문제 음성 사용)")]
+        public AudioClip localAudioClip;
+        [Tooltip("보충 학습에 사용할 원격 오디오 URL(있을 경우 우선 사용)")]
+        public string remoteAudioUrl;
+    }
+
+    [Serializable]
     public class QuestionDto
     {
         public int id;            // fallback: 일부 응답에서 questionId 대신 id 사용 가능
@@ -313,13 +343,6 @@ using Stage.UI;
         return progressText;
     }
 
-    private void SetProgressLabel(int index, int total)
-    {
-        var t = EnsureProgressText();
-        if (!t) return;
-        t.text = $"{index} / {total}";
-    }
-
     private void TryApplyAutoLayout()
     {
         // 옵션 컨테이너: 화면 하단에 가로로 늘려 배치
@@ -371,6 +394,8 @@ using Stage.UI;
             mainImage.sprite = null;
         }
         // 0) 시작 효과음
+        _remedialPhonemes.Clear();
+        _lastQuestions.Clear();
         yield return PlayClip(sfxStart);
 
         // 0-1) 도입 대사 (가이드 이미지는 고정, 이동은 sfxNext 타이밍에 수행)
@@ -429,6 +454,10 @@ using Stage.UI;
                 }
             }
 
+            _lastQuestions.Clear();
+            if (questions != null)
+                _lastQuestions.AddRange(questions);
+
             for (int i = 0; i < questions.Count; i++)
             {
                 var q = questions[i];
@@ -450,6 +479,7 @@ using Stage.UI;
 
         // 세션 완료 보고 (best-effort)
         yield return CompleteStageSession();
+        yield return RunRemedialSequence();
         ShowEndModal();
     }
 
@@ -478,7 +508,12 @@ using Stage.UI;
         public QuestionSet data;
     }
 
-    // userId를 사용하지 않으므로 StartStageBody는 제거됨
+    [Serializable]
+    private class StartStageBody
+    {
+        public string stage;
+        public int totalProblems;
+    }
 
     [Serializable]
     private class StartStageData
@@ -498,16 +533,17 @@ using Stage.UI;
     }
 
     [Serializable]
-    private class CompleteStageBody
-    {
-        public string stageSessionId;
-    }
-
-    [Serializable]
     private class CompleteStageData
     {
         public string stageSessionId;
         public List<string> voiceResult;
+    }
+
+    [Serializable]
+    private class CompleteStageDataInt
+    {
+        public string stageSessionId;
+        public List<int> voiceResult;
     }
 
     [Serializable]
@@ -516,6 +552,83 @@ using Stage.UI;
         public bool success;
         public string message;
         public CompleteStageData data;
+    }
+
+    [Serializable]
+    private class CompleteStageResponseInt
+    {
+        public bool success;
+        public string message;
+        public CompleteStageDataInt data;
+    }
+
+    private void AddRemedialKeyInternal(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        string normalized = NormalizeRemedialKey(key);
+        if (string.IsNullOrEmpty(normalized))
+            return;
+
+        if (_remedialPhonemeSet.Add(normalized))
+            _remedialPhonemes.Add(normalized);
+    }
+
+    private void AddRemedialKeysForQuestion(QuestionDto question)
+    {
+        if (question == null)
+            return;
+
+        AddRemedialKeyInternal(question.value);
+        AddRemedialKeyInternal(question.unicode);
+
+        if (question.phonemeId != 0)
+            AddRemedialKeyInternal(question.phonemeId.ToString());
+
+        if (question.id != 0)
+            AddRemedialKeyInternal(question.id.ToString());
+
+        if (question.questionId != 0)
+            AddRemedialKeyInternal(question.questionId.ToString());
+    }
+
+    private bool AddRemedialKeyFromQuestionIndex(int questionIndex)
+    {
+        if (questionIndex <= 0)
+            return false;
+
+        if (_lastQuestions == null || _lastQuestions.Count == 0)
+        {
+            Debug.LogWarning($"[Stage11] voiceResult 인덱스 {questionIndex} 처리 실패: 저장된 문제가 없습니다.");
+            return false;
+        }
+
+        int arrayIndex = questionIndex - 1;
+        if (arrayIndex < 0 || arrayIndex >= _lastQuestions.Count)
+        {
+            Debug.LogWarning($"[Stage11] voiceResult 인덱스 {questionIndex} 처리 실패: 범위를 벗어났습니다(_lastQuestions.Count={_lastQuestions.Count}).");
+            return false;
+        }
+
+        AddRemedialKeysForQuestion(_lastQuestions[arrayIndex]);
+        return true;
+    }
+
+    private void AddRemedialKeyFromToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return;
+
+        token = token.Trim();
+
+        if (int.TryParse(token, out int indexToken))
+        {
+            if (AddRemedialKeyFromQuestionIndex(indexToken))
+                return;
+        }
+
+        AddRemedialKeyInternal(token);
     }
 
     // 일부 서버가 data를 문자열(JSON)로 감싸서 반환하는 경우 대응
@@ -538,15 +651,22 @@ using Stage.UI;
     private IEnumerator StartStageSession()
     {
         // Use query parameters (e.g., /api/train/stage/start?stage=1.1&totalProblems=5)
-        string stageParam = UnityWebRequest.EscapeURL(stage); // API가 전체 단계(1.1.1 등)를 요구
+        string stageParamSource = string.IsNullOrWhiteSpace(stageTwoPart) ? stage : stageTwoPart;
+        string stageParam = UnityWebRequest.EscapeURL(stageParamSource);
         string url = ComposeUrl($"/api/train/stage/start?stage={stageParam}&totalProblems={count}");
+        var payload = new StartStageBody
+        {
+            stage = stageParamSource,
+            totalProblems = Mathf.Max(1, count)
+        };
+        var payloadJson = JsonUtility.ToJson(payload);
+        var payloadBytes = Encoding.UTF8.GetBytes(payloadJson ?? "{}");
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
-            // No JSON body; parameters are in the query string
-            req.uploadHandler = null;
+            req.uploadHandler = new UploadHandlerRaw(payloadBytes);
             req.downloadHandler = new DownloadHandlerBuffer();
-            // No Content-Type needed without body
+            req.SetRequestHeader("Content-Type", "application/json");
             yield return req.SendWebRequest();
             if (req.result != UnityWebRequest.Result.Success)
             {
@@ -594,7 +714,49 @@ using Stage.UI;
                 Debug.LogWarning($"[Stage11] stage/complete 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={resp}");
                 yield break;
             }
-            Debug.Log("[Stage11] stage/complete OK");
+            var respText = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
+            Debug.Log($"[Stage11] stage/complete OK\nBody={respText}");
+            _remedialPhonemes.Clear();
+            _remedialPhonemeSet.Clear();
+            if (!string.IsNullOrWhiteSpace(respText))
+            {
+                try
+                {
+                    var resp = JsonUtility.FromJson<CompleteStageResponse>(respText);
+                    bool parsed = false;
+                    if (resp != null && resp.data != null && resp.data.voiceResult != null && resp.data.voiceResult.Count > 0)
+                    {
+                        foreach (var item in resp.data.voiceResult)
+                        {
+                            AddRemedialKeyFromToken(item);
+                        }
+                        parsed = true;
+                    }
+
+                    if (!parsed)
+                    {
+                        var respInt = JsonUtility.FromJson<CompleteStageResponseInt>(respText);
+                        if (respInt != null && respInt.data != null && respInt.data.voiceResult != null && respInt.data.voiceResult.Count > 0)
+                        {
+                            foreach (var item in respInt.data.voiceResult)
+                            {
+                                if (!AddRemedialKeyFromQuestionIndex(item))
+                                    AddRemedialKeyInternal(item.ToString());
+                            }
+                            parsed = true;
+                        }
+                    }
+
+                    if (parsed && _remedialPhonemes.Count > 0)
+                    {
+                        Debug.Log($"[Stage11] stage/complete voiceResult 수신: {_remedialPhonemes.Count}개");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[Stage11] stage/complete voiceResult 파싱 실패: {e.Message}\nRaw={respText}");
+                }
+            }
         }
     }
 
@@ -920,6 +1082,53 @@ using Stage.UI;
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
+    private static string NormalizeField(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        s = s.Trim();
+        try
+        {
+            s = Regex.Replace(s, @"\\u([0-9A-Fa-f]{4})", m =>
+            {
+                int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                return char.ConvertFromUtf32(code);
+            });
+            s = Regex.Replace(s, @"(?i)U\+([0-9A-Fa-f]{4,6})", m =>
+            {
+                int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                return char.ConvertFromUtf32(code);
+            });
+        }
+        catch { }
+        return s;
+    }
+
+    private static string NormalizeForCompare(string s)
+    {
+        s = NormalizeField(s);
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        try { s = s.Normalize(NormalizationForm.FormKC).Trim(); } catch { }
+        return s;
+    }
+
+    private string ComposeOptionLabel(OptionDto opt)
+    {
+        string uni = NormalizeField(opt != null ? (opt.unicode ?? string.Empty) : string.Empty);
+        string val = NormalizeField(opt != null ? (opt.value ?? string.Empty) : string.Empty);
+        switch (optionLabelMode)
+        {
+            case OptionLabelMode.UnicodeOnly:
+                return string.IsNullOrEmpty(uni) ? val : uni;
+            case OptionLabelMode.ValueOnly:
+                return string.IsNullOrEmpty(val) ? uni : val;
+            case OptionLabelMode.UnicodeThenValue:
+                return string.IsNullOrEmpty(uni) ? val : (string.IsNullOrEmpty(val) ? uni : ($"{uni} {val}"));
+            case OptionLabelMode.ValueThenUnicode:
+            default:
+                return string.IsNullOrEmpty(val) ? uni : (string.IsNullOrEmpty(uni) ? val : ($"{val} {uni}"));
+        }
+    }
+
     private IEnumerator RecordAndUpload(QuestionDto q)
     {
         // 마이크 녹음
@@ -933,15 +1142,15 @@ using Stage.UI;
         {
             Debug.LogWarning("[Stage11] stageSessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 stageSessionId를 발급받으세요.");
         }
-        // stage는 1.1.1 형태에서 앞의 두 자리만 요구됨(예: 1.1)
-        string stageForUpload = stage;
-        if (!string.IsNullOrEmpty(stage))
-        {
-            var parts = stage.Split('.');
-            if (parts.Length >= 2) stageForUpload = parts[0] + "." + parts[1];
-        }
+        // stage는 서버 요구 사항에 맞춰 전체(예: 1.1.1)로 전송
+        string stageForUpload = !string.IsNullOrWhiteSpace(stage) ? stage : stageTwoPart;
         int problemNumber = Mathf.Max(1, _currentProblemNumber);
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}";
+        string answerValue = ResolveAnswerValue(q);
+        string qs =
+            $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}" +
+            $"&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}" +
+            $"&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}" +
+            $"&answer={UnityWebRequest.EscapeURL(answerValue ?? string.Empty)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         var form = new WWWForm();
         // multipart 필드명은 audio
@@ -949,6 +1158,7 @@ using Stage.UI;
 
         using (var req = UnityWebRequest.Post(url, form))
         {
+            Debug.Log($"[Stage11] check/voice request\nURL={url}\nanswer={answerValue}\nwaveBytes={wav?.Length ?? 0}");
             ApplyCommonHeaders(req);
             // 일부 서버/프록시는 chunked 업로드를 거부합니다.
             req.chunkedTransfer = false;
@@ -960,7 +1170,8 @@ using Stage.UI;
             }
             else
             {
-                Debug.Log($"[Stage11] 업로드 완료: {req.downloadHandler.text}");
+                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.Log($"[Stage11] check/voice success\nBody={body}");
             }
         }
     }
@@ -973,17 +1184,10 @@ using Stage.UI;
             if (tokenTrim.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 tokenTrim = tokenTrim.Substring(7).Trim();
             req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
-            // 디버그: 토큰 길이만 로깅
+            // 디버그 
             Debug.Log($"[Stage11] Auth header attached (len={tokenTrim.Length})");
         }
         req.SetRequestHeader("Accept", "application/json");
-    }
-
-    private IEnumerator RecordBackgroundCoroutine(int seconds)
-    {
-        var clip = StartMic(seconds, recordSampleRate);
-        yield return new WaitForSeconds(seconds);
-        // 배경 녹음 결과는 사용하지 않음
     }
 
     private AudioClip StartMic(int seconds, int sampleRate)
@@ -1042,57 +1246,6 @@ using Stage.UI;
             if (match != null) correctPhonemeValue = NormalizeField(match.value);
         }
         if (string.IsNullOrEmpty(correctPhonemeValue)) correctPhonemeValue = NormalizeField(q.value);
-
-        // 서버가 보낸 문자열이 "U+XXXX" 또는 "\uXXXX" 형태일 수 있으므로
-        // 표시 및 비교 전에 실제 문자로 정규화한다.
-        string NormalizeField(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-            s = s.Trim();
-            try
-            {
-                // 1) \uXXXX 시퀀스들 디코딩
-                s = Regex.Replace(s, @"\\u([0-9A-Fa-f]{4})", m =>
-                {
-                    int code = Convert.ToInt32(m.Groups[1].Value, 16);
-                    return char.ConvertFromUtf32(code);
-                });
-                // 2) U+XXXX 또는 u+XXXX 패턴 디코딩
-                s = Regex.Replace(s, @"(?i)U\+([0-9A-Fa-f]{4,6})", m =>
-                {
-                    int code = Convert.ToInt32(m.Groups[1].Value, 16);
-                    return char.ConvertFromUtf32(code);
-                });
-            }
-            catch { }
-            return s;
-        }
-
-        string NormalizeForCompare(string s)
-        {
-            s = NormalizeField(s);
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-            try { s = s.Normalize(NormalizationForm.FormKC).Trim(); } catch { }
-            return s;
-        }
-
-        string ComposeOptionLabel(OptionDto opt)
-        {
-            string uni = NormalizeField(opt != null ? (opt.unicode ?? string.Empty) : string.Empty);
-            string val = NormalizeField(opt != null ? (opt.value ?? string.Empty) : string.Empty);
-            switch (optionLabelMode)
-            {
-                case OptionLabelMode.UnicodeOnly:
-                    return string.IsNullOrEmpty(uni) ? val : uni;
-                case OptionLabelMode.ValueOnly:
-                    return string.IsNullOrEmpty(val) ? uni : val;
-                case OptionLabelMode.UnicodeThenValue:
-                    return string.IsNullOrEmpty(uni) ? val : (string.IsNullOrEmpty(val) ? uni : ($"{uni} {val}"));
-                case OptionLabelMode.ValueThenUnicode:
-                default:
-                    return string.IsNullOrEmpty(val) ? uni : (string.IsNullOrEmpty(uni) ? val : ($"{val} {uni}"));
-            }
-        }
 
         void SetupOne(OptionDto opt)
         {
@@ -1197,6 +1350,41 @@ using Stage.UI;
         foreach (Transform child in optionsContainer)
             Destroy(child.gameObject);
         optionsContainer.gameObject.SetActive(false);
+    }
+
+    private string ResolveAnswerValue(QuestionDto q)
+    {
+        if (q == null) return string.Empty;
+        string normalized = NormalizeField(q.value);
+        if (!string.IsNullOrEmpty(normalized)) return normalized;
+
+        if (q.options != null && q.options.Count > 0)
+        {
+            OptionDto priority = null;
+            if (q.phonemeId != 0)
+            {
+                priority = q.options.FirstOrDefault(o => o != null && o.id == q.phonemeId);
+            }
+            if (priority == null)
+            {
+                priority = q.options.FirstOrDefault(o => o != null && !string.IsNullOrWhiteSpace(o.value));
+            }
+            if (priority == null)
+            {
+                priority = q.options.FirstOrDefault(o => o != null && !string.IsNullOrWhiteSpace(o.unicode));
+            }
+            if (priority != null)
+            {
+                string val = NormalizeField(priority.value);
+                if (!string.IsNullOrEmpty(val))
+                    return val;
+                string unicodeVal = NormalizeField(priority.unicode);
+                if (!string.IsNullOrEmpty(unicodeVal))
+                    return unicodeVal;
+            }
+        }
+
+        return string.Empty;
     }
 
     private void LateUpdate()
@@ -1729,6 +1917,206 @@ using Stage.UI;
             return true;
 
         return false;
+    }
+
+    private IEnumerator RunRemedialSequence()
+    {
+        bool hasRemedial = _remedialPhonemes != null && _remedialPhonemes.Count > 0;
+        if (!hasRemedial)
+        {
+            if (clipRemedialPerfect)
+                yield return PlayClip(clipRemedialPerfect);
+            if (clipRemedialNextLesson)
+                yield return PlayClip(clipRemedialNextLesson);
+            yield break;
+        }
+
+        if (clipRemedialNeedPractice)
+            yield return PlayClip(clipRemedialNeedPractice);
+
+        if (clipRemedialPracticeIntro)
+            yield return PlayClip(clipRemedialPracticeIntro);
+
+        for (int i = 0; i < _remedialPhonemes.Count; i++)
+        {
+            string phonemeKey = _remedialPhonemes[i];
+            var resource = ResolveRemedialResource(phonemeKey, out QuestionDto fallbackQuestion);
+            yield return ShowRemedialPractice(phonemeKey, resource, fallbackQuestion);
+
+            AudioClip encourageClip = null;
+            if (i == 0 && clipRemedialFirstEncourage)
+                encourageClip = clipRemedialFirstEncourage;
+            else if (clipRemedialSecondEncourage)
+                encourageClip = clipRemedialSecondEncourage;
+
+            if (encourageClip)
+            {
+                yield return PlayClip(encourageClip);
+                if (remedialEncouragePauseSeconds > 0f)
+                    yield return new WaitForSeconds(remedialEncouragePauseSeconds);
+            }
+        }
+
+        if (clipRemedialNextLesson)
+            yield return PlayClip(clipRemedialNextLesson);
+
+        if (mainImage)
+        {
+            mainImage.enabled = false;
+            mainImage.sprite = null;
+        }
+    }
+
+    private RemedialPracticeResource ResolveRemedialResource(string key, out QuestionDto matchedQuestion)
+    {
+        matchedQuestion = null;
+        string normalizedKey = NormalizeRemedialKey(key);
+        if (string.IsNullOrEmpty(normalizedKey))
+            return null;
+
+        RemedialPracticeResource foundResource = null;
+        if (remedialResources != null)
+        {
+            for (int i = 0; i < remedialResources.Count; i++)
+            {
+                var res = remedialResources[i];
+                if (res == null || string.IsNullOrWhiteSpace(res.key)) continue;
+                if (string.Equals(NormalizeRemedialKey(res.key), normalizedKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    foundResource = res;
+                    break;
+                }
+            }
+        }
+
+        if (_lastQuestions != null)
+        {
+            for (int i = 0; i < _lastQuestions.Count; i++)
+            {
+                var q = _lastQuestions[i];
+                if (q == null) continue;
+
+                if (!string.IsNullOrEmpty(q.value) && string.Equals(NormalizeRemedialKey(q.value), normalizedKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchedQuestion = q;
+                    break;
+                }
+                if (!string.IsNullOrEmpty(q.unicode) && string.Equals(NormalizeRemedialKey(q.unicode), normalizedKey, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchedQuestion = q;
+                    break;
+                }
+                if (q.phonemeId != 0 && string.Equals(q.phonemeId.ToString(), key, StringComparison.OrdinalIgnoreCase))
+                {
+                    matchedQuestion = q;
+                    break;
+                }
+                if (q.options != null)
+                {
+                    for (int oi = 0; oi < q.options.Count; oi++)
+                    {
+                        var opt = q.options[oi];
+                        if (opt == null) continue;
+                        if (!string.IsNullOrEmpty(opt.value) && string.Equals(NormalizeRemedialKey(opt.value), normalizedKey, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchedQuestion = q;
+                            break;
+                        }
+                        if (!string.IsNullOrEmpty(opt.unicode) && string.Equals(NormalizeRemedialKey(opt.unicode), normalizedKey, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchedQuestion = q;
+                            break;
+                        }
+                        if (opt.id != 0 && string.Equals(opt.id.ToString(), key, StringComparison.OrdinalIgnoreCase))
+                        {
+                            matchedQuestion = q;
+                            break;
+                        }
+                    }
+                }
+                if (matchedQuestion != null)
+                    break;
+            }
+        }
+
+        return foundResource;
+    }
+
+    private IEnumerator ShowRemedialPractice(string key, RemedialPracticeResource resource, QuestionDto fallbackQuestion)
+    {
+        if (verboseLogging)
+            Debug.Log($"[Stage11] Remedial practice start (key={key})");
+
+        if (progressText)
+            progressText.text = string.Empty;
+
+        if (mainImage)
+        {
+            if (resource != null && resource.image != null)
+            {
+                mainImage.sprite = resource.image;
+                mainImage.preserveAspect = true;
+                mainImage.enabled = true;
+            }
+            else if (fallbackQuestion != null && !string.IsNullOrEmpty(fallbackQuestion.imageUrl))
+            {
+                yield return LoadAndShowImage(fallbackQuestion.imageUrl);
+            }
+            else
+            {
+                mainImage.enabled = false;
+                mainImage.sprite = null;
+            }
+        }
+
+        bool audioPlayed = false;
+        if (resource != null)
+        {
+            if (!string.IsNullOrEmpty(resource.remoteAudioUrl))
+            {
+                yield return PlayVoiceUrl(resource.remoteAudioUrl);
+                audioPlayed = true;
+            }
+            else if (resource.localAudioClip)
+            {
+                yield return PlayClip(resource.localAudioClip);
+                audioPlayed = true;
+            }
+        }
+
+        if (!audioPlayed && fallbackQuestion != null && !string.IsNullOrEmpty(fallbackQuestion.voiceUrl))
+        {
+            yield return PlayVoiceUrl(fallbackQuestion.voiceUrl);
+            audioPlayed = true;
+        }
+
+        if (!audioPlayed)
+            yield return null;
+    }
+
+    private string NormalizeRemedialKey(string source)
+    {
+        if (string.IsNullOrWhiteSpace(source))
+            return string.Empty;
+
+        string s = source.Trim();
+        try
+        {
+            s = Regex.Replace(s, @"\\u([0-9A-Fa-f]{4})", m =>
+            {
+                int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                return char.ConvertFromUtf32(code);
+            });
+            s = Regex.Replace(s, @"(?i)U\+([0-9A-Fa-f]{4,6})", m =>
+            {
+                int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                return char.ConvertFromUtf32(code);
+            });
+        }
+        catch { }
+
+        try { s = s.Normalize(NormalizationForm.FormKC); } catch { }
+        return s;
     }
 
     private IEnumerator MoveCursorSmooth(Transform cursorTransform, RectTransform target, float moveSeconds, AnimationCurve curve)
