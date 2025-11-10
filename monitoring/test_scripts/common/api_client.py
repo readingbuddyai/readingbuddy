@@ -162,7 +162,7 @@ class TrainAPIClient:
             logger.error(f"문제 생성 중 오류: {str(e)}")
             return None
 
-    def submit_attempt(self, stage_session_id, stage, problem_number, answer, is_correct):
+    def submit_attempt(self, stage_session_id, stage, problem_number, attempt_number, answer, problem, is_correct):
         """
         문제 시도 결과를 서버에 기록
 
@@ -170,28 +170,47 @@ class TrainAPIClient:
             stage_session_id: 스테이지 세션 ID
             stage: 스테이지
             problem_number: 문제 번호
+            attempt_number: 시도 번호
             answer: 답안
+            problem: 문제 텍스트 (String)
             is_correct: 정답 여부
 
         Returns:
             bool: 성공 여부
         """
         try:
+            # 토큰 확인 (디버그)
+            if not self.token:
+                logger.error("토큰이 없습니다! 로그인을 먼저 해주세요.")
+                return False
+
+            # answer를 명시적으로 문자열로 변환
+            answer_str = str(answer) if answer is not None else ""
+
+            request_data = {
+                'stageSessionId': stage_session_id,
+                'stage': stage,
+                'problemNumber': problem_number,
+                'answer': answer_str,
+                'attemptNumber': attempt_number,
+                'problem': problem,
+                'isCorrect': is_correct
+            }
+
+            # 디버그: 전송할 데이터 로그
+            logger.info(f"submit_attempt 요청 데이터: {request_data}")
+            logger.info(f"answer 타입: {type(answer_str)}, 값: {answer_str}")
+
             response = self.session.post(
                 f"{self.base_url}/api/train/attempt",
-                json={
-                    'stageSessionId': stage_session_id,
-                    'stage': stage,
-                    'problemNumber': problem_number,
-                    'answer': answer,
-                    'isCorrect': is_correct
-                }
+                json=request_data
             )
 
             if response.status_code in [200, 201]:
                 return True
             else:
-                logger.error(f"시도 기록 실패: {response.status_code}")
+                logger.error(f"시도 기록 실패: {response.status_code} - {response.text}")
+                logger.error(f"Authorization 헤더: {self.session.headers.get('Authorization', 'MISSING')}")
                 return False
 
         except Exception as e:

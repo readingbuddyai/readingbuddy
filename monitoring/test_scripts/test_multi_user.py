@@ -100,9 +100,11 @@ class UserSimulator:
         for i, problem in enumerate(problems, 1):
             request_count += 1
             is_correct = random.random() < 0.8  # 80% 정답률
-            answer = problem.get('koreanChar', '')
+            answer = ""
+            problem_text = problem.get('problemWord', '')  # 문제 텍스트 (String)
 
-            if not self.client.submit_attempt(stage_session_id, stage, i, answer, is_correct):
+            print(problem)
+            if not self.client.submit_attempt(stage_session_id, stage, i, 1, answer, problem_text, is_correct):
                 failed_count += 1
 
         self.log('info', f"모든 문제 시도 완료 ({len(problems)}개)")

@@ -13,6 +13,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 빌드 트리거 (코드 변경 시 이 파일의 타임스탬프만 변경하면 됨)
+COPY .buildtrigger /tmp/.buildtrigger
+
 # 애플리케이션 코드 복사
 COPY . .
 

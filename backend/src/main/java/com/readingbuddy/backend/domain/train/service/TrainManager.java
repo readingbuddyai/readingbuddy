@@ -113,7 +113,10 @@ public class TrainManager {
                 Boolean isCorrect = (Boolean) responseMap.get("is_correct");
                 List<String> decomposed = (List<String>) responseMap.get("decoded_tokens");
 
-                // 세션 정보에 결과 저장
+                /**
+                 * 세션 정보에 저장
+                 * 반환값이 오면 그대로 저장하고, 없는 경우 false로 뜬다.
+                 */
                 if (stageSessionInfo != null) {
                     Map<Integer, Boolean> isProblemCorrect = stageSessionInfo.getIsProblemCorrect();
                     isProblemCorrect.put(problemNumber, isCorrect != null ? isCorrect : false);

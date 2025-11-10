@@ -96,13 +96,16 @@ class Stage4Tester:
             # 랜덤으로 정답/오답 결정 (80% 정답률)
             is_correct = random.random() < 0.8
             answer = problem.get('koreanChar', '')
+            problem_text = problem.get('koreanChar', '')  # 문제 텍스트 (String)
 
             start_time = time.time()
             success = self.client.submit_attempt(
                 stage_session_id=stage_session_id,
                 stage=stage,
                 problem_number=i,
+                attempt_number=1,
                 answer=answer,
+                problem=problem_text,
                 is_correct=is_correct
             )
             duration = time.time() - start_time
