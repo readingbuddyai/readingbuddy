@@ -644,8 +644,10 @@ public class Stage41Controller : MonoBehaviour
 
         var wav = WavUtility.FromAudioClip(clip);
         string targetAns0 = GetTargetPhonemeAnswer(segmentIndex);
+        Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns0}'");
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns0)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
+        Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
@@ -728,8 +730,10 @@ public class Stage41Controller : MonoBehaviour
 
         var wav = WavUtility.FromAudioClip(clip);
         string targetAns1 = GetTargetPhonemeAnswer(segmentIndex);
+        Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns1}'");
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns1)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
+        Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
