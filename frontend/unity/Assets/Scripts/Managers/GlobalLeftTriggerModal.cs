@@ -82,6 +82,17 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private void OnEnable()
+    {
+        SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        UpdateHomeButtonState();
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+    }
+
     private void Update()
     {
         bool pressed = IsLeftTriggerPressed();
@@ -106,6 +117,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         EnsureOverlay();
         if (_overlayRoot != null)
             _overlayRoot.SetActive(_visible);
+        UpdateHomeButtonState();
     }
 
     private void EnsureOverlay()
@@ -245,6 +257,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         // Sync UI state (label/icon) with audio state
         UpdateAudioVisual();
         UpdateHomeVisual();
+        UpdateHomeButtonState();
 
         _overlayRoot.SetActive(false);
     }
@@ -456,6 +469,21 @@ public class GlobalLeftTriggerModal : MonoBehaviour
                 target.preserveAspect = true;
             }
         }
+    }
+
+    private void OnActiveSceneChanged(Scene prev, Scene next)
+    {
+        UpdateHomeButtonState(next.name);
+    }
+
+    private void UpdateHomeButtonState(string currentSceneName = null)
+    {
+        if (_homeButton == null) return;
+        if (string.IsNullOrEmpty(currentSceneName))
+            currentSceneName = SceneManager.GetActiveScene().name;
+        var targetHome = string.IsNullOrEmpty(homeSceneName) ? "Home" : homeSceneName;
+        bool isHome = string.Equals(currentSceneName, targetHome, System.StringComparison.OrdinalIgnoreCase);
+        _homeButton.interactable = !isHome;
     }
 
     private static readonly System.Collections.Generic.List<InputDevice> _leftDevices = new System.Collections.Generic.List<InputDevice>();
