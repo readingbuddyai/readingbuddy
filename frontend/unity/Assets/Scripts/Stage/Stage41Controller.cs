@@ -647,7 +647,8 @@ public class Stage41Controller : MonoBehaviour
         Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns0}'");
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns0)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
-        Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
+        // Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
+        Debug.Log($"[Stage41] check/voice 요청 URL(한글): {System.Uri.UnescapeDataString(url)}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
@@ -734,6 +735,7 @@ public class Stage41Controller : MonoBehaviour
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns1)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
+        Debug.Log($"[Stage41] check/voice 요청 URL(한글): {System.Uri.UnescapeDataString(url)}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
