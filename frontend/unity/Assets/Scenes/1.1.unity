@@ -410,7 +410,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjY3Mjk5NiwiZXhwIjoxNzYyNzU5Mzk2fQ.N1f5K9IMQDQZtIkqZ757UBV_Mb0EG_tDSGucpaFaYJ32iAPOLm4Mfu2TA5QS-2oZ
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNzM1MzkyLCJleHAiOjE3NjI4MjE3OTJ9.wRi_frGM6rKm4Sck71kcRRJ7IL04f0upF79c8X4mr5B3u2SW6lS8v2pZgsa9KYdd
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -495,6 +495,13 @@ MonoBehaviour:
   questionVoiceDelaySeconds: 0.9
   sfxCorrectClip: {fileID: 8300000, guid: 0757437de9a7c424a9869a7b6b386cdf, type: 3}
   sfxWrongClip: {fileID: 8300000, guid: fb0fc48b45278db438780575aa69a766, type: 3}
+  clipRemedialNeedPractice: {fileID: 0}
+  clipRemedialPracticeIntro: {fileID: 0}
+  clipRemedialFirstEncourage: {fileID: 0}
+  clipRemedialSecondEncourage: {fileID: 0}
+  clipRemedialPerfect: {fileID: 0}
+  clipRemedialNextLesson: {fileID: 0}
+  remedialResources: []
   recordSeconds: 3
   recordSampleRate: 44100
   micDuringChoice: 1
