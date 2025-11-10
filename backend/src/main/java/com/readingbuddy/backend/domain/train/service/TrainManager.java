@@ -64,7 +64,7 @@ public class TrainManager {
         if (stage.matches("^1(\\.\\d+)*$")) path += "/jamo";
         else if (stage.equals("2")) path += "/word";
         else if (stage.equals("3")) path += "/syllable";
-        else if (stage.equals("4")) path += "/syllable";
+        else if (stage.equals("4.1") || stage.equals("4.2")) path += "/syllable";
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         try {
