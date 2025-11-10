@@ -409,8 +409,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
-  count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjY3Mjk5NiwiZXhwIjoxNzYyNzU5Mzk2fQ.N1f5K9IMQDQZtIkqZ757UBV_Mb0EG_tDSGucpaFaYJ32iAPOLm4Mfu2TA5QS-2oZ
+  stageTwoPart: 1.1
+  count: 3
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNzQ3OTM2LCJleHAiOjE3NjI4MzQzMzZ9.cePEt4vpdy3yWZw0q5cQsbR80dPCh1JWV3ne8eBWs71eZMl-7LogqjFD9gMIfxQz
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -420,7 +421,6 @@ MonoBehaviour:
   optionsContainer: {fileID: 211129656}
   optionButtonPrefab: {fileID: 3536607101297841266, guid: e5ad1b1348914c04b9a2fcfb5bcc51f2, type: 3}
   introTutorialImage: {fileID: 0}
-  introTutorialMicIndicator: {fileID: 182330385}
   introOptions:
   - label: "\u3157"
     isCorrect: 0
@@ -495,9 +495,15 @@ MonoBehaviour:
   questionVoiceDelaySeconds: 0.9
   sfxCorrectClip: {fileID: 8300000, guid: 0757437de9a7c424a9869a7b6b386cdf, type: 3}
   sfxWrongClip: {fileID: 8300000, guid: fb0fc48b45278db438780575aa69a766, type: 3}
+  clipRemedialNeedPractice: {fileID: 8300000, guid: 0e2bdc51c94f51741820f6a8204a0c6c, type: 3}
+  clipRemedialPracticeIntro: {fileID: 8300000, guid: 10759e915ec0a45458a4c765cb323842, type: 3}
+  clipRemedialFirstEncourage: {fileID: 8300000, guid: cf25973478c97a24989a7053ebdf65f8, type: 3}
+  clipRemedialSecondEncourage: {fileID: 8300000, guid: 795e177611e65654b990b15868cd5fad, type: 3}
+  clipRemedialPerfect: {fileID: 8300000, guid: 37b1849475249324097970721cb00f1c, type: 3}
+  clipRemedialNextLesson: {fileID: 8300000, guid: 9e7802724fb712944844813a2e183b67, type: 3}
+  remedialResources: []
   recordSeconds: 3
   recordSampleRate: 44100
-  micDuringChoice: 1
   maxWrongAttempts: 2
   guideImage: {fileID: 303755262}
   guideStartSize: {x: 1500, y: 1500}
