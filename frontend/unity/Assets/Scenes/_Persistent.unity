@@ -10848,6 +10848,7 @@ Transform:
   - {fileID: 1010385923}
   - {fileID: 806254726}
   - {fileID: 1599868704}
+  - {fileID: 661625647}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &706755742
@@ -10882,6 +10883,70 @@ Transform:
   - {fileID: 1509603342}
   m_Father: {fileID: 1514611355}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &661625646
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 661625647}
+  - component: {fileID: 661625648}
+  m_Layer: 0
+  m_Name: GlobalLeftTriggerModal
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &661625647
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 661625646}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 656887328}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &661625648
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 661625646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b88bcb9824b6b5a4fa6b3d37dc7d0cfe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  overlayColor: {r: 0, g: 0, b: 0, a: 0.6}
+  hintText: "\uC67C\uC190 \uD2B8\uB9AC\uAC70\uB97C \uB2E4\uC2DC \uB204\uB974\uBA74
+    \uB2EB\uD600\uC694"
+  uiFont: {fileID: 0}
+  useWorldSpaceForXR: 1
+  worldSpaceDistance: 1.25
+  worldSpaceSizeMeters: {x: 1.6, y: 0.9}
+  parentToCamera: 1
+  triggerPressThreshold: 0.6
+  toggleFallbackKey: 109
+  homeSceneName: Home
+  audioMutedSprite: {fileID: 21300000, guid: 23a354336ca94b94ab8b30c43f84b32b, type: 3}
+  audioUnmutedSprite: {fileID: 21300000, guid: 06321550d11a177479a9150c7b236f8a, type: 3}
+  audioIconTarget: {fileID: 0}
+  homeSprite: {fileID: 21300000, guid: 46d87d7e8c6733f44a3d13b405d88ce7, type: 3}
+  homeIconTarget: {fileID: 0}
+  overlayPrefab: {fileID: 0}
+  homeButtonRef: {fileID: 0}
+  audioButtonRef: {fileID: 0}
+  autoBuildUI: 1
 --- !u!1 &806254725
 GameObject:
   m_ObjectHideFlags: 0
@@ -21524,7 +21589,7 @@ MonoBehaviour:
   triggerClip: {fileID: 8300000, guid: d501d55d83e50ce498255d14a777315a, type: 3}
   thumbstickClip: {fileID: 8300000, guid: 079a13e7c625e2846904e5f95a49fa15, type: 3}
   enableTriggerHaptics: 1
-  triggerHapticsAmplitude: 0.6
+  triggerHapticsAmplitude: 0.545
   triggerHapticsDuration: 0.15
   thumbstickActivationThreshold: 0.35
   triggerFallbackKey: 32
@@ -21873,7 +21938,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &1691407331
 RectTransform:
   m_ObjectHideFlags: 0
