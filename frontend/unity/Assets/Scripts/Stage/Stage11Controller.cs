@@ -993,6 +993,53 @@ using Stage.UI;
         return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
+    private static string NormalizeField(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        s = s.Trim();
+        try
+        {
+            s = Regex.Replace(s, @"\\u([0-9A-Fa-f]{4})", m =>
+            {
+                int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                return char.ConvertFromUtf32(code);
+            });
+            s = Regex.Replace(s, @"(?i)U\+([0-9A-Fa-f]{4,6})", m =>
+            {
+                int code = Convert.ToInt32(m.Groups[1].Value, 16);
+                return char.ConvertFromUtf32(code);
+            });
+        }
+        catch { }
+        return s;
+    }
+
+    private static string NormalizeForCompare(string s)
+    {
+        s = NormalizeField(s);
+        if (string.IsNullOrEmpty(s)) return string.Empty;
+        try { s = s.Normalize(NormalizationForm.FormKC).Trim(); } catch { }
+        return s;
+    }
+
+    private string ComposeOptionLabel(OptionDto opt)
+    {
+        string uni = NormalizeField(opt != null ? (opt.unicode ?? string.Empty) : string.Empty);
+        string val = NormalizeField(opt != null ? (opt.value ?? string.Empty) : string.Empty);
+        switch (optionLabelMode)
+        {
+            case OptionLabelMode.UnicodeOnly:
+                return string.IsNullOrEmpty(uni) ? val : uni;
+            case OptionLabelMode.ValueOnly:
+                return string.IsNullOrEmpty(val) ? uni : val;
+            case OptionLabelMode.UnicodeThenValue:
+                return string.IsNullOrEmpty(uni) ? val : (string.IsNullOrEmpty(val) ? uni : ($"{uni} {val}"));
+            case OptionLabelMode.ValueThenUnicode:
+            default:
+                return string.IsNullOrEmpty(val) ? uni : (string.IsNullOrEmpty(uni) ? val : ($"{val} {uni}"));
+        }
+    }
+
     private IEnumerator RecordAndUpload(QuestionDto q)
     {
         // 마이크 녹음
@@ -1006,15 +1053,15 @@ using Stage.UI;
         {
             Debug.LogWarning("[Stage11] stageSessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 stageSessionId를 발급받으세요.");
         }
-        // stage는 1.1.1 형태에서 앞의 두 자리만 요구됨(예: 1.1)
-        string stageForUpload = stage;
-        if (!string.IsNullOrEmpty(stage))
-        {
-            var parts = stage.Split('.');
-            if (parts.Length >= 2) stageForUpload = parts[0] + "." + parts[1];
-        }
+        // stage는 서버 요구 사항에 맞춰 전체(예: 1.1.1)로 전송
+        string stageForUpload = !string.IsNullOrWhiteSpace(stage) ? stage : stageTwoPart;
         int problemNumber = Mathf.Max(1, _currentProblemNumber);
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}";
+        string answerValue = NormalizeField(q?.value);
+        string qs =
+            $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}" +
+            $"&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}" +
+            $"&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}" +
+            $"&answer={UnityWebRequest.EscapeURL(answerValue ?? string.Empty)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         var form = new WWWForm();
         // multipart 필드명은 audio
@@ -1115,57 +1162,6 @@ using Stage.UI;
             if (match != null) correctPhonemeValue = NormalizeField(match.value);
         }
         if (string.IsNullOrEmpty(correctPhonemeValue)) correctPhonemeValue = NormalizeField(q.value);
-
-        // 서버가 보낸 문자열이 "U+XXXX" 또는 "\uXXXX" 형태일 수 있으므로
-        // 표시 및 비교 전에 실제 문자로 정규화한다.
-        string NormalizeField(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-            s = s.Trim();
-            try
-            {
-                // 1) \uXXXX 시퀀스들 디코딩
-                s = Regex.Replace(s, @"\\u([0-9A-Fa-f]{4})", m =>
-                {
-                    int code = Convert.ToInt32(m.Groups[1].Value, 16);
-                    return char.ConvertFromUtf32(code);
-                });
-                // 2) U+XXXX 또는 u+XXXX 패턴 디코딩
-                s = Regex.Replace(s, @"(?i)U\+([0-9A-Fa-f]{4,6})", m =>
-                {
-                    int code = Convert.ToInt32(m.Groups[1].Value, 16);
-                    return char.ConvertFromUtf32(code);
-                });
-            }
-            catch { }
-            return s;
-        }
-
-        string NormalizeForCompare(string s)
-        {
-            s = NormalizeField(s);
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-            try { s = s.Normalize(NormalizationForm.FormKC).Trim(); } catch { }
-            return s;
-        }
-
-        string ComposeOptionLabel(OptionDto opt)
-        {
-            string uni = NormalizeField(opt != null ? (opt.unicode ?? string.Empty) : string.Empty);
-            string val = NormalizeField(opt != null ? (opt.value ?? string.Empty) : string.Empty);
-            switch (optionLabelMode)
-            {
-                case OptionLabelMode.UnicodeOnly:
-                    return string.IsNullOrEmpty(uni) ? val : uni;
-                case OptionLabelMode.ValueOnly:
-                    return string.IsNullOrEmpty(val) ? uni : val;
-                case OptionLabelMode.UnicodeThenValue:
-                    return string.IsNullOrEmpty(uni) ? val : (string.IsNullOrEmpty(val) ? uni : ($"{uni} {val}"));
-                case OptionLabelMode.ValueThenUnicode:
-                default:
-                    return string.IsNullOrEmpty(val) ? uni : (string.IsNullOrEmpty(uni) ? val : ($"{val} {uni}"));
-            }
-        }
 
         void SetupOne(OptionDto opt)
         {
