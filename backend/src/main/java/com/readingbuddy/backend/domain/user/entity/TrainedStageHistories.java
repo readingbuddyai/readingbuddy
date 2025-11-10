@@ -18,8 +18,6 @@ import java.time.LocalDateTime;
 @Getter
 public class TrainedStageHistories {
 
-    int TOTAL_COUNT = 5;
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
