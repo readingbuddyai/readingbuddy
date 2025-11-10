@@ -508,7 +508,7 @@ class TrainedStageServiceTest {
     // ===== completeStage 테스트 =====
 
     @Test
-    @DisplayName("completeStage - 정상 케이스: 스테이지 완료")
+    @DisplayName("completeStage - 정상 케이스: 스테이지 완료 (틀린 문제만 반환)")
     void completeStage_Success() {
         // given
         String stageSessionId = "session-123";
@@ -517,6 +517,8 @@ class TrainedStageServiceTest {
         isProblemCorrect.put(1, true);
         isProblemCorrect.put(2, false);
         isProblemCorrect.put(3, true);
+        isProblemCorrect.put(4, false);
+        isProblemCorrect.put(5, false);
 
         StageSessionInfo sessionInfo = StageSessionInfo.builder()
                 .trainedStageHistoriesId(1L)
@@ -535,7 +537,12 @@ class TrainedStageServiceTest {
         assertNotNull(response);
         assertEquals(stageSessionId, response.getStageSessionId());
         assertNotNull(response.getVoiceResult());
-        assertEquals(3, response.getVoiceResult().size());
+        assertEquals(3, response.getVoiceResult().size(), "틀린 문제는 2, 4, 5번");
+        assertTrue(response.getVoiceResult().contains(2), "2번 문제는 틀렸으므로 포함되어야 함");
+        assertTrue(response.getVoiceResult().contains(4), "4번 문제는 틀렸으므로 포함되어야 함");
+        assertTrue(response.getVoiceResult().contains(5), "5번 문제는 틀렸으므로 포함되어야 함");
+        assertFalse(response.getVoiceResult().contains(1), "1번 문제는 맞았으므로 포함되지 않아야 함");
+        assertFalse(response.getVoiceResult().contains(3), "3번 문제는 맞았으므로 포함되지 않아야 함");
 
         verify(trainManager, times(1)).getStageSession(stageSessionId);
         verify(trainedStageHistoriesRepository, times(1)).findById(1L);
@@ -558,6 +565,77 @@ class TrainedStageServiceTest {
 
         assertTrue(exception.getMessage().contains("세션을 찾을 수 없습니다"));
         verify(trainManager, times(1)).getStageSession(stageSessionId);
+    }
+
+    @Test
+    @DisplayName("completeStage - 모든 문제를 맞춘 경우 빈 Set 반환")
+    void completeStage_AllCorrect() {
+        // given
+        String stageSessionId = "session-123";
+
+        Map<Integer, Boolean> isProblemCorrect = new HashMap<>();
+        isProblemCorrect.put(1, true);
+        isProblemCorrect.put(2, true);
+        isProblemCorrect.put(3, true);
+
+        StageSessionInfo sessionInfo = StageSessionInfo.builder()
+                .trainedStageHistoriesId(1L)
+                .isProblemCorrect(isProblemCorrect)
+                .build();
+
+        when(trainManager.getStageSession(stageSessionId))
+                .thenReturn(sessionInfo);
+        when(trainedStageHistoriesRepository.findById(1L))
+                .thenReturn(Optional.of(testStageHistory));
+
+        // when
+        StageCompleteResponse response = trainedStageService.completeStage(stageSessionId);
+
+        // then
+        assertNotNull(response);
+        assertEquals(stageSessionId, response.getStageSessionId());
+        assertNotNull(response.getVoiceResult());
+        assertTrue(response.getVoiceResult().isEmpty(), "모든 문제를 맞췄으므로 빈 Set이어야 함");
+
+        verify(trainManager, times(1)).getStageSession(stageSessionId);
+        verify(trainedStageHistoriesRepository, times(1)).findById(1L);
+    }
+
+    @Test
+    @DisplayName("completeStage - 모든 문제를 틀린 경우 모든 문제 번호 반환")
+    void completeStage_AllWrong() {
+        // given
+        String stageSessionId = "session-123";
+
+        Map<Integer, Boolean> isProblemCorrect = new HashMap<>();
+        isProblemCorrect.put(1, false);
+        isProblemCorrect.put(2, false);
+        isProblemCorrect.put(3, false);
+
+        StageSessionInfo sessionInfo = StageSessionInfo.builder()
+                .trainedStageHistoriesId(1L)
+                .isProblemCorrect(isProblemCorrect)
+                .build();
+
+        when(trainManager.getStageSession(stageSessionId))
+                .thenReturn(sessionInfo);
+        when(trainedStageHistoriesRepository.findById(1L))
+                .thenReturn(Optional.of(testStageHistory));
+
+        // when
+        StageCompleteResponse response = trainedStageService.completeStage(stageSessionId);
+
+        // then
+        assertNotNull(response);
+        assertEquals(stageSessionId, response.getStageSessionId());
+        assertNotNull(response.getVoiceResult());
+        assertEquals(3, response.getVoiceResult().size(), "모든 문제를 틀렸으므로 3개 모두 반환");
+        assertTrue(response.getVoiceResult().contains(1));
+        assertTrue(response.getVoiceResult().contains(2));
+        assertTrue(response.getVoiceResult().contains(3));
+
+        verify(trainManager, times(1)).getStageSession(stageSessionId);
+        verify(trainedStageHistoriesRepository, times(1)).findById(1L);
     }
 
     // ===== saveProblemInfoToSession 테스트 =====
