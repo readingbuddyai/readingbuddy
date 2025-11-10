@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, Form, HTTPException
 from app.services.inference import transcribe_stream, normalize_target_to_jamo
 from app.services.utils_audio import detect_audio_format
+from app.services.phoneme_similarity import calculate_similarity_with_feedback
 from app.core.config import settings
 from app.schemas import JamoCheckResponse, SyllableCheckResponse, WordCheckResponse, ErrorResponse
 
@@ -40,7 +41,7 @@ def validate_audio_file(file: UploadFile):
 # =================================
 @router.post("/jamo", response_model=JamoCheckResponse, responses={400: {"model": ErrorResponse}})
 async def check_jamo(file: UploadFile, target: str = Form(...)):
-    """자모 단위 발음 검사"""
+    """자모 단위 발음 검사 (유사도 기반)"""
     validate_audio_file(file)
 
     if len(target) != 1:
@@ -51,9 +52,30 @@ async def check_jamo(file: UploadFile, target: str = Form(...)):
 
     # 자모를 리스트로 변환
     decoded_tokens = model_output.split()
-    is_correct = target in decoded_tokens
 
-    feedback = f"'{target}' 발음이 정확해요!" if is_correct else f"'{target}'로 인식되지 않았어요."
+    # 자모는 단일 토큰이므로 각 토큰과 비교
+    # 포함되어 있거나 유사한 것이 있는지 확인
+    from app.services.phoneme_similarity import get_phoneme_similarity
+
+    max_similarity = 0.0
+    for token in decoded_tokens:
+        sim = get_phoneme_similarity(target, token)
+        if sim > max_similarity:
+            max_similarity = sim
+
+    # 자모는 더 관대하게 (80% 이상)
+    is_correct = max_similarity >= 0.80
+
+    # 피드백 생성
+    if max_similarity >= 0.95:
+        feedback = f"완벽해요! '{target}' 발음이 정확해요!"
+    elif max_similarity >= 0.80:
+        feedback = f"잘했어요! '{target}'를 잘 발음했어요!"
+    elif max_similarity >= 0.60:
+        feedback = f"'{target}'와 비슷하게 들렸어요. 다시 한번 해볼까요?"
+    else:
+        feedback = f"'{target}'를 다시 한번 발음해보세요!"
+
     return JamoCheckResponse(
         type="jamo",
         target=target,
@@ -67,7 +89,7 @@ async def check_jamo(file: UploadFile, target: str = Form(...)):
 # =================================
 @router.post("/syllable", response_model=SyllableCheckResponse, responses={400: {"model": ErrorResponse}})
 async def check_syllable(file: UploadFile, target: str = Form(...)):
-    """음절 단위 발음 검사"""
+    """음절 단위 발음 검사 (유사도 기반)"""
     validate_audio_file(file)
 
     if len(target) != 1:
@@ -82,17 +104,20 @@ async def check_syllable(file: UploadFile, target: str = Form(...)):
     model_output = result["decoded_sequence"]
     decoded_tokens = model_output.split()
 
-    # 비교
-    is_correct = (target_jamo == model_output)
-    feedback = f"'{target}' 발음이 정확해요!" if is_correct else f"'{target}'의 발음이 달라요."
+    # 유사도 기반 평가
+    evaluation = calculate_similarity_with_feedback(
+        target_tokens=target_tokens,
+        decoded_tokens=decoded_tokens,
+        target_word=target
+    )
 
     return SyllableCheckResponse(
         type="syllable",
         target=target,
         decomposed=target_tokens,
         decoded_tokens=decoded_tokens,
-        is_correct=is_correct,
-        feedback=feedback,
+        is_correct=evaluation["is_correct"],
+        feedback=evaluation["feedback"],
     )
 
 # =================================
@@ -100,7 +125,7 @@ async def check_syllable(file: UploadFile, target: str = Form(...)):
 # =================================
 @router.post("/word", response_model=WordCheckResponse, responses={400: {"model": ErrorResponse}})
 async def check_word(file: UploadFile, target: str = Form(...)):
-    """단어 단위 발음 검사"""
+    """단어 단위 발음 검사 (유사도 기반)"""
     validate_audio_file(file)
 
     if not target or not all("가" <= ch <= "힣" or ch == " " for ch in target):
@@ -122,18 +147,22 @@ async def check_word(file: UploadFile, target: str = Form(...)):
     model_output = result["decoded_sequence"]
     decoded_tokens = model_output.split()
 
-    # 비교 (띄어쓰기 무시하고 비교)
-    target_no_space = target_jamo.replace("|", "").replace(" ", "").strip()
-    model_no_space = model_output.replace("|", "").replace(" ", "").strip()
-    is_correct = (target_no_space == model_no_space)
+    # 띄어쓰기 제거하고 비교용 토큰 생성
+    target_tokens = target_jamo.replace("|", " ").split()  # "|"를 공백으로 변환 후 split
+    target_tokens = [t for t in target_tokens if t]  # 빈 토큰 제거
 
-    feedback = f"'{target}' 발음이 정확해요!" if is_correct else f"'{target}' 발음이 달라요."
+    # 유사도 기반 평가
+    evaluation = calculate_similarity_with_feedback(
+        target_tokens=target_tokens,
+        decoded_tokens=decoded_tokens,
+        target_word=target
+    )
 
     return WordCheckResponse(
         type="word",
         target=target,
         syllables=syllables,
         decoded_tokens=decoded_tokens,
-        is_correct=is_correct,
-        feedback=feedback,
+        is_correct=evaluation["is_correct"],
+        feedback=evaluation["feedback"],
     )
