@@ -26,7 +26,7 @@ public class TrainedStageHistories {
     private String stage;
 
     @Column(nullable = false)
-    private Integer problemCount;
+    private Integer totalCount;
 
     @Column(nullable = false)
     private Integer correctCount;
