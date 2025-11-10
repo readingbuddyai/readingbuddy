@@ -410,7 +410,7 @@ MonoBehaviour:
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
   stageTwoPart: 1.1
-  count: 5
+  count: 3
   authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNzQ3OTM2LCJleHAiOjE3NjI4MzQzMzZ9.cePEt4vpdy3yWZw0q5cQsbR80dPCh1JWV3ne8eBWs71eZMl-7LogqjFD9gMIfxQz
   stageSessionId: 
   optionLabelMode: 1
@@ -495,12 +495,12 @@ MonoBehaviour:
   questionVoiceDelaySeconds: 0.9
   sfxCorrectClip: {fileID: 8300000, guid: 0757437de9a7c424a9869a7b6b386cdf, type: 3}
   sfxWrongClip: {fileID: 8300000, guid: fb0fc48b45278db438780575aa69a766, type: 3}
-  clipRemedialNeedPractice: {fileID: 0}
-  clipRemedialPracticeIntro: {fileID: 0}
-  clipRemedialFirstEncourage: {fileID: 0}
-  clipRemedialSecondEncourage: {fileID: 0}
-  clipRemedialPerfect: {fileID: 0}
-  clipRemedialNextLesson: {fileID: 0}
+  clipRemedialNeedPractice: {fileID: 8300000, guid: 0e2bdc51c94f51741820f6a8204a0c6c, type: 3}
+  clipRemedialPracticeIntro: {fileID: 8300000, guid: 10759e915ec0a45458a4c765cb323842, type: 3}
+  clipRemedialFirstEncourage: {fileID: 8300000, guid: cf25973478c97a24989a7053ebdf65f8, type: 3}
+  clipRemedialSecondEncourage: {fileID: 8300000, guid: 795e177611e65654b990b15868cd5fad, type: 3}
+  clipRemedialPerfect: {fileID: 8300000, guid: 37b1849475249324097970721cb00f1c, type: 3}
+  clipRemedialNextLesson: {fileID: 8300000, guid: 9e7802724fb712944844813a2e183b67, type: 3}
   remedialResources: []
   recordSeconds: 3
   recordSampleRate: 44100

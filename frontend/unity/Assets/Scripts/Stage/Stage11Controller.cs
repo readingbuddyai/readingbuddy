@@ -131,6 +131,8 @@ using Stage.UI;
     public AudioClip clipRemedialSecondEncourage;       // [1.1.8.1.3] 두 번째 격려
     public AudioClip clipRemedialPerfect;               // [1.1.8.2] 완벽 안내
     public AudioClip clipRemedialNextLesson;            // [1.0.1] 다음 수업 안내
+    [Tooltip("격려 음성 이후 대기 시간(초). 아이의 응답을 기다리는 느낌을 줍니다.")]
+    public float remedialEncouragePauseSeconds = 3f;
 
     [Header("추가 학습 리소스")]
     [Tooltip("voiceResult 항목과 매칭될 보충 학습 리소스(이미지/오디오). key는 stage/complete 응답값과 비교합니다.")]
@@ -156,6 +158,7 @@ using Stage.UI;
         private Vector2 _guideFinalSize;
         private int _currentProblemNumber = 0; // 현재 문제 번호 (attempt 로깅용)
         private readonly List<string> _remedialPhonemes = new List<string>();
+        private readonly HashSet<string> _remedialPhonemeSet = new HashSet<string>(StringComparer.Ordinal);
         private readonly List<QuestionDto> _lastQuestions = new List<QuestionDto>();
 #if ENABLE_INPUT_SYSTEM
         private AxisControl _rightTriggerAxis;
@@ -537,11 +540,95 @@ using Stage.UI;
     }
 
     [Serializable]
+    private class CompleteStageDataInt
+    {
+        public string stageSessionId;
+        public List<int> voiceResult;
+    }
+
+    [Serializable]
     private class CompleteStageResponse
     {
         public bool success;
         public string message;
         public CompleteStageData data;
+    }
+
+    [Serializable]
+    private class CompleteStageResponseInt
+    {
+        public bool success;
+        public string message;
+        public CompleteStageDataInt data;
+    }
+
+    private void AddRemedialKeyInternal(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        string normalized = NormalizeRemedialKey(key);
+        if (string.IsNullOrEmpty(normalized))
+            return;
+
+        if (_remedialPhonemeSet.Add(normalized))
+            _remedialPhonemes.Add(normalized);
+    }
+
+    private void AddRemedialKeysForQuestion(QuestionDto question)
+    {
+        if (question == null)
+            return;
+
+        AddRemedialKeyInternal(question.value);
+        AddRemedialKeyInternal(question.unicode);
+
+        if (question.phonemeId != 0)
+            AddRemedialKeyInternal(question.phonemeId.ToString());
+
+        if (question.id != 0)
+            AddRemedialKeyInternal(question.id.ToString());
+
+        if (question.questionId != 0)
+            AddRemedialKeyInternal(question.questionId.ToString());
+    }
+
+    private bool AddRemedialKeyFromQuestionIndex(int questionIndex)
+    {
+        if (questionIndex <= 0)
+            return false;
+
+        if (_lastQuestions == null || _lastQuestions.Count == 0)
+        {
+            Debug.LogWarning($"[Stage11] voiceResult 인덱스 {questionIndex} 처리 실패: 저장된 문제가 없습니다.");
+            return false;
+        }
+
+        int arrayIndex = questionIndex - 1;
+        if (arrayIndex < 0 || arrayIndex >= _lastQuestions.Count)
+        {
+            Debug.LogWarning($"[Stage11] voiceResult 인덱스 {questionIndex} 처리 실패: 범위를 벗어났습니다(_lastQuestions.Count={_lastQuestions.Count}).");
+            return false;
+        }
+
+        AddRemedialKeysForQuestion(_lastQuestions[arrayIndex]);
+        return true;
+    }
+
+    private void AddRemedialKeyFromToken(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            return;
+
+        token = token.Trim();
+
+        if (int.TryParse(token, out int indexToken))
+        {
+            if (AddRemedialKeyFromQuestionIndex(indexToken))
+                return;
+        }
+
+        AddRemedialKeyInternal(token);
     }
 
     // 일부 서버가 data를 문자열(JSON)로 감싸서 반환하는 경우 대응
@@ -630,22 +717,39 @@ using Stage.UI;
             var respText = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
             Debug.Log($"[Stage11] stage/complete OK\nBody={respText}");
             _remedialPhonemes.Clear();
+            _remedialPhonemeSet.Clear();
             if (!string.IsNullOrWhiteSpace(respText))
             {
                 try
                 {
                     var resp = JsonUtility.FromJson<CompleteStageResponse>(respText);
-                    if (resp != null && resp.data != null && resp.data.voiceResult != null)
+                    bool parsed = false;
+                    if (resp != null && resp.data != null && resp.data.voiceResult != null && resp.data.voiceResult.Count > 0)
                     {
                         foreach (var item in resp.data.voiceResult)
                         {
-                            if (string.IsNullOrWhiteSpace(item)) continue;
-                            _remedialPhonemes.Add(item.Trim());
+                            AddRemedialKeyFromToken(item);
                         }
-                        if (_remedialPhonemes.Count > 0)
+                        parsed = true;
+                    }
+
+                    if (!parsed)
+                    {
+                        var respInt = JsonUtility.FromJson<CompleteStageResponseInt>(respText);
+                        if (respInt != null && respInt.data != null && respInt.data.voiceResult != null && respInt.data.voiceResult.Count > 0)
                         {
-                            Debug.Log($"[Stage11] stage/complete voiceResult 수신: {_remedialPhonemes.Count}개");
+                            foreach (var item in respInt.data.voiceResult)
+                            {
+                                if (!AddRemedialKeyFromQuestionIndex(item))
+                                    AddRemedialKeyInternal(item.ToString());
+                            }
+                            parsed = true;
                         }
+                    }
+
+                    if (parsed && _remedialPhonemes.Count > 0)
+                    {
+                        Debug.Log($"[Stage11] stage/complete voiceResult 수신: {_remedialPhonemes.Count}개");
                     }
                 }
                 catch (Exception e)
@@ -1846,7 +1950,11 @@ using Stage.UI;
                 encourageClip = clipRemedialSecondEncourage;
 
             if (encourageClip)
+            {
                 yield return PlayClip(encourageClip);
+                if (remedialEncouragePauseSeconds > 0f)
+                    yield return new WaitForSeconds(remedialEncouragePauseSeconds);
+            }
         }
 
         if (clipRemedialNextLesson)
