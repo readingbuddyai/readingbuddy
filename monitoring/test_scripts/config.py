@@ -3,7 +3,8 @@ BASE_URL = "http://localhost:8080"
 # 테스트 계정 정보
 TEST_USER = {
     "email": "user@example.com",
-    "password": "password!@123" 
+    "password": "password!@123",
+    "nickname": "testuser"
 }
 
 # 테스트 설정

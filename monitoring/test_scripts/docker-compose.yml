@@ -1,0 +1,49 @@
+services:
+  # 단일 유저 테스트
+  test-single-user:
+    build: .
+    container_name: test-single-user
+    environment:
+      - BASE_URL=${BASE_URL:-http://host.docker.internal:8080}
+    command: python -u test_stage4_full.py
+    stdin_open: true    # -i 옵션 (인터랙티브)
+    tty: true          # -t 옵션 (터미널)
+    networks:
+      - test-network
+    profiles:
+      - single
+
+  # 멀티 유저 부하 테스트
+  test-multi-user:
+    build: .
+    container_name: test-multi-user
+    environment:
+      - BASE_URL=${BASE_URL:-http://host.docker.internal:8080}
+    command: python -u test_multi_user.py
+    stdin_open: true
+    tty: true
+    networks:
+      - test-network
+    profiles:
+      - multi
+
+  # 자동 부하 테스트 (비인터랙티브)
+  test-load-auto:
+    build: .
+    container_name: test-load-auto
+    environment:
+      - BASE_URL=${BASE_URL:-http://host.docker.internal:8080}
+      - NUM_USERS=${NUM_USERS:-20}
+      - MAX_WORKERS=${MAX_WORKERS:-10}
+      - STAGE=${STAGE:-4.1}
+      - PROBLEM_COUNT=${PROBLEM_COUNT:-5}
+      - AUTO_SIGNUP=${AUTO_SIGNUP:-true}
+    command: python -u run_auto_test.py
+    networks:
+      - test-network
+    profiles:
+      - auto
+
+networks:
+  test-network:
+    driver: bridge
