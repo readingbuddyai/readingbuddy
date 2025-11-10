@@ -60,7 +60,6 @@ using Stage.UI;
 
     [Header("Intro Tutorial")]
     public Sprite introTutorialImage;
-    public GameObject introTutorialMicIndicator;
     public List<IntroOption> introOptions = new List<IntroOption>();
     public IntroOptionCursor introOptionCursor;
     [Tooltip("튜토리얼 패널 연출용 컴포넌트 (선택)")]
@@ -140,7 +139,6 @@ using Stage.UI;
     [Header("마이크 설정")]
     public int recordSeconds = 3;        // 발음 녹음 시간
     public int recordSampleRate = 44100; // 발음 샘플레이트
-        public bool micDuringChoice = true;  // 선택 단계에서도 마이크 ON
         [Range(0,5)] public int maxWrongAttempts = 2; // 오답 허용 횟수 (기본 2)
 
         [Header("가이드 이미지(도입/전환 연출)")]
@@ -342,13 +340,6 @@ using Stage.UI;
         return progressText;
     }
 
-    private void SetProgressLabel(int index, int total)
-    {
-        var t = EnsureProgressText();
-        if (!t) return;
-        t.text = $"{index} / {total}";
-    }
-
     private void TryApplyAutoLayout()
     {
         // 옵션 컨테이너: 화면 하단에 가로로 늘려 배치
@@ -539,12 +530,6 @@ using Stage.UI;
     }
 
     [Serializable]
-    private class CompleteStageBody
-    {
-        public string stageSessionId;
-    }
-
-    [Serializable]
     private class CompleteStageData
     {
         public string stageSessionId;
@@ -643,7 +628,7 @@ using Stage.UI;
                 yield break;
             }
             var respText = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
-            Debug.Log("[Stage11] stage/complete OK");
+            Debug.Log($"[Stage11] stage/complete OK\nBody={respText}");
             _remedialPhonemes.Clear();
             if (!string.IsNullOrWhiteSpace(respText))
             {
@@ -1056,7 +1041,7 @@ using Stage.UI;
         // stage는 서버 요구 사항에 맞춰 전체(예: 1.1.1)로 전송
         string stageForUpload = !string.IsNullOrWhiteSpace(stage) ? stage : stageTwoPart;
         int problemNumber = Mathf.Max(1, _currentProblemNumber);
-        string answerValue = NormalizeField(q?.value);
+        string answerValue = ResolveAnswerValue(q);
         string qs =
             $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}" +
             $"&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}" +
@@ -1069,6 +1054,7 @@ using Stage.UI;
 
         using (var req = UnityWebRequest.Post(url, form))
         {
+            Debug.Log($"[Stage11] check/voice request\nURL={url}\nanswer={answerValue}\nwaveBytes={wav?.Length ?? 0}");
             ApplyCommonHeaders(req);
             // 일부 서버/프록시는 chunked 업로드를 거부합니다.
             req.chunkedTransfer = false;
@@ -1080,7 +1066,8 @@ using Stage.UI;
             }
             else
             {
-                Debug.Log($"[Stage11] 업로드 완료: {req.downloadHandler.text}");
+                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
+                Debug.Log($"[Stage11] check/voice success\nBody={body}");
             }
         }
     }
@@ -1093,17 +1080,10 @@ using Stage.UI;
             if (tokenTrim.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 tokenTrim = tokenTrim.Substring(7).Trim();
             req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
-            // 디버그: 토큰 길이만 로깅
+            // 디버그 
             Debug.Log($"[Stage11] Auth header attached (len={tokenTrim.Length})");
         }
         req.SetRequestHeader("Accept", "application/json");
-    }
-
-    private IEnumerator RecordBackgroundCoroutine(int seconds)
-    {
-        var clip = StartMic(seconds, recordSampleRate);
-        yield return new WaitForSeconds(seconds);
-        // 배경 녹음 결과는 사용하지 않음
     }
 
     private AudioClip StartMic(int seconds, int sampleRate)
@@ -1266,6 +1246,41 @@ using Stage.UI;
         foreach (Transform child in optionsContainer)
             Destroy(child.gameObject);
         optionsContainer.gameObject.SetActive(false);
+    }
+
+    private string ResolveAnswerValue(QuestionDto q)
+    {
+        if (q == null) return string.Empty;
+        string normalized = NormalizeField(q.value);
+        if (!string.IsNullOrEmpty(normalized)) return normalized;
+
+        if (q.options != null && q.options.Count > 0)
+        {
+            OptionDto priority = null;
+            if (q.phonemeId != 0)
+            {
+                priority = q.options.FirstOrDefault(o => o != null && o.id == q.phonemeId);
+            }
+            if (priority == null)
+            {
+                priority = q.options.FirstOrDefault(o => o != null && !string.IsNullOrWhiteSpace(o.value));
+            }
+            if (priority == null)
+            {
+                priority = q.options.FirstOrDefault(o => o != null && !string.IsNullOrWhiteSpace(o.unicode));
+            }
+            if (priority != null)
+            {
+                string val = NormalizeField(priority.value);
+                if (!string.IsNullOrEmpty(val))
+                    return val;
+                string unicodeVal = NormalizeField(priority.unicode);
+                if (!string.IsNullOrEmpty(unicodeVal))
+                    return unicodeVal;
+            }
+        }
+
+        return string.Empty;
     }
 
     private void LateUpdate()

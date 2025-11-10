@@ -421,7 +421,6 @@ MonoBehaviour:
   optionsContainer: {fileID: 211129656}
   optionButtonPrefab: {fileID: 3536607101297841266, guid: e5ad1b1348914c04b9a2fcfb5bcc51f2, type: 3}
   introTutorialImage: {fileID: 0}
-  introTutorialMicIndicator: {fileID: 182330385}
   introOptions:
   - label: "\u3157"
     isCorrect: 0
@@ -505,7 +504,6 @@ MonoBehaviour:
   remedialResources: []
   recordSeconds: 3
   recordSampleRate: 44100
-  micDuringChoice: 1
   maxWrongAttempts: 2
   guideImage: {fileID: 303755262}
   guideStartSize: {x: 1500, y: 1500}
