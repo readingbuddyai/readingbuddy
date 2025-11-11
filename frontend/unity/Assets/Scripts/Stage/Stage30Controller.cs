@@ -2,27 +2,38 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
 
+/// <summary>
+/// Stage 2.2 진행 컨트롤러 (마법 돌 퍼즐 - 확장)
+/// Stage11/Stage12와 동일한 책임 분리를 적용하여
+/// 세션/오디오/문항 관리 로직을 공통 컨트롤러에 위임한다.
+/// </summary>
 public class Stage30Controller : MonoBehaviour
 {
     [Header("API 설정")]
     public string baseUrl = "";
-    public string stage = "2";
+    [Tooltip("문제 세트 조회에 사용할 stage 값 (예: 1.2.2)")]
+    public string stage = "1.2.2";
+    [Tooltip("stage/start · check/voice 등 2단계 스테이지 값 (예: 2.2)")]
+    public string stageTwoPart = "2.2";
     public int count = 5;
     [Tooltip("Authorization: Bearer {token}")]
     public string authToken = "";
-    [Tooltip("stage/start 호출을 건너뛰려면 켜 두세요")]
-    public bool bypassStageStart = false;
-    [Tooltip("디버그 로그를 상세히 출력합니다")]
-    public bool verboseLogging = false;
 
-    private string stageSessionId;
+    [Header("세션")]
+    [Tooltip("stage/start 응답의 stageSessionId. 미설정 시 자동 발급을 시도합니다.")]
+    public string stageSessionId = "";
+    [Tooltip("/api/train/stage/start 요청을 건너뛰고 문제 GET만 진행합니다.")]
+    public bool bypassStartRequest = false;
+    [Tooltip("음성 녹음 및 /api/train/check/voice 업로드를 건너뜁니다.")]
+    public bool bypassVoiceUpload = false;
+    [Tooltip("자세한 로그를 출력합니다.")]
+    public bool verboseLogging = false;
 
     [Header("UI 참조")]
     public Text progressText;
@@ -34,27 +45,23 @@ public class Stage30Controller : MonoBehaviour
     public AudioClip sfxStart;
     public AudioClip sfxNext;
 
-    [Header("마이크 설정")]
-    public int recordSeconds = 3;
-    public int recordSampleRate = 44100;
-
     [Header("도입 대사")]
-    public AudioClip clipGreeting;                      // "안녕~! 꼬마 마법사!"
-    public AudioClip clipLessonIntro;                   // [3.1]
-    public AudioClip clipRecallPreviousLesson;          // [3.2]
-    public AudioClip clipExplainPhonemeMagic;           // [3.3]
-    public AudioClip clipInstructionListenCarefully;    // [3.4.1]
-    public AudioClip clipInstructionHiddenPieces;       // [3.4.2]
-    public AudioClip clipInstructionMoveStones;         // [3.5]
+    public AudioClip clipGreeting;
+    public AudioClip clipLessonIntro;
+    public AudioClip clipRecallPreviousLesson;
+    public AudioClip clipExplainPhonemeMagic;
+    public AudioClip clipInstructionListenCarefully;
+    public AudioClip clipInstructionHiddenPieces;
+    public AudioClip clipInstructionMoveStones;
 
     [Header("문항 흐름 대사")]
-    public AudioClip clipTeacherChant;                  // [3.6]
-    public AudioClip clipPromptYourTurn;                // [3.7]
-    public AudioClip clipPromptRepeat;                  // [3.8]
-    public AudioClip clipPraisePrecision;               // [3.9]
-    public AudioClip clipPromptCountStones;             // [3.10]
-    public AudioClip clipCorrectCelebration;            // [3.11.1]
-    public AudioClip clipRetryEncourageAttempt;         // [3.11.2]
+    public AudioClip clipTeacherChant;
+    public AudioClip clipPromptYourTurn;
+    public AudioClip clipPromptRepeat;
+    public AudioClip clipPraisePrecision;
+    public AudioClip clipPromptCountStones;
+    public AudioClip clipCorrectCelebration;
+    public AudioClip clipRetryEncourageAttempt;
 
     [Header("마법 돌 퍼즐")]
     public GameObject stoneBoard;
@@ -62,7 +69,7 @@ public class Stage30Controller : MonoBehaviour
     public float countdownSeconds = 10f;
     public int maxStoneAttempts = 2;
 
-    [System.Serializable]
+    [Serializable]
     public class IntUnityEvent : UnityEvent<int> { }
 
     public IntUnityEvent onStoneRoundBegin;
@@ -71,15 +78,20 @@ public class Stage30Controller : MonoBehaviour
     public bool autoStartCountdown = true;
 
     [Header("발음 피드백")]
-    public AudioClip clipFeedbackLackSense;             // [3.12.1]
-    public AudioClip clipFeedbackRetryPrompt;           // [3.12.2]
-    public AudioClip clipFeedbackTryAgainFirst;         // [3.12.3.1]
-    public AudioClip clipFeedbackTryAgainSecond;        // [3.12.3.2]
-    public AudioClip clipFeedbackGreatJob;              // [3.13]
-    public AudioClip clipFinalEncouragement;            // [3.14]
+    public AudioClip clipFeedbackLackSense;
+    public AudioClip clipFeedbackRetryPrompt;
+    public AudioClip clipFeedbackTryAgainFirst;
+    public AudioClip clipFeedbackTryAgainSecond;
+    public AudioClip clipFeedbackGreatJob;
+    public AudioClip clipFinalEncouragement;
 
-    private bool waitingForStoneCount;
-    private int? pendingStoneCount;
+    private StageSessionController _sessionController;
+    private StageAudioController _audioController;
+    private StageAudioDependencies _audioDependencies;
+    private readonly StageQuestionController<Problem> _questionController = new StageQuestionController<Problem>();
+
+    private bool _waitingForStoneCount;
+    private int? _pendingStoneCount;
     private int _currentProblemNumber;
 
     private readonly List<PronunciationFeedback> _accumulatedFeedback = new List<PronunciationFeedback>();
@@ -89,46 +101,110 @@ public class Stage30Controller : MonoBehaviour
     {
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
         authToken = EnvConfig.ResolveAuthToken(authToken);
+        ConfigureSessionController();
+        ConfigureAudioController();
         ResetStoneUI();
         StartCoroutine(RunStage());
     }
 
+    private void ConfigureSessionController()
+    {
+        if (_sessionController == null)
+            _sessionController = new StageSessionController();
+
+        _sessionController.Configure(baseUrl, authToken);
+        _sessionController.Log = verboseLogging ? (Action<string>)Debug.Log : null;
+        _sessionController.LogWarning = Debug.LogWarning;
+        _sessionController.LogError = Debug.LogError;
+    }
+
+    private StageSessionController GetSessionController()
+    {
+        if (_sessionController == null)
+            ConfigureSessionController();
+        return _sessionController;
+    }
+
+    private void ConfigureAudioController()
+    {
+        if (_audioController == null)
+            _audioController = new StageAudioController();
+
+        if (_audioDependencies == null)
+            _audioDependencies = new StageAudioDependencies();
+
+        _audioDependencies.AudioSource = audioSource;
+        _audioDependencies.Log = verboseLogging ? (Action<string>)Debug.Log : null;
+        _audioDependencies.LogWarning = Debug.LogWarning;
+
+        _audioController.Initialize(_audioDependencies);
+    }
+
     private IEnumerator RunStage()
     {
-        if (!bypassStageStart)
+        var sessionController = GetSessionController();
+
+        if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
         {
-            yield return StageStart();
-            if (string.IsNullOrWhiteSpace(stageSessionId))
+            StageSessionController.StageStartResult startResult = null;
+            yield return sessionController.StartStageSession(
+                string.IsNullOrWhiteSpace(stageTwoPart) ? stage : stageTwoPart,
+                Mathf.Max(1, count),
+                r => startResult = r);
+
+            if (startResult == null || !startResult.Success || string.IsNullOrWhiteSpace(startResult.StageSessionId))
             {
-                Debug.LogError("[Stage30] stageSessionId를 가져오지 못했습니다. 진행을 중단합니다.");
+                Debug.LogError("[Stage30] stage/start 호출에 실패했습니다. 진행을 중단합니다.");
                 yield break;
             }
+
+            stageSessionId = startResult.StageSessionId;
+            if (verboseLogging)
+                Debug.Log($"[Stage30] stageSessionId 발급: {stageSessionId}");
         }
 
         if (sfxStart) yield return PlayClip(sfxStart);
         yield return RunIntroSequence();
 
-        List<QuestionDto> questions = null;
-        yield return StartCoroutine(FetchQuestions(result => questions = result));
+        List<Problem> problems = null;
+        yield return FetchProblems(sessionController, result => problems = result);
 
-        if (questions != null && questions.Count > 0)
+        if (problems == null || problems.Count == 0)
         {
-            for (int i = 0; i < questions.Count; i++)
+            Debug.LogError("[Stage30] 문제 데이터를 가져오지 못했습니다.");
+            yield break;
+        }
+
+        _questionController.SetQuestions(problems);
+
+        int totalQuestions = _questionController.Count;
+        for (int i = 0; i < totalQuestions; i++)
+        {
+            _questionController.SetCurrentQuestionNumber(i + 1);
+            var problem = _questionController.GetQuestionByNumber(i + 1);
+            yield return RunOneProblem(i + 1, totalQuestions, problem);
+
+            if (i < totalQuestions - 1 && sfxNext)
+                yield return PlayClip(sfxNext);
+        }
+
+        yield return ProcessAccumulatedFeedback();
+
+        if (!bypassStartRequest && !string.IsNullOrWhiteSpace(stageSessionId))
+        {
+            StageSessionController.StageCompleteResult completeResult = null;
+            yield return sessionController.CompleteStageSession(stageSessionId, r => completeResult = r);
+
+            if (completeResult != null && completeResult.VoiceResultTokens.Count > 0)
             {
-                yield return RunOneProblem(i + 1, questions.Count, questions[i]);
-
-                if (sfxNext && i < questions.Count - 1)
-                    yield return PlayClip(sfxNext);
+                foreach (var token in completeResult.VoiceResultTokens)
+                    CollectFeedback(token);
+                yield return ProcessAccumulatedFeedback();
             }
-
-            yield return ProcessAccumulatedFeedback();
         }
 
         if (clipFinalEncouragement)
             yield return PlayClip(clipFinalEncouragement);
-
-        if (!bypassStageStart && !string.IsNullOrWhiteSpace(stageSessionId))
-            yield return StageComplete();
     }
 
     private IEnumerator RunIntroSequence()
@@ -142,7 +218,7 @@ public class Stage30Controller : MonoBehaviour
         if (clipInstructionMoveStones) yield return PlayClip(clipInstructionMoveStones);
     }
 
-    private IEnumerator RunOneProblem(int index, int total, QuestionDto problem)
+    private IEnumerator RunOneProblem(int index, int total, Problem problem)
     {
         ResetStoneUI();
         _currentProblemNumber = index;
@@ -151,32 +227,39 @@ public class Stage30Controller : MonoBehaviour
         if (wordLabel)
         {
             wordLabel.enableWordWrapping = false;
-            wordLabel.text = problem.problemWord;
+            wordLabel.text = problem?.problemWord ?? string.Empty;
             wordLabel.gameObject.SetActive(true);
         }
 
         if (clipTeacherChant) yield return PlayClip(clipTeacherChant);
-        if (!string.IsNullOrEmpty(problem.problemVoiceUrl))
+        if (!string.IsNullOrEmpty(problem?.problemVoiceUrl))
             yield return PlayVoiceUrl(problem.problemVoiceUrl);
 
         if (clipPromptYourTurn) yield return PlayClip(clipPromptYourTurn);
         if (clipPromptRepeat) yield return PlayClip(clipPromptRepeat);
 
-        yield return RecordAndUpload(problem, index);
+        if (!bypassVoiceUpload)
+        {
+            yield return RecordAndUpload(problem, index);
+        }
+        else
+        {
+            yield return new WaitForSeconds(recordSeconds);
+        }
 
         if (clipPraisePrecision) yield return PlayClip(clipPraisePrecision);
 
         if (clipPromptCountStones) yield return PlayClip(clipPromptCountStones);
-        if (!string.IsNullOrEmpty(problem.problemVoiceUrl))
+        if (!string.IsNullOrEmpty(problem?.problemVoiceUrl))
             yield return PlayVoiceUrl(problem.problemVoiceUrl);
 
         yield return RunStoneRound(problem, index);
     }
 
-    private void UpdateProgress(int index, int total, QuestionDto problem)
+    private void UpdateProgress(int index, int total, Problem problem)
     {
         string label = $"{index}/{total}";
-        if (!string.IsNullOrWhiteSpace(problem.problemWord))
+        if (!string.IsNullOrWhiteSpace(problem?.problemWord))
             label += $"\n{problem.problemWord}";
 
         if (progressText)
@@ -190,17 +273,18 @@ public class Stage30Controller : MonoBehaviour
         }
     }
 
-    private IEnumerator RunStoneRound(QuestionDto problem, int problemNumber)
+    private IEnumerator RunStoneRound(Problem problem, int problemNumber)
     {
-        int expectedCount = problem != null ? problem.answerCnt : 0;
+        int expectedCount = problem?.answerCnt ?? 0;
         int attempts = 0;
         bool solved = false;
+        var sessionController = GetSessionController();
 
-        while (attempts < maxStoneAttempts && !solved)
+        while (attempts < Mathf.Max(1, maxStoneAttempts) && !solved)
         {
             ResetStonePositions();
-            pendingStoneCount = null;
-            waitingForStoneCount = true;
+            _pendingStoneCount = null;
+            _waitingForStoneCount = true;
 
             if (stoneBoard)
                 stoneBoard.SetActive(true);
@@ -212,22 +296,30 @@ public class Stage30Controller : MonoBehaviour
 
             onStoneRoundBegin?.Invoke(expectedCount);
 
-            while (waitingForStoneCount)
-            {
+            while (_waitingForStoneCount)
                 yield return null;
-            }
 
-            int submitted = pendingStoneCount ?? 0;
-            pendingStoneCount = null;
+            int submitted = _pendingStoneCount ?? 0;
+            _pendingStoneCount = null;
 
             if (stoneBoard)
                 stoneBoard.SetActive(false);
             onStoneRoundEnd?.Invoke();
 
             int attemptNumber = attempts + 1;
-            bool isCorrect = (submitted == expectedCount);
-            yield return SendAttemptLog(problemNumber, attemptNumber, expectedCount, submitted, isCorrect,
-                problem != null ? problem.problemWord : null);
+            bool isCorrect = submitted == expectedCount;
+
+            yield return sessionController.LogAttempt(
+                stageSessionId,
+                string.IsNullOrWhiteSpace(stageTwoPart) ? stage : stageTwoPart,
+                Mathf.Max(1, problemNumber),
+                attemptNumber,
+                submitted.ToString(),
+                isCorrect,
+                problem?.problemWord ?? string.Empty,
+                expectedCount.ToString(),
+                attemptNumber > 1,
+                null);
 
             if (isCorrect)
             {
@@ -244,101 +336,91 @@ public class Stage30Controller : MonoBehaviour
 
     public void ReportStoneCount(int count)
     {
-        if (!waitingForStoneCount) return;
-        pendingStoneCount = count;
+        if (!_waitingForStoneCount) return;
+        _pendingStoneCount = count;
         if (verboseLogging)
-            Debug.Log($"[Stage30] ReportStoneCount → pending={pendingStoneCount} (waiting={waitingForStoneCount})");
+            Debug.Log($"[Stage30] ReportStoneCount → pending={_pendingStoneCount}");
     }
 
     public void ConfirmStoneCount()
     {
-        Debug.Log("[Stage30] ConfirmStoneCount() 호출 시도");
-        if (!waitingForStoneCount)
+        if (!_waitingForStoneCount)
         {
             if (verboseLogging)
-                Debug.Log("[Stage30] ConfirmStoneCount → waitingForStoneCount=false, 호출 무시");
+                Debug.Log("[Stage30] ConfirmStoneCount 호출 무시 (waiting=false)");
             return;
         }
 
-        if (!pendingStoneCount.HasValue)
+        if (!_pendingStoneCount.HasValue)
         {
-            Debug.LogWarning("[Stage30] 아직 보고된 Stone 개수가 없습니다. 드롭 후 버튼을 눌러 주세요.");
+            Debug.LogWarning("[Stage30] 아직 보고된 돌 개수가 없습니다. 드롭 후 버튼을 눌러 주세요.");
             return;
         }
 
-        if (verboseLogging)
-            Debug.Log($"[Stage30] ConfirmStoneCount → 제출 예정 개수 = {pendingStoneCount.Value}");
-
-        waitingForStoneCount = false;
+        _waitingForStoneCount = false;
     }
 
-    private IEnumerator FetchQuestions(Action<List<QuestionDto>> onCompleted)
+    private IEnumerator FetchProblems(StageSessionController sessionController, Action<List<Problem>> onCompleted)
     {
-        string sessionQuery = string.IsNullOrWhiteSpace(stageSessionId)
-            ? string.Empty
-            : $"&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}";
+        StageSessionController.QuestionSetResult result = null;
+        yield return sessionController.FetchQuestionSet(stage, count, stageSessionId, r => result = r);
 
-        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}{sessionQuery}");
-
-        using (var req = UnityWebRequest.Get(url))
+        if (result == null || !result.Success)
         {
-            ApplyCommonHeaders(req);
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
-                Debug.LogError($"[Stage30] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
-                yield break;
-            }
-
-            var json = req.downloadHandler.text;
-            ProblemListResponse parsed = null;
-
-            try
-            {
-                parsed = JsonUtility.FromJson<ProblemListResponse>(json);
-                Debug.Log($"[Stage30] 질문 응답 JSON: {json}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[Stage30] 문제 파싱 실패: {ex.Message}\nJSON={json}");
-            }
-
-            if (parsed == null || parsed.data == null)
-            {
-                Debug.LogError("[Stage30] 문제 데이터가 비어 있습니다 (data=null)." );
-                yield break;
-            }
-
-            string sessionFromResponse = !string.IsNullOrEmpty(parsed.data.stageSessionId)
-                ? parsed.data.stageSessionId
-                : parsed.data.sessionId;
-
-            if (!string.IsNullOrEmpty(sessionFromResponse))
-            {
-                stageSessionId = sessionFromResponse;
-                if (verboseLogging)
-                    Debug.Log($"[Stage30] stageSessionId 수신: {stageSessionId}");
-            }
-
-            if (parsed.data.problems == null || parsed.data.problems.Count == 0)
-            {
-                Debug.LogError("[Stage30] 문제 데이터가 비어 있습니다.");
-                yield break;
-            }
-
-            if (!string.IsNullOrWhiteSpace(stageSessionId))
-            {
-                foreach (var problem in parsed.data.problems)
-                    problem.sessionId = stageSessionId;
-            }
-
-            onCompleted?.Invoke(parsed.data.problems);
+            Debug.LogError($"[Stage30] 문제 요청 실패: code={result?.ResponseCode}");
+            onCompleted?.Invoke(null);
+            yield break;
         }
+
+        var problems = ParseProblemResponse(result.RawBody);
+        onCompleted?.Invoke(problems);
     }
 
-    private IEnumerator RecordAndUpload(QuestionDto problem, int problemNumber)
+    private List<Problem> ParseProblemResponse(string rawJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawJson))
+            return null;
+
+        ProblemListResponse parsed = null;
+        try
+        {
+            parsed = JsonUtility.FromJson<ProblemListResponse>(rawJson);
+            if (verboseLogging)
+                Debug.Log($"[Stage30] 문제 응답 JSON: {rawJson}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Stage30] 문제 파싱 실패: {ex.Message}\nJSON={rawJson}");
+            return null;
+        }
+
+        if (parsed?.data == null || parsed.data.problems == null || parsed.data.problems.Count == 0)
+        {
+            Debug.LogError("[Stage30] 문제 데이터가 비어 있습니다.");
+            return null;
+        }
+
+        var sessionIdFromResponse = !string.IsNullOrEmpty(parsed.data.stageSessionId)
+            ? parsed.data.stageSessionId
+            : parsed.data.sessionId;
+
+        if (!string.IsNullOrEmpty(sessionIdFromResponse))
+        {
+            stageSessionId = sessionIdFromResponse;
+            if (verboseLogging)
+                Debug.Log($"[Stage30] stageSessionId 갱신: {stageSessionId}");
+        }
+
+        if (!string.IsNullOrEmpty(stageSessionId))
+        {
+            foreach (var problem in parsed.data.problems)
+                problem.sessionId = stageSessionId;
+        }
+
+        return parsed.data.problems;
+    }
+
+    private IEnumerator RecordAndUpload(Problem problem, int problemNumber)
     {
         var clip = StartMic(recordSeconds, recordSampleRate);
         yield return new WaitForSeconds(recordSeconds);
@@ -352,34 +434,19 @@ public class Stage30Controller : MonoBehaviour
         Microphone.End(null);
         var wav = WavUtility.FromAudioClip(clip);
 
-        if (string.IsNullOrWhiteSpace(stageSessionId))
-        {
-            Debug.LogWarning("[Stage30] stageSessionId가 비어 있습니다. /api/train/stage/start 응답을 확인하세요.");
-        }
-
-        int safeProblemNumber = Mathf.Max(1, problemNumber);
-        string stageForUpload = stage ?? string.Empty;
-        string sessionForUpload = !string.IsNullOrEmpty(stageSessionId) ? stageSessionId : (problem != null ? problem.sessionId ?? string.Empty : string.Empty);
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(sessionForUpload ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(safeProblemNumber.ToString())}";
-        string url = ComposeUrl($"/api/train/check/voice?{qs}");
-        var form = new WWWForm();
-        form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
-
-        using (var req = UnityWebRequest.Post(url, form))
-        {
-            ApplyCommonHeaders(req);
-            req.chunkedTransfer = false;
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
+        string stageForUpload = GetStageForVoiceUpload();
+        var sessionController = GetSessionController();
+        yield return sessionController.CheckVoice(
+            stageSessionId,
+            stageForUpload,
+            Mathf.Max(1, problemNumber),
+            string.Empty,
+            wav,
+            result =>
             {
-                Debug.LogWarning($"[Stage30] 음성 업로드 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={req.downloadHandler?.text}");
-            }
-            else
-            {
-                CollectFeedback(req.downloadHandler.text);
-            }
-        }
+                if (result != null && !string.IsNullOrWhiteSpace(result.RawBody))
+                    CollectFeedback(result.RawBody);
+            });
     }
 
     private IEnumerator ProcessAccumulatedFeedback()
@@ -395,7 +462,7 @@ public class Stage30Controller : MonoBehaviour
 
         var ordered = _accumulatedFeedback
             .Where(p => p != null)
-            .GroupBy(p => p.phoneme ?? p.label ?? "")
+            .GroupBy(p => p.phoneme ?? p.label ?? string.Empty)
             .Select(g => g.First())
             .ToList();
 
@@ -412,7 +479,6 @@ public class Stage30Controller : MonoBehaviour
             if (i == 0)
             {
                 if (clipFeedbackTryAgainFirst) yield return PlayClip(clipFeedbackTryAgainFirst);
-                if (clipFeedbackTryAgainSecond) yield return PlayClip(clipFeedbackTryAgainSecond);
             }
             else
             {
@@ -423,7 +489,8 @@ public class Stage30Controller : MonoBehaviour
 
     private IEnumerator LoadAndShowImage(string imageUrl)
     {
-        if (string.IsNullOrEmpty(imageUrl)) yield break;
+        if (string.IsNullOrEmpty(imageUrl))
+            yield break;
 
         using (var req = UnityWebRequestTexture.GetTexture(imageUrl))
         {
@@ -435,77 +502,29 @@ public class Stage30Controller : MonoBehaviour
                 yield break;
             }
 
-            var tex = DownloadHandlerTexture.GetContent(req);
-            var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-            // 이미지 표시용 UI가 있다면 여기에서 적용합니다.
+            // 현재는 표시용 UI가 없으므로 텍스처만 로드하고 종료합니다.
         }
     }
 
     private IEnumerator PlayClip(AudioClip clip)
     {
-        if (!clip || !audioSource)
+        if (_audioController == null)
             yield break;
 
-        audioSource.Stop();
-        audioSource.clip = clip;
-        audioSource.Play();
-        yield return new WaitWhile(() => audioSource.isPlaying);
+        yield return _audioController.PlayClip(clip);
     }
 
     private IEnumerator PlayVoiceUrl(string voiceUrl)
     {
-        if (string.IsNullOrEmpty(voiceUrl) || !audioSource)
-        {
-            Debug.LogWarning(string.IsNullOrEmpty(voiceUrl)
-                ? "[Stage30] voiceUrl가 비어 있어 음성을 재생하지 못했습니다."
-                : "[Stage30] audioSource가 설정되지 않아 음성을 재생하지 못했습니다.");
+        if (_audioController == null)
             yield break;
-        }
 
-        string sanitizedUrl = SanitizeUrl(voiceUrl);
-        Debug.Log($"[Stage30] 음성 요청 시작 → {sanitizedUrl}");
-
-        using (var req = UnityWebRequestMultimedia.GetAudioClip(sanitizedUrl, GuessAudioType(sanitizedUrl)))
-        {
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage30] 음성 로드 실패: {req.error}\nURL={sanitizedUrl}");
-                yield break;
-            }
-
-            var clip = DownloadHandlerAudioClip.GetContent(req);
-            audioSource.Stop();
-            audioSource.clip = clip;
-            audioSource.Play();
-            yield return new WaitWhile(() => audioSource.isPlaying);
-        }
+        yield return _audioController.PlayVoiceUrl(voiceUrl);
     }
 
-    private AudioType GuessAudioType(string url)
+    private string GetStageForVoiceUpload()
     {
-        url = url.ToLowerInvariant();
-        if (url.EndsWith(".mp3")) return AudioType.MPEG;
-        if (url.EndsWith(".wav") || url.EndsWith(".wave")) return AudioType.WAV;
-        if (url.EndsWith(".ogg")) return AudioType.OGGVORBIS;
-        return AudioType.UNKNOWN;
-    }
-
-    private string SanitizeUrl(string url)
-    {
-        return string.IsNullOrEmpty(url) ? url : url.Replace("+", "%2B");
-    }
-
-    private AudioClip StartMic(int seconds, int sampleRate)
-    {
-        if (Microphone.devices == null || Microphone.devices.Length == 0)
-        {
-            Debug.LogWarning("[Stage30] 마이크 장치가 없습니다.");
-            return null;
-        }
-
-        return Microphone.Start(null, false, seconds, sampleRate);
+        return !string.IsNullOrWhiteSpace(stageTwoPart) ? stageTwoPart : stage;
     }
 
     private void CollectFeedback(string json)
@@ -548,8 +567,8 @@ public class Stage30Controller : MonoBehaviour
 
     private void ResetStoneUI()
     {
-        waitingForStoneCount = false;
-        pendingStoneCount = null;
+        _waitingForStoneCount = false;
+        _pendingStoneCount = null;
         ResetStonePositions();
         if (stoneBoard) stoneBoard.SetActive(false);
         if (countdownText)
@@ -580,132 +599,27 @@ public class Stage30Controller : MonoBehaviour
         }
     }
 
-    private void ApplyCommonHeaders(UnityWebRequest req)
+    private AudioClip StartMic(int seconds, int sampleRate)
     {
-        if (!string.IsNullOrWhiteSpace(authToken))
-            req.SetRequestHeader("Authorization", $"Bearer {authToken}");
-        req.SetRequestHeader("Accept", "application/json");
-    }
-
-    private string ComposeUrl(string path)
-    {
-        if (string.IsNullOrWhiteSpace(baseUrl)) return path;
-        if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return path;
-
-        string trimmedBase = baseUrl.EndsWith("/") ? baseUrl : baseUrl + "/";
-        if (path.StartsWith("/")) path = path.Substring(1);
-        return trimmedBase + path;
-    }
-
-    private IEnumerator StageStart()
-    {
-        string stageForStart = stage ?? string.Empty;
-        string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageForStart)}&totalProblems={count}");
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        if (Microphone.devices == null || Microphone.devices.Length == 0)
         {
-            ApplyCommonHeaders(req);
-            req.uploadHandler = null;
-            req.downloadHandler = new DownloadHandlerBuffer();
-
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"[Stage30] stage/start 호출 실패: {req.error}\nURL={url}\nResponse={req.downloadHandler.text}");
-                yield break;
-            }
-
-            var response = JsonUtility.FromJson<StageStartResponse>(req.downloadHandler.text);
-            if (response == null || response.data == null || string.IsNullOrWhiteSpace(response.data.stageSessionId))
-            {
-                Debug.LogError($"[Stage30] stage/start 응답 파싱 실패\nResponse={req.downloadHandler.text}");
-                yield break;
-            }
-
-            stageSessionId = response.data.stageSessionId;
-            if (verboseLogging)
-                Debug.Log($"[Stage30] stage/start 완료 → sessionId={stageSessionId}");
+            Debug.LogWarning("[Stage30] 마이크 장치가 없습니다.");
+            return null;
         }
-    }
-
-    private IEnumerator SendAttemptLog(int problemNumber, int attemptNumber, int expectedCount, int submittedCount, bool isCorrect, string word)
-    {
-        string url = ComposeUrl("/api/train/attempt");
-        string ssid = stageSessionId ?? string.Empty;
-        string stg = stage ?? string.Empty;
-        string answer = submittedCount >= 0 ? submittedCount.ToString() : string.Empty;
-        string problemWord = word ?? string.Empty;
-        string audioUrl = string.Empty;
-        bool includeReplyResult = attemptNumber > 1;
-
-        string json = "{" +
-                      "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
-                      "\"problemNumber\":" + problemNumber + "," +
-                      "\"stage\":\"" + JsonEscape(stg) + "\"," +
-                      "\"problem\":\"" + JsonEscape(problemWord) + "\"," +
-                      "\"answer\":\"" + JsonEscape(answer) + "\"," +
-                      "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
-                      "\"isReplyCorrect\":" + (includeReplyResult ? (isCorrect ? "true" : "false") : "null") + "," +
-                      "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"audioUrl\":\"" + JsonEscape(audioUrl) + "\"" + "}";
-
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
-        {
-            byte[] body = Encoding.UTF8.GetBytes(json);
-            req.uploadHandler = new UploadHandlerRaw(body);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            ApplyCommonHeaders(req);
-
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage30] attempt 로깅 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={json}\nResp={req.downloadHandler.text}");
-            }
-            else if (verboseLogging)
-            {
-                Debug.Log($"[Stage30] attempt 로깅 OK: problem={problemNumber}, attempt={attemptNumber}, correct={isCorrect}");
-            }
-        }
-    }
-
-    private static string JsonEscape(string s)
-    {
-        if (string.IsNullOrEmpty(s)) return s ?? string.Empty;
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
-    }
-
-    private IEnumerator StageComplete()
-    {
-        if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
-
-        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
-        {
-            ApplyCommonHeaders(req);
-            req.uploadHandler = null;
-            req.downloadHandler = new DownloadHandlerBuffer();
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage30] stage/complete 호출 실패: {req.error}\nURL={url}\nResponse={req.downloadHandler.text}");
-            }
-            else if (verboseLogging)
-            {
-                Debug.Log($"[Stage30] stage/complete 응답 → {req.downloadHandler.text}");
-            }
-        }
+        return Microphone.Start(null, false, seconds, sampleRate);
     }
 
     [Serializable]
-    private class QuestionDto
+    private class Problem
     {
-        public string problemWord;
-        public string problemVoiceUrl;
-        public int answerCnt;
+        public int questionId;
         public string sessionId;
+        public string problemWord;
+        public int answerCnt;
+        public int wordLength;
+        public string problemVoiceUrl;
+        public string problemVoiceUrl2;
+        public string problemVoiceUrl3;
     }
 
     [Serializable]
@@ -713,7 +627,7 @@ public class Stage30Controller : MonoBehaviour
     {
         public string stageSessionId;
         public string sessionId;
-        public List<QuestionDto> problems;
+        public List<Problem> problems;
     }
 
     [Serializable]
@@ -722,23 +636,6 @@ public class Stage30Controller : MonoBehaviour
         public bool success;
         public string message;
         public ProblemData data;
-    }
-
-    [Serializable]
-    private class StageStartResponse
-    {
-        public bool success;
-        public string message;
-        public StageStartData data;
-    }
-
-    [Serializable]
-    private class StageStartData
-    {
-        public string stageSessionId;
-        public string stage;
-        public int totalProblems;
-        public string startAt;
     }
 
     [Serializable]
@@ -766,3 +663,4 @@ public class Stage30Controller : MonoBehaviour
         public string imageUrl;
     }
 }
+

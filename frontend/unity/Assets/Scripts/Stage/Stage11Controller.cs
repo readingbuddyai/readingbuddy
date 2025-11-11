@@ -922,7 +922,7 @@ using OptionDto = StageQuestionModels.OptionDto;
             Debug.LogWarning("[Stage11] stageSessionId가 비어 있습니다. 업로드 403이 발생할 수 있습니다. /api/train/stage/start 호출로 stageSessionId를 발급받으세요.");
         }
         // stage는 서버 요구 사항에 맞춰 전체(예: 1.1.1)로 전송
-        string stageForUpload = !string.IsNullOrWhiteSpace(stage) ? stage : stageTwoPart;
+        string stageForUpload = GetStageForVoiceUpload(q);
         int problemNumber = Mathf.Max(1, _currentProblemNumber);
         string answerValue = ResolveAnswerValue(q);
         var sessionController = GetSessionController();
@@ -1076,7 +1076,7 @@ using OptionDto = StageQuestionModels.OptionDto;
                 bool includeReplyResult = attemptNumber > 1;
                 yield return sessionController.LogAttempt(
                     stageSessionId,
-                    stage,
+                    GetStageForAttempt(q, lastSelected),
                     _currentProblemNumber,
                     attemptNumber,
                     selectedVal,
@@ -1153,6 +1153,16 @@ using OptionDto = StageQuestionModels.OptionDto;
             guideImage.anchoredPosition = _guideFinalPos;
             guideImage.sizeDelta = _guideFinalSize;
         }
+    }
+
+    protected virtual string GetStageForVoiceUpload(QuestionDto q)
+    {
+        return !string.IsNullOrWhiteSpace(stage) ? stage : stageTwoPart;
+    }
+
+    protected virtual string GetStageForAttempt(QuestionDto q, OptionDto selectedOption)
+    {
+        return stage;
     }
 
     private void ShowEndModal()
