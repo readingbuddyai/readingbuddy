@@ -189,7 +189,6 @@ public class HomeStageInitializer : MonoBehaviour
         var profile = ResolveProfile(stage);
         ToggleCharacters(profile);
         Debug.Log($"[HomeStage] stage '{stage}' → {profile}");
-        // TODO: 음성 선택 로직 연결 (Voice Manager가 있다면 여기에)
     }
 
     public static HomeProfile ResolveProfile(string stage)

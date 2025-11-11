@@ -46,3 +46,7 @@ copilot-messages.log
 # System files
 .DS_Store
 .project/attachments/files/**
+
+# Unity Reflection Probe baked data
+*.exr
+*.exr.meta
