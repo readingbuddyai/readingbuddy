@@ -8,8 +8,20 @@ TEST_USER = {
 
 # 테스트 설정
 TEST_CONFIG = {
-    "stage_4_1_count": 5,
+    # Stage 1 설정
+    "stage_1_1_1_count": 5,  # 모음 기초
+    "stage_1_1_2_count": 5,  # 모음 심화
+    "stage_1_2_1_count": 5,  # 자음 기초
+    "stage_1_2_2_count": 5,  # 자음 심화
 
+    # Stage 2 설정
+    "stage_2_count": 5,  # 단어 음절 수 세기
+
+    # Stage 3 설정
+    "stage_3_count": 5,  # 글자 분해 조립
+
+    # Stage 4 설정
+    "stage_4_1_count": 5,
     "stage_4_2_count": 5,
 
     # 부하 테스트 시 API를 반복 호출할 횟수

@@ -20,47 +20,47 @@ logger = logging.getLogger(__name__)
 # Grafana에서 시각화할 메트릭들을 정의
 
 # Counter: API 요청 총 횟수를 카운트 (누적값)
-# Labels: stage(4.1/4.2), endpoint(start/set/complete), status(success/fail)
+# Labels: stage(3), endpoint(start/set/attempt/complete), status(success/fail)
 api_request_total = Counter(
-    'stage4_api_request_total',
-    'Total API requests for Stage 4',
+    'stage3_api_request_total',
+    'Total API requests for Stage 3',
     ['stage', 'endpoint', 'status']
 )
 
 # Histogram: API 응답 시간 분포를 측정
 # 평균, 중앙값, 백분위수 등을 계산할 수 있음
 api_request_duration = Histogram(
-    'stage4_api_request_duration_seconds',
-    'API request duration for Stage 4',
+    'stage3_api_request_duration_seconds',
+    'API request duration for Stage 3',
     ['stage', 'endpoint']
 )
 
 # Gauge: 현재 성공률을 표시 (0.0 ~ 1.0 사이 값)
 # Counter와 달리 값이 증가/감소할 수 있음
 api_success_rate = Gauge(
-    'stage4_api_success_rate',
-    'API success rate for Stage 4',
+    'stage3_api_success_rate',
+    'API success rate for Stage 3',
     ['stage']
 )
 
 # Counter: 생성된 문제 개수를 카운트
 problem_count = Counter(
-    'stage4_problem_generated_total',
-    'Total problems generated for Stage 4',
+    'stage3_problem_generated_total',
+    'Total problems generated for Stage 3',
     ['stage']
 )
 
 # Counter: 문제 시도 횟수 카운트
 attempt_total = Counter(
-    'stage4_attempt_total',
-    'Total problem attempts for Stage 4',
+    'stage3_attempt_total',
+    'Total problem attempts for Stage 3',
     ['stage', 'is_correct']
 )
 
 # Gauge: 문제 시도 정답률
 attempt_accuracy = Gauge(
-    'stage4_attempt_accuracy',
-    'Problem attempt accuracy for Stage 4',
+    'stage3_attempt_accuracy',
+    'Problem attempt accuracy for Stage 3',
     ['stage']
 )
 
@@ -76,10 +76,9 @@ class TrainTester:
         self.session = requests.Session()  # 세션 유지 (쿠키, 헤더 등)
         self.token = None
 
-        # 각 스테이지별 성공/실패 통계
+        # 스테이지별 성공/실패 통계
         self.stats = {
-            '4.1': {'success': 0, 'fail': 0, 'attempt_correct': 0, 'attempt_wrong': 0},
-            '4.2': {'success': 0, 'fail': 0, 'attempt_correct': 0, 'attempt_wrong': 0}
+            '3': {'success': 0, 'fail': 0, 'attempt_correct': 0, 'attempt_wrong': 0}
         }
 
 
@@ -215,7 +214,6 @@ class TrainTester:
 
         try:
             # GET /api/train/set 호출
-            # 이 API가 ProblemGenerateService.generateStage4()를 실행함
             response = self.session.get(
                 f"{self.base_url}/api/train/set",
                 params={
@@ -254,10 +252,9 @@ class TrainTester:
 
                 # 생성된 문제 상세 정보 출력
                 for i, prob in enumerate(problems, 1):
-                    if stage in ['4.1', '4.2']:
-                        problem_word = prob.get('problemWord', 'N/A')
-                        phonemes = prob.get('phonemes', [])
-                        print(f"  문제 {i}: '{problem_word}' - 음소: {phonemes}")
+                    problem_word = prob.get('problemWord', 'N/A')
+                    answer_cnt = prob.get('answerCnt', 0)
+                    print(f"  문제 {i}: '{problem_word}' (정답 글자수: {answer_cnt})")
 
                 return problems
             else:
@@ -289,7 +286,7 @@ class TrainTester:
     def get_correct_answer(self, problem, stage):
         """
         문제에서 정답을 추출
-        Stage 4.1, 4.2 모두 problemWord가 정답
+        Stage 3의 정답은 problemWord 자체
         """
         return problem.get('problemWord')
 
@@ -406,8 +403,8 @@ class TrainTester:
                 self.print_error(f"문제 {i}의 정답을 찾을 수 없습니다.")
                 continue
 
-            # 일부 문제는 틀리게 제출 (i % 4 == 0인 경우 오답)
-            is_correct = (i % 4 != 0)
+            # 일부 문제는 틀리게 제출 (i % 3 == 0인 경우 오답)
+            is_correct = (i % 3 != 0)
             self.submit_attempt(
                 stage=stage,
                 stage_session_id=stage_session_id,
@@ -434,16 +431,10 @@ class TrainTester:
     # 테스트 시나리오 메서드들
     def run_basic_test(self):
         """
-        기본 기능 테스트: Stage 4.1과 4.2를 각각 1회씩 테스트
+        기본 기능 테스트: Stage 3을 1회 테스트
         """
         self.print_header("기본 기능 테스트 시작")
-
-        # Stage 4.1 테스트
-        self.test_stage('4.1', config.TEST_CONFIG['stage_4_1_count'])
-        time.sleep(config.TEST_CONFIG['delay_between_requests'])
-
-        # Stage 4.2 테스트
-        self.test_stage('4.2', config.TEST_CONFIG['stage_4_2_count'])
+        self.test_stage('3', config.TEST_CONFIG['stage_3_count'])
 
     def run_load_test(self):
         """
@@ -457,12 +448,7 @@ class TrainTester:
         for i in range(iterations):
             print(f"\n{Fore.MAGENTA}--- 반복 {i+1}/{iterations} ---{Style.RESET_ALL}")
 
-            # Stage 4.1과 4.2를 번갈아가며 테스트
-            # 짝수 번째는 4.1, 홀수 번째는 4.2
-            stage = '4.1' if i % 2 == 0 else '4.2'
-            count = config.TEST_CONFIG[f'stage_{stage.replace(".", "_")}_count']
-
-            self.test_stage(stage, count)
+            self.test_stage('3', config.TEST_CONFIG['stage_3_count'])
 
             # 마지막 반복이 아니면 대기
             if i < iterations - 1:
@@ -475,43 +461,43 @@ class TrainTester:
         self.print_header("테스트 결과 요약")
 
         # 스테이지별 통계 출력
-        for stage in ['4.1', '4.2']:
-            success = self.stats[stage]['success']
-            fail = self.stats[stage]['fail']
-            total = success + fail
-            attempt_correct = self.stats[stage]['attempt_correct']
-            attempt_wrong = self.stats[stage]['attempt_wrong']
-            total_attempts = attempt_correct + attempt_wrong
+        stage = '3'
+        success = self.stats[stage]['success']
+        fail = self.stats[stage]['fail']
+        total = success + fail
+        attempt_correct = self.stats[stage]['attempt_correct']
+        attempt_wrong = self.stats[stage]['attempt_wrong']
+        total_attempts = attempt_correct + attempt_wrong
 
-            if total > 0 or total_attempts > 0:
-                print(f"\n{Fore.CYAN}Stage {stage}:{Style.RESET_ALL}")
+        if total > 0 or total_attempts > 0:
+            print(f"\n{Fore.CYAN}Stage {stage} (글자 분해 조립):{Style.RESET_ALL}")
 
-                # 문제 생성 통계
-                if total > 0:
-                    success_rate = (success / total) * 100
-                    print(f"  [문제 생성]")
-                    print(f"    성공: {Fore.GREEN}{success}{Style.RESET_ALL}")
-                    print(f"    실패: {Fore.RED}{fail}{Style.RESET_ALL}")
-                    print(f"    성공률: {Fore.YELLOW}{success_rate:.1f}%{Style.RESET_ALL}")
+            # 문제 생성 통계
+            if total > 0:
+                success_rate = (success / total) * 100
+                print(f"  [문제 생성]")
+                print(f"    성공: {Fore.GREEN}{success}{Style.RESET_ALL}")
+                print(f"    실패: {Fore.RED}{fail}{Style.RESET_ALL}")
+                print(f"    성공률: {Fore.YELLOW}{success_rate:.1f}%{Style.RESET_ALL}")
 
-                # 문제 시도 통계
-                if total_attempts > 0:
-                    attempt_rate = (attempt_correct / total_attempts) * 100
-                    print(f"  [문제 시도]")
-                    print(f"    정답: {Fore.GREEN}{attempt_correct}{Style.RESET_ALL}")
-                    print(f"    오답: {Fore.RED}{attempt_wrong}{Style.RESET_ALL}")
-                    print(f"    정답률: {Fore.YELLOW}{attempt_rate:.1f}%{Style.RESET_ALL}")
+            # 문제 시도 통계
+            if total_attempts > 0:
+                attempt_rate = (attempt_correct / total_attempts) * 100
+                print(f"  [문제 시도]")
+                print(f"    정답: {Fore.GREEN}{attempt_correct}{Style.RESET_ALL}")
+                print(f"    오답: {Fore.RED}{attempt_wrong}{Style.RESET_ALL}")
+                print(f"    정답률: {Fore.YELLOW}{attempt_rate:.1f}%{Style.RESET_ALL}")
 
         # Prometheus 메트릭 정보
         print(f"\n{Fore.CYAN}Prometheus 메트릭:{Style.RESET_ALL}")
         print(f"  메트릭 서버: http://localhost:{config.METRICS_PORT}/metrics")
         print(f"  확인 가능한 메트릭:")
-        print(f"    - stage4_api_request_total (요청 총 횟수 - endpoint별)")
-        print(f"    - stage4_api_request_duration_seconds (응답 시간 분포)")
-        print(f"    - stage4_api_success_rate (API 성공률)")
-        print(f"    - stage4_problem_generated_total (생성된 문제 수)")
-        print(f"    - stage4_attempt_total (문제 시도 횟수 - 정답/오답별)")
-        print(f"    - stage4_attempt_accuracy (문제 시도 정답률)")
+        print(f"    - stage3_api_request_total (요청 총 횟수 - endpoint별)")
+        print(f"    - stage3_api_request_duration_seconds (응답 시간 분포)")
+        print(f"    - stage3_api_success_rate (API 성공률)")
+        print(f"    - stage3_problem_generated_total (생성된 문제 수)")
+        print(f"    - stage3_attempt_total (문제 시도 횟수 - 정답/오답별)")
+        print(f"    - stage3_attempt_accuracy (문제 시도 정답률)")
 
         # Grafana 접속 정보
         print(f"\n{Fore.CYAN}Grafana 대시보드:{Style.RESET_ALL}")
@@ -546,11 +532,9 @@ def main():
         print(f"\n{Fore.CYAN}{'='*60}")
         print("테스트 옵션:")
         print(f"{'='*60}{Style.RESET_ALL}")
-        print("1. 기본 기능 테스트 (Stage 4.1, 4.2 각 1회)")
+        print("1. 기본 기능 테스트 (Stage 3 - 1회)")
         print("2. 부하 테스트 (여러 번 반복 - Grafana 메트릭 수집용)")
-        print("3. Stage 4.1만 테스트")
-        print("4. Stage 4.2만 테스트")
-        print("5. 테스트 결과 요약 보기")
+        print("3. 테스트 결과 요약 보기")
         print("0. 종료")
 
         choice = input(f"\n{Fore.YELLOW}선택: {Style.RESET_ALL}").strip()
@@ -560,10 +544,6 @@ def main():
         elif choice == '2':
             tester.run_load_test()
         elif choice == '3':
-            tester.test_stage('4.1', config.TEST_CONFIG['stage_4_1_count'])
-        elif choice == '4':
-            tester.test_stage('4.2', config.TEST_CONFIG['stage_4_2_count'])
-        elif choice == '5':
             tester.print_summary()
         elif choice == '0':
             print(f"\n{Fore.CYAN}테스트를 종료합니다.{Style.RESET_ALL}")
