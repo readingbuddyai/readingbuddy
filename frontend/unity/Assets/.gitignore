@@ -56,3 +56,6 @@ copilot-messages.log
 # Hovl Studio Demo scenes (optional)
 Assets/Hovl Studio/Magic effects pack/Demo scene/
 Assets/3D Items - Wand Pack/Example SceneSettings.lighting*
+
+# Codex
+AGENTS.md

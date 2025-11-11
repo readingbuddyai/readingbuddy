@@ -104,6 +104,10 @@ public class Stage20Controller : MonoBehaviour
     public AudioClip clipGreatJob2;           // [2.9.5.2]
     public AudioClip clipReadyNextLesson;     // [2.9.6]
 
+    [Header("마이크 설정")]
+    public int recordSeconds = 3;
+    public int recordSampleRate = 44100;
+
     private StageSessionController _sessionController;
     private StageAudioController _audioController;
     private StageAudioDependencies _audioDependencies;
