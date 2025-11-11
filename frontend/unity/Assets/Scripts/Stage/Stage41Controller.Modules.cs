@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -118,6 +119,7 @@ public partial class Stage41Controller
         _tutorialController.introOptionCursor = introOptionCursor;
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
+        _tutorialController.guide3DCharacter = guide3DCharacter;
         _tutorialController.Initialize(_tutorialDependencies);
     }
 
@@ -129,6 +131,32 @@ public partial class Stage41Controller
             if (show)
             {
                 var rt = choicesContainer.GetComponent<RectTransform>();
+                if (rt)
+                {
+                    Canvas.ForceUpdateCanvases();
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                }
+            }
+        }
+        if (consonantChoicesContainer != null)
+        {
+            consonantChoicesContainer.SetActive(show);
+            if (show)
+            {
+                var rt = consonantChoicesContainer.GetComponent<RectTransform>();
+                if (rt)
+                {
+                    Canvas.ForceUpdateCanvases();
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+                }
+            }
+        }
+        if (vowelChoicesContainer != null)
+        {
+            vowelChoicesContainer.SetActive(show);
+            if (show)
+            {
+                var rt = vowelChoicesContainer.GetComponent<RectTransform>();
                 if (rt)
                 {
                     Canvas.ForceUpdateCanvases();
@@ -149,10 +177,30 @@ public partial class Stage41Controller
 
     private System.Collections.IEnumerator Co_TutorialPulseSlot(StageTutorialSlotTarget target, float scale, float duration, int loops)
     {
-        var rect = ResolveTutorialSlotTarget(target);
-        if (rect == null)
+        var box = ResolveTutorialSlotObject(target);
+        if (box == null)
             yield break;
-        yield return PulseOption(rect, scale, duration, loops);
+
+        var cg = box.GetComponent<CanvasGroup>() ?? box.AddComponent<CanvasGroup>();
+        float minAlpha = blinkAlphaMin;
+        float maxAlpha = blinkAlphaMax;
+        float period = blinkPeriod;
+        loops = Mathf.Max(1, loops);
+        float singleDuration = duration > 0f ? duration : blinkPeriod;
+
+        float originalAlpha = cg.alpha;
+        for (int i = 0; i < loops; i++)
+        {
+            float t = 0f;
+            while (t < singleDuration)
+            {
+                t += Time.deltaTime;
+                float phase = Mathf.Sin((t / Mathf.Max(0.01f, period)) * Mathf.PI * 2f) * 0.5f + 0.5f;
+                cg.alpha = Mathf.Lerp(minAlpha, maxAlpha, phase);
+                yield return null;
+            }
+        }
+        cg.alpha = originalAlpha;
     }
 
     private System.Collections.IEnumerator Co_TutorialAnimateChoiceDrag(string key, StageTutorialSlotTarget target, float seconds, AnimationCurve curve, bool keepInSlot)
@@ -174,6 +222,21 @@ public partial class Stage41Controller
                 return jungseongBox != null ? jungseongBox.GetComponent<RectTransform>() : null;
             case StageTutorialSlotTarget.Jongsung:
                 return jongseongBox != null ? jongseongBox.GetComponent<RectTransform>() : null;
+            default:
+                return null;
+        }
+    }
+
+    private GameObject ResolveTutorialSlotObject(StageTutorialSlotTarget target)
+    {
+        switch (target)
+        {
+            case StageTutorialSlotTarget.Choseong:
+                return choseongBox;
+            case StageTutorialSlotTarget.Jungseong:
+                return jungseongBox;
+            case StageTutorialSlotTarget.Jongsung:
+                return jongseongBox;
             default:
                 return null;
         }

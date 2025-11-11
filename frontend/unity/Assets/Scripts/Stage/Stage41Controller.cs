@@ -38,6 +38,7 @@ public partial class Stage41Controller : MonoBehaviour
     public Font uiFont;
     public Image guideImage;
     public RectTransform guideRect;
+    public GameObject guide3DCharacter;
     public TMP_Text wordText;
     public TMP_Text choseongText;
     public TMP_Text jungseongText;
@@ -99,7 +100,7 @@ public partial class Stage41Controller : MonoBehaviour
     public float blinkPeriod = 0.6f; // sec per cycle
 
     [Header("개발/우회")]
-    public bool bypassStartRequest = true;
+    public bool bypassStartRequest = false;
     public bool bypassVoiceUpload = false;
     public bool logVerbose = true;
 
@@ -194,7 +195,17 @@ public partial class Stage41Controller : MonoBehaviour
     // 메인 스테이지 진행 코루틴
     private IEnumerator RunStage()
     {
+        _tutorialController?.ResetAfterStageRestart();
+
         yield return PlayClip(sfxStart);
+
+        if (_tutorialController != null)
+        {
+            yield return _tutorialController.RunIntroSequence();
+            yield return _tutorialController.RunIntroTutorial();
+        }
+        EnsureGameplayUiVisible();
+
         yield return PlayClip(clipIntroAdvancedMagic);   // [4.1.1]
         yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
 
@@ -1246,6 +1257,16 @@ public partial class Stage41Controller : MonoBehaviour
         if (choicesContainer) choicesContainer.SetActive(false);
         if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
         if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
+    }
+
+    private void EnsureGameplayUiVisible()
+    {
+        if (choseongBox) choseongBox.SetActive(true);
+        if (jungseongBox) jungseongBox.SetActive(true);
+        if (jongseongBox) jongseongBox.SetActive(true);
+        if (choicesContainer) choicesContainer.SetActive(true);
+        if (consonantChoicesContainer) consonantChoicesContainer.SetActive(true);
+        if (vowelChoicesContainer) vowelChoicesContainer.SetActive(true);
     }
 
 

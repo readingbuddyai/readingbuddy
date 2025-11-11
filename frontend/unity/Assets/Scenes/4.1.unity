@@ -6896,7 +6896,7 @@ MonoBehaviour:
   stageSet: 4.1
   stageTwoPart: 4.1
   count: 5
-  authToken: 
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyODQyMjU5LCJleHAiOjE3NjI5Mjg2NTl9.8uWZeR5EpQKWyuWSG0vbfr0cXcsy4k65KmBM_lHAC6eCAizHTo7w9w5rkHNe8i3s
   stageSessionId: 
   progressText: {fileID: 0}
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
@@ -6948,6 +6948,51 @@ MonoBehaviour:
   bypassStartRequest: 0
   bypassVoiceUpload: 0
   logVerbose: 1
+  tutorialProfile: {fileID: 11400000, guid: 0b84b47dbcdec2848a1fe791bea0b5a1, type: 2}
+  introTutorialImage: {fileID: 0}
+  introOptions: []
+  introOptionCursor:
+    handCursor: {fileID: 1723730359}
+    wrongOptionTransform: {fileID: 0}
+    correctOptionTransform: {fileID: 0}
+    doneButtonTransform: {fileID: 0}
+    wrongHoverSeconds: 1
+    correctHoverSeconds: 1
+    cursorMoveSeconds: 0.35
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enableCorrectPulse: 1
+    correctPulseScale: 1.1
+    correctPulseDuration: 0.35
+    correctPulseLoops: 1
+  introTutorialPanelAnimator: {fileID: 393785404}
+  introTutorialPanel: {fileID: 393785399}
+  requireTriggerAfterTutorial: 1
+  tutorialTriggerThreshold: 0.6
+  tutorialFallbackKey: 32
+  tutorialClipGapSeconds: 0.9
 --- !u!4 &955322919
 Transform:
   m_ObjectHideFlags: 0
@@ -11534,6 +11579,11 @@ PrefabInstance:
 --- !u!224 &1723730358 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 8867321349795180110, guid: 1499aeed256584b44b17494563d5ef9b, type: 3}
+  m_PrefabInstance: {fileID: 1723730357}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1723730359 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5074973163057813357, guid: 1499aeed256584b44b17494563d5ef9b, type: 3}
   m_PrefabInstance: {fileID: 1723730357}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1800434355

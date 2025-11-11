@@ -24,6 +24,7 @@ public partial class Stage42Controller : MonoBehaviour
     public TMP_Text progressText;
     public Image guideImage;
     public RectTransform guideRect;
+    public GameObject guide3DCharacter;
     public TMP_Text wordText;
     public TMP_Text choseongText;
     public TMP_Text jungseongText;
@@ -84,7 +85,7 @@ public partial class Stage42Controller : MonoBehaviour
     public float blinkPeriod = 0.6f;
 
     [Header("통신/로깅")]
-    public bool bypassStartRequest = true;
+    public bool bypassStartRequest = false;
     public bool logVerbose = true;
     [Tooltip("[4.2.11] 구간에서 check/voice POST 전송 여부 (테스트용)")]
     public bool enableVoicePost = true;
@@ -154,6 +155,16 @@ public partial class Stage42Controller : MonoBehaviour
         StartCoroutine(RunStage());
     }
 
+    private void EnsureGameplayUiVisible()
+    {
+        if (choseongBox) choseongBox.SetActive(true);
+        if (jungseongBox) jungseongBox.SetActive(true);
+        if (jongseongBox) jongseongBox.SetActive(true);
+        if (choicesContainer) choicesContainer.SetActive(true);
+        if (consonantChoicesContainer) consonantChoicesContainer.SetActive(true);
+        if (vowelChoicesContainer) vowelChoicesContainer.SetActive(true);
+    }
+
     private void ResetUI()
     {
         if (progressText) progressText.text = string.Empty;
@@ -175,13 +186,20 @@ public partial class Stage42Controller : MonoBehaviour
     private IEnumerator RunStage()
     {
         // 도입
+        _tutorialController?.ResetAfterStageRestart();
         yield return PlayClip(sfxStart);
+        if (_tutorialController != null)
+        {
+            yield return _tutorialController.RunIntroSequence();
+            yield return _tutorialController.RunIntroTutorial();
+        }
+        EnsureGameplayUiVisible();
         yield return PlayClip(clipIntroCompositeMagic);   // [4.2.1]
         yield return PlayClip(clipIntroListenAndChoose);  // [4.2.2]
         yield return PlayClip(clipIntroMakeStrongSpell);  // [4.2.3]
 
         // Ensure session for set API (stageSessionId is required by server)
-        if (string.IsNullOrWhiteSpace(stageSessionId))
+        if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
             yield return StartStageSession();
 
         // 문제 세트 요청
@@ -832,8 +850,11 @@ public partial class Stage42Controller : MonoBehaviour
         // Ensure stage session exists before upload to avoid 403
         if (string.IsNullOrWhiteSpace(stageSessionId))
         {
-            if (logVerbose) Debug.Log("[Stage42] stageSessionId is empty; attempting stage/start...");
-            yield return StartStageSession();
+            if (!bypassStartRequest)
+            {
+                if (logVerbose) Debug.Log("[Stage42] stageSessionId is empty; attempting stage/start...");
+                yield return StartStageSession();
+            }
             if (string.IsNullOrWhiteSpace(stageSessionId))
             {
                 if (logVerbose) Debug.LogWarning("[Stage42] stage/start failed or no sessionId; skipping check/voice upload.");

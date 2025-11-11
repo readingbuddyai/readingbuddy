@@ -102,5 +102,6 @@ public enum StageTutorialSlotTarget
     None,
     Choseong,
     Jungseong,
-    Jongsung
+    Jongsung,
+    Jongseong = Jongsung
 }

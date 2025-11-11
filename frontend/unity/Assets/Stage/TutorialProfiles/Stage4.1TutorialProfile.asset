@@ -41,6 +41,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -64,6 +67,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -87,6 +93,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -110,6 +119,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -133,12 +145,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uC74C\uC808 \uC0C1\uC790 ON"
     phase: 1
-    action: 13
+    action: 8
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -156,6 +171,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -179,6 +197,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -202,6 +223,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -225,6 +249,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -248,12 +275,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uCCAB\uBC88\uC9F8 \uC0C1\uC790 focus"
     phase: 1
-    action: 13
+    action: 15
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -267,10 +297,13 @@ MonoBehaviour:
       m_PreInfinity: 0
       m_PostInfinity: 0
       m_RotationOrder: 4
-    enablePulse: 0
+    enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 1
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -294,6 +327,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -317,6 +353,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -340,12 +379,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uB450\uBC88\uC9F8 \uC0C1\uC790 focus"
     phase: 1
-    action: 13
+    action: 15
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -359,10 +401,13 @@ MonoBehaviour:
       m_PreInfinity: 0
       m_PostInfinity: 0
       m_RotationOrder: 4
-    enablePulse: 0
+    enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 2
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -386,6 +431,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -409,6 +457,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -432,12 +483,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uC138\uBC88\uC9F8 \uC0C1\uC790 focus"
     phase: 1
-    action: 13
+    action: 15
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -451,10 +505,13 @@ MonoBehaviour:
       m_PreInfinity: 0
       m_PostInfinity: 0
       m_RotationOrder: 4
-    enablePulse: 0
+    enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 3
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -478,6 +535,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -501,6 +561,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -524,6 +587,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -547,12 +613,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uBCF4\uAE30 ON"
-    phase: 0
-    action: 13
+    phase: 1
+    action: 10
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -570,12 +639,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uC138\uBC88\uC9F8 \uC0C1\uC790 focus"
     phase: 1
-    action: 13
+    action: 15
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -589,10 +661,13 @@ MonoBehaviour:
       m_PreInfinity: 0
       m_PostInfinity: 0
       m_RotationOrder: 4
-    enablePulse: 0
+    enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 3
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -616,6 +691,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -639,6 +717,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -662,6 +743,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -685,29 +769,53 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uBC15\uC2A4 Drag"
     phase: 1
-    action: 13
+    action: 16
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
     boolValue: 0
     cursorTarget: 0
-    cursorMoveSeconds: 0
+    cursorMoveSeconds: 1.5
     cursorMoveCurve:
       serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
       m_RotationOrder: 4
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 3
+    choiceTileKey: "Tile_\u3141"
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -731,6 +839,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -754,6 +865,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -777,12 +891,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uC74C\uC808 \uC0C1\uC790 OFF"
     phase: 1
-    action: 13
+    action: 9
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -800,12 +917,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uBCF4\uAE30 OFF"
     phase: 1
-    action: 13
+    action: 11
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -823,6 +943,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -846,6 +969,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -869,12 +995,15 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
   - name: "\uD2B8\uB9AC\uAC70 wait"
     phase: 1
-    action: 11
+    action: 17
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -892,6 +1021,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -915,6 +1047,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -938,6 +1073,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 0
