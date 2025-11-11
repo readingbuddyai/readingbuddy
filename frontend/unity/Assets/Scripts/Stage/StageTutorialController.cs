@@ -57,6 +57,53 @@ public class StageTutorialController
     private readonly List<UnityEngine.XR.InputDevice> _rightHandDevices = new List<UnityEngine.XR.InputDevice>();
     private Coroutine _guideShowCoroutine;
 
+    public void ApplyProfile(StageTutorialProfile profile)
+    {
+        if (profile == null)
+            return;
+
+        introTutorialImage = profile.introTutorialImage;
+
+        introOptions = new List<IntroOption>();
+        if (profile.introOptions != null)
+        {
+            for (int i = 0; i < profile.introOptions.Count; i++)
+            {
+                var option = profile.introOptions[i];
+                if (option == null)
+                    continue;
+                introOptions.Add(new IntroOption
+                {
+                    label = option.label,
+                    isCorrect = option.isCorrect
+                });
+            }
+        }
+
+        guideHideLeadSeconds = Mathf.Max(0f, profile.guideHideLeadSeconds);
+        showGuideWhenPanelOff = profile.showGuideWhenPanelOff;
+        guideShowDelayAfterPanelOff = Mathf.Max(0f, profile.guideShowDelayAfterPanelOff);
+
+        requireTriggerAfterTutorial = profile.requireTriggerAfterTutorial;
+        tutorialTriggerThreshold = Mathf.Clamp01(profile.tutorialTriggerThreshold);
+        tutorialFallbackKey = profile.tutorialFallbackKey;
+        tutorialClipGapSeconds = Mathf.Max(0f, profile.tutorialClipGapSeconds);
+
+        introClip1 = profile.introClip1;
+        introClip2 = profile.introClip2;
+        introClip3 = profile.introClip3;
+        introClip4 = profile.introClip4;
+        introClip5 = profile.introClip5;
+        introClip6 = profile.introClip6;
+        introClip7 = profile.introClip7;
+        introClip8 = profile.introClip8;
+        introClip9 = profile.introClip9;
+        introClip10 = profile.introClip10;
+        introClip11 = profile.introClip11;
+        introDemoClip1 = profile.introDemoClip1;
+        introDemoClip2 = profile.introDemoClip2;
+    }
+
     public void Initialize(StageTutorialDependencies deps)
     {
         if (deps == null) throw new ArgumentNullException(nameof(deps));

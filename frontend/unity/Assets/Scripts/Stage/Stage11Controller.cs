@@ -61,6 +61,7 @@ using OptionDto = StageQuestionModels.OptionDto;
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
 
     [Header("Intro Tutorial")]
+    public StageTutorialProfile tutorialProfile;
     public Sprite introTutorialImage;
     public List<IntroOption> introOptions = new List<IntroOption>();
     public IntroOptionCursor introOptionCursor;
@@ -340,35 +341,43 @@ using OptionDto = StageQuestionModels.OptionDto;
             _tutorialDependencies.VerboseLogging = verboseLogging;
         }
 
-        _tutorialController.introTutorialImage = introTutorialImage;
-        if (introOptions != null)
-            _tutorialController.introOptions = introOptions.ConvertAll<StageTutorialController.IntroOption>(io => (StageTutorialController.IntroOption)io);
+        if (tutorialProfile != null)
+        {
+            _tutorialController.ApplyProfile(tutorialProfile);
+        }
         else
-            _tutorialController.introOptions = new List<StageTutorialController.IntroOption>();
+        {
+            _tutorialController.introTutorialImage = introTutorialImage;
+            if (introOptions != null)
+                _tutorialController.introOptions = introOptions.ConvertAll<StageTutorialController.IntroOption>(io => (StageTutorialController.IntroOption)io);
+            else
+                _tutorialController.introOptions = new List<StageTutorialController.IntroOption>();
+            _tutorialController.guideHideLeadSeconds = guideHideLeadSeconds;
+            _tutorialController.showGuideWhenPanelOff = showGuideWhenPanelOff;
+            _tutorialController.guideShowDelayAfterPanelOff = guideShowDelayAfterPanelOff;
+            _tutorialController.requireTriggerAfterTutorial = requireTriggerAfterTutorial;
+            _tutorialController.tutorialTriggerThreshold = tutorialTriggerThreshold;
+            _tutorialController.tutorialFallbackKey = tutorialFallbackKey;
+            _tutorialController.tutorialClipGapSeconds = tutorialClipGapSeconds;
+            _tutorialController.introClip1 = introClip1;
+            _tutorialController.introClip2 = introClip2;
+            _tutorialController.introClip3 = introClip3;
+            _tutorialController.introClip4 = introClip4;
+            _tutorialController.introClip5 = introClip5;
+            _tutorialController.introClip6 = introClip6;
+            _tutorialController.introClip7 = introClip7;
+            _tutorialController.introClip8 = introClip8;
+            _tutorialController.introClip9 = introClip9;
+            _tutorialController.introClip10 = introClip10;
+            _tutorialController.introClip11 = introClip11;
+            _tutorialController.introDemoClip1 = introDemoClip1;
+            _tutorialController.introDemoClip2 = introDemoClip2;
+        }
+
         _tutorialController.introOptionCursor = introOptionCursor;
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
         _tutorialController.guide3DCharacter = guide3DCharacter;
-        _tutorialController.guideHideLeadSeconds = guideHideLeadSeconds;
-        _tutorialController.showGuideWhenPanelOff = showGuideWhenPanelOff;
-        _tutorialController.guideShowDelayAfterPanelOff = guideShowDelayAfterPanelOff;
-        _tutorialController.requireTriggerAfterTutorial = requireTriggerAfterTutorial;
-        _tutorialController.tutorialTriggerThreshold = tutorialTriggerThreshold;
-        _tutorialController.tutorialFallbackKey = tutorialFallbackKey;
-        _tutorialController.tutorialClipGapSeconds = tutorialClipGapSeconds;
-        _tutorialController.introClip1 = introClip1;
-        _tutorialController.introClip2 = introClip2;
-        _tutorialController.introClip3 = introClip3;
-        _tutorialController.introClip4 = introClip4;
-        _tutorialController.introClip5 = introClip5;
-        _tutorialController.introClip6 = introClip6;
-        _tutorialController.introClip7 = introClip7;
-        _tutorialController.introClip8 = introClip8;
-        _tutorialController.introClip9 = introClip9;
-        _tutorialController.introClip10 = introClip10;
-        _tutorialController.introClip11 = introClip11;
-        _tutorialController.introDemoClip1 = introDemoClip1;
-        _tutorialController.introDemoClip2 = introDemoClip2;
 
         _tutorialController.Initialize(_tutorialDependencies);
 

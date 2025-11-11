@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d60b2327687708e4b9358231732ccf74, type: 3}
+  m_Name: Stage1.2.1TutorialProfile
+  m_EditorClassIdentifier: 
+  introTutorialImage: {fileID: 0}
+  introOptions: []
+  guideHideLeadSeconds: 0.5
+  showGuideWhenPanelOff: 1
+  guideShowDelayAfterPanelOff: 0
+  requireTriggerAfterTutorial: 1
+  tutorialTriggerThreshold: 0.6
+  tutorialFallbackKey: 32
+  tutorialClipGapSeconds: 0.9
+  introClip1: {fileID: 0}
+  introClip2: {fileID: 0}
+  introClip3: {fileID: 0}
+  introClip4: {fileID: 0}
+  introClip5: {fileID: 0}
+  introClip6: {fileID: 0}
+  introClip7: {fileID: 0}
+  introClip8: {fileID: 0}
+  introClip9: {fileID: 0}
+  introClip10: {fileID: 0}
+  introClip11: {fileID: 0}
+  introDemoClip1: {fileID: 0}
+  introDemoClip2: {fileID: 0}
