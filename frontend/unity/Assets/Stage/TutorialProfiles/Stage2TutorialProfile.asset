@@ -151,7 +151,7 @@ MonoBehaviour:
       m_Curve: []
       m_PreInfinity: 0
       m_PostInfinity: 0
-      m_RotationOrder: 0
+      m_RotationOrder: 4
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
@@ -182,6 +182,29 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
+  - name: "\uC635\uC158 ON"
+    phase: 1
+    action: 6
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    progressText: 
+    customActionId: SetWord
+    awaitRelease: 0
   - name: "\uB2E8\uC5B4 ON"
     phase: 1
     action: 13
@@ -197,13 +220,13 @@ MonoBehaviour:
       m_Curve: []
       m_PreInfinity: 0
       m_PostInfinity: 0
-      m_RotationOrder: 0
+      m_RotationOrder: 4
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
     progressText: 
-    customActionId: SetWord
+    customActionId: "SetOptionWord:\uBC14\uB098\uB098"
     awaitRelease: 0
   - name: "\uC74C\uC131 \uC548\uB0B4(\uC790 \uC774\uB807\uAC8C)"
     phase: 1
@@ -433,7 +456,7 @@ MonoBehaviour:
     pulseDuration: 0
     pulseLoops: 0
     progressText: 
-    customActionId: SetWord
+    customActionId: MoveStone:Stone_1>Slot_1
     awaitRelease: 0
   - name: "\uC74C\uC1311 play"
     phase: 1
@@ -479,7 +502,7 @@ MonoBehaviour:
     pulseDuration: 0
     pulseLoops: 0
     progressText: 
-    customActionId: SetWord
+    customActionId: MoveStone:Stone_2>Slot_2
     awaitRelease: 0
   - name: "\uC74C\uC1312 play"
     phase: 1
@@ -525,7 +548,7 @@ MonoBehaviour:
     pulseDuration: 0
     pulseLoops: 0
     progressText: 
-    customActionId: SetWord
+    customActionId: MoveStone:Stone_3>Slot_3
     awaitRelease: 0
   - name: "\uC74C\uC1313 play"
     phase: 1
@@ -588,7 +611,7 @@ MonoBehaviour:
       m_Curve: []
       m_PreInfinity: 0
       m_PostInfinity: 0
-      m_RotationOrder: 0
+      m_RotationOrder: 4
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
@@ -604,14 +627,32 @@ MonoBehaviour:
     waitSeconds: 0
     panelImmediate: 0
     boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
+    cursorTarget: 3
+    cursorMoveSeconds: 1.5
     cursorMoveCurve:
       serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 0
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
@@ -627,14 +668,14 @@ MonoBehaviour:
     waitSeconds: 0
     panelImmediate: 0
     boolValue: 0
-    cursorTarget: 0
+    cursorTarget: 3
     cursorMoveSeconds: 0
     cursorMoveCurve:
       serializedVersion: 2
       m_Curve: []
       m_PreInfinity: 0
       m_PostInfinity: 0
-      m_RotationOrder: 0
+      m_RotationOrder: 4
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0

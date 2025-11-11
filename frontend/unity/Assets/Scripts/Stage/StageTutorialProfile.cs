@@ -83,5 +83,6 @@ public enum StageTutorialCursorTarget
 {
     None,
     WrongOption,
-    CorrectOption
+    CorrectOption,
+    DoneButton
 }

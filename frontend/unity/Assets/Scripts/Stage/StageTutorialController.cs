@@ -391,17 +391,21 @@ public class StageTutorialController
 
         _deps.OptionsContainer.gameObject.SetActive(true);
         _deps.OptionsContainer.SetAsLastSibling();
-        SetupIntroOptions(interactable);
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(_deps.OptionsContainer);
-        yield return null;
+        if (_deps.ManageOptionsContainerContents)
+        {
+            SetupIntroOptions(interactable);
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_deps.OptionsContainer);
+            yield return null;
+        }
     }
 
     private void HideIntroOptions()
     {
         if (_deps.OptionsContainer == null)
             return;
-        ClearIntroOptionButtons();
+        if (_deps.ManageOptionsContainerContents)
+            ClearIntroOptionButtons();
         _deps.OptionsContainer.gameObject.SetActive(false);
     }
 
@@ -468,6 +472,8 @@ public class StageTutorialController
                 return introOptionCursor?.correctOptionTransform;
             case StageTutorialCursorTarget.WrongOption:
                 return introOptionCursor?.wrongOptionTransform;
+            case StageTutorialCursorTarget.DoneButton:
+                return introOptionCursor?.doneButtonTransform;
             default:
                 return null;
         }
@@ -675,6 +681,8 @@ public class StageTutorialController
     {
         if (_deps.OptionsContainer == null)
             return;
+        if (!_deps.ManageOptionsContainerContents)
+            return;
 
         EnsureOptionPrefab();
         ClearIntroOptionButtons();
@@ -718,6 +726,8 @@ public class StageTutorialController
 
     private void EnsureOptionPrefab()
     {
+        if (!_deps.ManageOptionsContainerContents)
+            return;
         if (_deps.OptionButtonPrefab == null)
         {
             _deps.OptionButtonPrefab = Resources.Load<Button>("UI/OptionButton");
@@ -727,6 +737,8 @@ public class StageTutorialController
     private void ClearIntroOptionButtons()
     {
         if (_deps.OptionsContainer == null)
+            return;
+        if (!_deps.ManageOptionsContainerContents)
             return;
 
         foreach (Transform child in _deps.OptionsContainer)
@@ -796,6 +808,7 @@ public class StageTutorialController
         public GameObject handCursor;
         public RectTransform wrongOptionTransform;
         public RectTransform correctOptionTransform;
+        public RectTransform doneButtonTransform;
         public float wrongHoverSeconds = 1f;
         public float correctHoverSeconds = 1f;
         public float cursorMoveSeconds = 0.35f;
@@ -826,5 +839,6 @@ public class StageTutorialDependencies
     public Action<string> Log;
     public Action<string> LogWarning;
     public bool VerboseLogging;
+    public bool ManageOptionsContainerContents = true;
 }
 

@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -104,6 +105,12 @@ public class Stage20Controller : MonoBehaviour
     public AudioClip clipGreatJob2;           // [2.9.5.2]
     public AudioClip clipReadyNextLesson;     // [2.9.6]
 
+    [Header("튜토리얼 UI")]
+    public RectTransform tutorialOptionsContainer;
+    public TMP_Text tutorialOptionWordText;
+    [Min(0f)] public float tutorialStoneMoveSeconds = 0.6f;
+    public AnimationCurve tutorialStoneMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
     [Header("마이크 설정")]
     public int recordSeconds = 3;
     public int recordSampleRate = 44100;
@@ -122,6 +129,7 @@ public class Stage20Controller : MonoBehaviour
 
     private readonly List<PronunciationFeedback> _accumulatedFeedback = new List<PronunciationFeedback>();
     private readonly HashSet<string> _feedbackKeys = new HashSet<string>();
+    private string _tutorialOptionWordCache = string.Empty;
 
     private void Start()
     {
@@ -694,15 +702,16 @@ public class Stage20Controller : MonoBehaviour
         _tutorialDependencies.ProgressText = progressText;
         _tutorialDependencies.EnsureProgressText = EnsureProgressText;
         _tutorialDependencies.MainImage = null;
-        _tutorialDependencies.OptionsContainer = null;
+        _tutorialDependencies.OptionsContainer = tutorialOptionsContainer;
         _tutorialDependencies.OptionButtonPrefab = null;
         _tutorialDependencies.CorrectSfx = null;
         _tutorialDependencies.MoveCursorSmooth = null;
-        _tutorialDependencies.PulseOption = null;
+        _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseTutorialTarget(rect, scale, duration, loops);
         _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
         _tutorialDependencies.Log = message => Debug.Log(message);
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = verboseLogging;
+        _tutorialDependencies.ManageOptionsContainerContents = tutorialOptionsContainer == null;
 
         if (tutorialProfile != null)
         {
@@ -791,6 +800,18 @@ public class Stage20Controller : MonoBehaviour
                     }
                     break;
                 }
+            case "setoptionword":
+                SetTutorialOptionWord(parameter, true);
+                break;
+            case "showoptionword":
+                SetTutorialOptionWord(_tutorialOptionWordCache, true);
+                break;
+            case "hideoptionword":
+                ApplyTutorialOptionWord(string.Empty, false);
+                break;
+            case "movestone":
+                yield return MoveStoneForTutorial(parameter);
+                break;
             default:
                 Debug.LogWarning($"[Stage20] Unknown tutorial custom action: {actionId}");
                 break;
@@ -811,6 +832,270 @@ public class Stage20Controller : MonoBehaviour
         _stoneCountdownCoroutine = StartCoroutine(StoneCountdownRoutine(seconds));
         yield return _stoneCountdownCoroutine;
         _stoneCountdownCoroutine = null;
+    }
+
+    private void SetTutorialOptionWord(string text, bool showImmediately)
+    {
+        _tutorialOptionWordCache = text ?? string.Empty;
+        ApplyTutorialOptionWord(_tutorialOptionWordCache, showImmediately);
+    }
+
+    private void ApplyTutorialOptionWord(string text, bool show)
+    {
+        var target = tutorialOptionWordText != null ? tutorialOptionWordText : wordLabel;
+        if (target == null)
+            return;
+
+        target.text = text ?? string.Empty;
+        target.gameObject.SetActive(show);
+
+        if (show && target.gameObject.activeInHierarchy)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(target.rectTransform);
+        }
+    }
+
+    private IEnumerator MoveStoneForTutorial(string parameter)
+    {
+        if (stoneBoard == null)
+        {
+            Debug.LogWarning("[Stage20] MoveStone tutorial action ignored because stoneBoard is not assigned.");
+            yield break;
+        }
+
+        string stoneKey = parameter;
+        string slotKey = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(parameter))
+        {
+            var parts = parameter.Split(new[] { '>' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0)
+                stoneKey = parts[0].Trim();
+            if (parts.Length > 1)
+                slotKey = parts[1].Trim();
+        }
+
+        var stone = FindStoneForTutorial(stoneKey);
+        if (stone == null)
+        {
+            Debug.LogWarning($"[Stage20] MoveStone tutorial action could not find stone '{stoneKey}'.");
+            yield break;
+        }
+
+        var targetSlot = FindSlotForTutorial(slotKey, stone);
+        if (targetSlot == null)
+        {
+            Debug.LogWarning($"[Stage20] MoveStone tutorial action could not find target slot '{slotKey}'.");
+            yield break;
+        }
+
+        yield return AnimateStoneToSlot(stone, targetSlot);
+        AttachStoneToSlot(stone, targetSlot);
+    }
+
+    private IEnumerator AnimateStoneToSlot(StoneDraggable stone, StoneDropZone slot)
+    {
+        if (stone == null || slot == null)
+            yield break;
+
+        var stoneRT = stone.GetComponent<RectTransform>();
+        var slotRT = slot.GetComponent<RectTransform>();
+
+        if (stoneRT == null || slotRT == null)
+        {
+            yield break;
+        }
+
+        float duration = Mathf.Max(0f, tutorialStoneMoveSeconds);
+        if (duration <= 0f)
+            yield break;
+
+        Vector3 startPosition = stoneRT.position;
+        Quaternion startRotation = stoneRT.rotation;
+        Vector3 targetPosition = slotRT.position;
+        Quaternion targetRotation = slotRT.rotation;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(duration > 0f ? elapsed / duration : 1f);
+            float eased = tutorialStoneMoveCurve != null ? tutorialStoneMoveCurve.Evaluate(t) : t;
+            stoneRT.position = Vector3.Lerp(startPosition, targetPosition, eased);
+            stoneRT.rotation = Quaternion.Slerp(startRotation, targetRotation, eased);
+            yield return null;
+        }
+
+        stoneRT.position = targetPosition;
+        stoneRT.rotation = targetRotation;
+    }
+
+    private void AttachStoneToSlot(StoneDraggable stone, StoneDropZone slot)
+    {
+        if (stone == null || slot == null)
+            return;
+
+        Transform container = slot.slotParent != null ? slot.slotParent : slot.transform;
+        stone.transform.SetParent(container, false);
+        stone.transform.SetAsLastSibling();
+
+        if (stone.TryGetComponent(out LayoutElement existingLayout))
+        {
+            existingLayout.ignoreLayout = true;
+        }
+        else if (container.TryGetComponent(out LayoutGroup _))
+        {
+            var addedLayout = stone.gameObject.AddComponent<LayoutElement>();
+            addedLayout.ignoreLayout = true;
+        }
+
+        if (stone.TryGetComponent(out RectTransform stoneRT))
+        {
+            stoneRT.anchorMin = new Vector2(0.5f, 0.5f);
+            stoneRT.anchorMax = new Vector2(0.5f, 0.5f);
+            stoneRT.anchoredPosition = Vector2.zero;
+            stoneRT.localScale = Vector3.one;
+
+            if (slot.TryGetComponent(out RectTransform slotRT))
+            {
+                stoneRT.position = slotRT.position;
+                stoneRT.rotation = slotRT.rotation;
+            }
+            else
+            {
+                stoneRT.localRotation = Quaternion.identity;
+            }
+        }
+
+        if (stone.TryGetComponent(out CanvasGroup cg))
+        {
+            cg.blocksRaycasts = true;
+            cg.alpha = 1f;
+        }
+    }
+
+    private IEnumerator PulseTutorialTarget(RectTransform target, float scaleMultiplier, float duration, int loops)
+    {
+        if (target == null)
+            yield break;
+
+        loops = Mathf.Max(1, loops);
+        scaleMultiplier = scaleMultiplier <= 0f ? 1f : scaleMultiplier;
+        duration = Mathf.Max(0f, duration);
+
+        Vector3 originalScale = target.localScale;
+        Vector3 peakScale = originalScale * scaleMultiplier;
+        float halfDuration = duration > 0f ? duration * 0.5f : 0f;
+
+        for (int i = 0; i < loops; i++)
+        {
+            yield return LerpScale(target, target.localScale, peakScale, halfDuration);
+            yield return LerpScale(target, target.localScale, originalScale, halfDuration);
+        }
+
+        target.localScale = originalScale;
+    }
+
+    private IEnumerator LerpScale(RectTransform target, Vector3 from, Vector3 to, float duration)
+    {
+        if (target == null)
+            yield break;
+
+        if (duration <= 0f)
+        {
+            target.localScale = to;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            target.localScale = Vector3.Lerp(from, to, t);
+            yield return null;
+        }
+
+        target.localScale = to;
+    }
+
+    private StoneDraggable FindStoneForTutorial(string identifier)
+    {
+        if (stoneBoard == null)
+            return null;
+
+        var stones = stoneBoard.GetComponentsInChildren<StoneDraggable>(true);
+        if (stones == null || stones.Length == 0)
+            return null;
+
+        identifier = string.IsNullOrWhiteSpace(identifier) ? string.Empty : identifier.Trim();
+        int targetNumber = ExtractNumberFromName(identifier);
+
+        foreach (var stone in stones)
+        {
+            if (stone == null)
+                continue;
+
+            if (!string.IsNullOrEmpty(identifier) &&
+                string.Equals(stone.gameObject.name, identifier, StringComparison.OrdinalIgnoreCase))
+            {
+                return stone;
+            }
+
+            if (targetNumber > 0 && ExtractNumberFromName(stone.gameObject.name) == targetNumber)
+                return stone;
+        }
+
+        return stones.FirstOrDefault(s => s != null);
+    }
+
+    private StoneDropZone FindSlotForTutorial(string identifier, StoneDraggable stoneFallback)
+    {
+        if (stoneBoard == null)
+            return null;
+
+        var slots = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        if (slots == null || slots.Length == 0)
+            return null;
+
+        identifier = string.IsNullOrWhiteSpace(identifier) ? string.Empty : identifier.Trim();
+        int targetNumber = ExtractNumberFromName(identifier);
+
+        if (targetNumber == 0 && stoneFallback != null)
+            targetNumber = ExtractNumberFromName(stoneFallback.gameObject.name);
+
+        foreach (var slot in slots)
+        {
+            if (slot == null)
+                continue;
+
+            if (!string.IsNullOrEmpty(identifier) &&
+                string.Equals(slot.gameObject.name, identifier, StringComparison.OrdinalIgnoreCase))
+            {
+                return slot;
+            }
+
+            if (targetNumber > 0)
+            {
+                int slotNumber = slot.slotNumber != 0 ? slot.slotNumber : ExtractNumberFromName(slot.gameObject.name);
+                if (slotNumber == targetNumber)
+                    return slot;
+            }
+        }
+
+        return slots.FirstOrDefault(s => s != null);
+    }
+
+    private int ExtractNumberFromName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return 0;
+
+        var match = Regex.Match(name, @"_(\d+)");
+        if (match.Success && match.Groups.Count > 1 && int.TryParse(match.Groups[1].Value, out var number))
+            return number;
+
+        return 0;
     }
 
     private IEnumerator StoneCountdownRoutine(float seconds)

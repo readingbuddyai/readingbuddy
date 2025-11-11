@@ -235,6 +235,11 @@ Transform:
   - {fileID: 1235579236}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!224 &601006427 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 4152141340459913118, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+  m_PrefabInstance: {fileID: 1112523491}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &665165349 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4423923863823259097, guid: 905794e6247728045af85a33f2e0da17, type: 3}
@@ -855,9 +860,10 @@ MonoBehaviour:
   introTutorialImage: {fileID: 0}
   introOptions: []
   introOptionCursor:
-    handCursor: {fileID: 0}
+    handCursor: {fileID: 5074973163057813357, guid: 1499aeed256584b44b17494563d5ef9b, type: 3}
     wrongOptionTransform: {fileID: 0}
     correctOptionTransform: {fileID: 0}
+    doneButtonTransform: {fileID: 601006427}
     wrongHoverSeconds: 1
     correctHoverSeconds: 1
     cursorMoveSeconds: 0.35
@@ -930,6 +936,33 @@ MonoBehaviour:
   clipFeedbackTryAgainSecond: {fileID: 8300000, guid: ca42e548555e2fd45be88f2608178f91, type: 3}
   clipFeedbackGreatJob: {fileID: 8300000, guid: 0426d53f0853494478ed2c9846db4946, type: 3}
   clipFinalEncouragement: {fileID: 8300000, guid: 2286a3c3e8a1b5442874e66157243bd5, type: 3}
+  tutorialOptionsContainer: {fileID: 1919600442}
+  tutorialOptionWordText: {fileID: 1112523495}
+  tutorialStoneMoveSeconds: 0.6
+  tutorialStoneMoveCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
   recordSeconds: 3
   recordSampleRate: 44100
 --- !u!82 &1112523494 stripped
@@ -1287,6 +1320,11 @@ Transform:
   - {fileID: 65512067}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!224 &1919600442 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 8616111212243132951, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+  m_PrefabInstance: {fileID: 1112523491}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &2042998715
 PrefabInstance:
   m_ObjectHideFlags: 0
