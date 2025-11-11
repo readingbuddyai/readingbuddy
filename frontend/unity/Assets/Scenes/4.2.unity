@@ -2611,11 +2611,12 @@ MonoBehaviour:
   stageSet: 4.2
   stageTwoPart: 4.2
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyODQyMjU5LCJleHAiOjE3NjI5Mjg2NTl9.8uWZeR5EpQKWyuWSG0vbfr0cXcsy4k65KmBM_lHAC6eCAizHTo7w9w5rkHNe8i3s
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyODk4NTI4LCJleHAiOjE3NjI5ODQ5Mjh9.7PE_fFs6C0b6Ud0A1nXi_cNxhh_TVOY23noGeAwA33guf2FMPdHqt7pXC4BurqVp
   stageSessionId: 
   progressText: {fileID: 1445873331}
   guideImage: {fileID: 1483861607}
   guideRect: {fileID: 1483861606}
+  guide3DCharacter: {fileID: 0}
   wordText: {fileID: 0}
   choseongText: {fileID: 42601047}
   jungseongText: {fileID: 1866874801}
