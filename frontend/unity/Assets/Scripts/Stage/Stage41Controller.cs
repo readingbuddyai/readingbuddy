@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Stage 4.1 컨트롤러 (모든 stage=4 규격)
@@ -34,6 +35,7 @@ public class Stage41Controller : MonoBehaviour
 
     [Header("UI 참조")]
     public Text progressText;
+    public Font uiFont;
     public Image guideImage;
     public RectTransform guideRect;
     public TMP_Text wordText;
@@ -50,6 +52,12 @@ public class Stage41Controller : MonoBehaviour
     public GameObject consonantChoicesContainer;
     [Tooltip("모음 후보 상자(중성 오답 시 표시)")]
     public GameObject vowelChoicesContainer;
+
+    [Header("End Modal (Stage Complete)")]
+    public AudioClip clipStageCompleteVoice;   // 종료 시 추가 재생할 음성
+    public Button againButtonPrefab;
+    public Button lobbyButtonPrefab;
+    public Vector2 endModalButtonSize = new Vector2(600f, 300f);
 
     [Header("가이드 이동/축소")]
     public Vector2 guideStartSize = new Vector2(1500, 1500);
@@ -177,6 +185,7 @@ public class Stage41Controller : MonoBehaviour
         SetAllBoxAlpha(dimAlpha);
     }
 
+    // 메인 스테이지 진행 코루틴
     private IEnumerator RunStage()
     {
         yield return PlayClip(sfxStart);
@@ -304,12 +313,121 @@ public class Stage41Controller : MonoBehaviour
             if (i < questions.Count - 1)
                 yield return PlayClip(sfxNext);
         }
-
         if (!string.IsNullOrWhiteSpace(stageSessionId))
             yield return CompleteStageSession();
 
-        yield return PlayClip(clipFinalizeSpell); // [4.1.13]
-        OnStageComplete?.Invoke();
+        // 완전 종료용 오디오 재생
+        if (clipStageCompleteVoice)
+        {
+            yield return PlayClip(clipStageCompleteVoice);
+        }
+
+        // 종료 모달 표시
+        ShowEndModal();
+    }
+
+        private void ShowEndModal()
+    {
+        //버튼 prefab 자동 로드
+        if (againButtonPrefab == null)
+            againButtonPrefab = Resources.Load<Button>("UI/againbutton");
+        if (lobbyButtonPrefab == null)
+            lobbyButtonPrefab = Resources.Load<Button>("UI/lobbybutton");
+
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas) return;
+
+        // 배경 오버레이
+        var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
+        overlay.layer = canvas.gameObject.layer;
+        var rt = overlay.GetComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.sizeDelta = Vector2.zero;
+
+        var bg = overlay.GetComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.65f);
+        bg.raycastTarget = true;
+
+        // 패널
+        var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        panel.layer = canvas.gameObject.layer;
+        var prt = panel.GetComponent<RectTransform>();
+        prt.SetParent(overlay.transform, false);
+        prt.anchorMin = new Vector2(0.5f, 0.5f);
+        prt.anchorMax = new Vector2(0.5f, 0.5f);
+        prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(2200f, 1500f);
+        var pbg = panel.GetComponent<Image>();
+        pbg.color = new Color(0.12f, 0.17f, 0.26f, 0.95f);
+
+        // 타이틀 텍스트
+        var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
+        title.layer = canvas.gameObject.layer;
+        var trt = title.GetComponent<RectTransform>();
+        trt.SetParent(panel.transform, false);
+        trt.anchorMin = new Vector2(0.5f, 1f);
+        trt.anchorMax = new Vector2(0.5f, 1f);
+        trt.pivot = new Vector2(0.5f, 1f);
+        trt.anchoredPosition = new Vector2(0f, -120f);
+        trt.sizeDelta = new Vector2(1600f, 200f);
+
+        var t = title.GetComponent<Text>();
+        t.text = "오늘의 마법 수업이 끝났어요!";
+        t.alignment = TextAnchor.MiddleCenter;
+        t.fontSize = 100;
+        t.fontStyle = FontStyle.Bold;
+        t.color = Color.white;
+        t.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+        // 버튼 크기와 위치
+        Vector2 btnSize = new Vector2(600f, 300f);
+        float gap = 50f;
+
+        // 다시 학습하기 버튼
+        var againBtn = Instantiate(againButtonPrefab, panel.transform);
+        var againRt = againBtn.GetComponent<RectTransform>();
+        againRt.anchorMin = new Vector2(0.5f, 0.5f);
+        againRt.anchorMax = new Vector2(0.5f, 0.5f);
+        againRt.pivot = new Vector2(1f, 0.5f);
+        againRt.sizeDelta = btnSize;
+        againRt.anchoredPosition = new Vector2(-gap * 0.5f, -150f);
+        againBtn.onClick.AddListener(() =>
+        {
+            Destroy(overlay);
+            RestartStage();
+        });
+
+        // 로비로 나가기 버튼
+        var lobbyBtn = Instantiate(lobbyButtonPrefab, panel.transform);
+        var lobbyRt = lobbyBtn.GetComponent<RectTransform>();
+        lobbyRt.anchorMin = new Vector2(0.5f, 0.5f);
+        lobbyRt.anchorMax = new Vector2(0.5f, 0.5f);
+        lobbyRt.pivot = new Vector2(0f, 0.5f);
+        lobbyRt.sizeDelta = btnSize;
+        lobbyRt.anchoredPosition = new Vector2(gap * 0.5f, -150f);
+        lobbyBtn.onClick.AddListener(() =>
+        {
+            Destroy(overlay);
+            GoToLobby();
+        });
+    }
+    
+        private void RestartStage()
+    {
+        StopAllCoroutines();
+        stageSessionId = string.Empty;
+        StartCoroutine(RunStage());
+    }
+
+    private void GoToLobby()
+    {
+        if (SceneLoader.Instance != null)
+            SceneLoader.Instance.LoadScene(SceneId.Lobby);
+        else
+            SceneManager.LoadScene(SceneId.Lobby);
     }
 
     // 드래그로 재배열 완료 시 외부에서 호출: 초/중/종 순
@@ -644,12 +762,12 @@ public class Stage41Controller : MonoBehaviour
 
         var wav = WavUtility.FromAudioClip(clip);
         string targetAns0 = GetTargetPhonemeAnswer(segmentIndex);
-        Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns0}'");
+        // Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns0}'");
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns0)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
         // Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
         Debug.Log($"[Stage41] check/voice 요청 URL(한글): {System.Uri.UnescapeDataString(url)}");
-        if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
+        // if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
 
@@ -682,8 +800,22 @@ public class Stage41Controller : MonoBehaviour
                 var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
                 string reply = parsed?.data?.reply ?? string.Empty;
                 bool ok = parsed?.data?.isReplyCorrect ?? false;
-                _segmentReplies.Add((reply ?? string.Empty).Trim());
+
+                // 이미 알고 있는 정답으로 대체 (reply 무시)
+                string correctPhoneme = GetTargetPhonemeAnswer(segmentIndex);
+                _segmentReplies.Add(correctPhoneme);
                 _segmentCorrects.Add(ok);
+
+                // 정답이면 즉시 해당 slot에 표시
+                if (ok)
+                {
+                    string normalized = NormalizePhoneme(correctPhoneme);
+                    SetSlotText(segmentIndex, normalized);
+                    SetSlotAlpha(segmentIndex, 1f);
+                    _finalizedSlots[segmentIndex] = true;
+                    // Debug.Log($"[Stage41] segment {segmentIndex} 정답 '{normalized}' → 슬롯에 표시됨");
+                }
+
                 if (logVerbose) Debug.Log($"[Stage41] segment {segmentIndex} → reply='{reply}', correct={ok}");
             }
             catch { }
@@ -731,12 +863,12 @@ public class Stage41Controller : MonoBehaviour
 
         var wav = WavUtility.FromAudioClip(clip);
         string targetAns1 = GetTargetPhonemeAnswer(segmentIndex);
-        Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns1}'");
+        // Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns1}'");
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns1)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
-        Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
+        // Debug.Log($"[Stage41] check/voice 요청 URL: {url}");
         Debug.Log($"[Stage41] check/voice 요청 URL(한글): {System.Uri.UnescapeDataString(url)}");
-        if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
+        // if (logVerbose) Debug.Log($"[Stage41] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
         form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
 
@@ -764,22 +896,38 @@ public class Stage41Controller : MonoBehaviour
             }
 
             var respText = req.downloadHandler.text;
-            if (logVerbose) Debug.Log($"[Stage41] check/voice 응답: {respText}");
-            try
-            {
-                var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
-                string reply = parsed?.data?.reply ?? string.Empty;
-                bool ok = parsed?.data?.isReplyCorrect ?? false;
-                while (_segmentReplies.Count <= segmentIndex) _segmentReplies.Add(string.Empty);
-                while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
-                _segmentReplies[segmentIndex] = (reply ?? string.Empty).Trim();
-                _segmentCorrects[segmentIndex] = ok;
-                // no immediate UI fill; will fill after all segments complete
+        if (logVerbose) Debug.Log($"[Stage41] check/voice 응답: {respText}");
+        try
+        {
+            var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
+            bool ok = parsed?.data?.isReplyCorrect ?? false;
 
-                if (logVerbose) Debug.Log($"[Stage41] segment {segmentIndex} reply='{reply}', correct={ok}");
-                onDone?.Invoke(ok, reply);
+            // 우리가 보낸 정답 phoneme
+            string correctPhoneme = GetTargetPhonemeAnswer(segmentIndex);
+
+            // 리스트 크기 보정
+            while (_segmentReplies.Count <= segmentIndex) _segmentReplies.Add(string.Empty);
+            while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
+
+            // reply는 절대 사용하지 않음. isReplyCorrect true면 우리가 보낸 targetAns로 채움
+            _segmentReplies[segmentIndex] = ok ? correctPhoneme : string.Empty;
+            _segmentCorrects[segmentIndex] = ok;
+
+            // 정답이면 즉시 UI에 표시
+            if (ok)
+            {
+                string normalized = NormalizePhoneme(correctPhoneme);
+                SetSlotText(segmentIndex, normalized);
+                SetSlotAlpha(segmentIndex, 1f);
+                _finalizedSlots[segmentIndex] = true;
+                // Debug.Log($"[Stage41] segment {segmentIndex} 정답 '{normalized}' → 슬롯 표시 완료");
             }
-            catch { onDone?.Invoke(false, string.Empty); }
+
+            if (logVerbose)
+                Debug.Log($"[Stage41] segment {segmentIndex} isReplyCorrect={ok}, target='{correctPhoneme}'");
+        }
+        catch { }
+
         }
     }
 
@@ -845,7 +993,7 @@ public class Stage41Controller : MonoBehaviour
             ApplyCommonHeaders(req);
             req.SetRequestHeader("Content-Type", "application/json");
             yield return req.SendWebRequest();
-            if (logVerbose) Debug.Log($"[Stage41] attempt (new): code={req.responseCode} body={req.downloadHandler.text}");
+            if (logVerbose) Debug.Log($"[Stage41] attempt (응답): code={req.responseCode} body={req.downloadHandler.text}");
         }
     }
 
