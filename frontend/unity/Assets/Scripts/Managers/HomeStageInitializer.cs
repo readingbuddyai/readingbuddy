@@ -22,6 +22,10 @@ public class HomeStageInitializer : MonoBehaviour
     [Tooltip("개발/테스트용 수동 토큰 (우선 사용)")]
     public string debugToken = "";
 
+    [Header("캐시 설정")]
+    [Tooltip("마지막 스테이지를 PlayerPrefs에 저장할 키")]
+    public string stageCacheKey = "lastStage";
+
     [Header("Home 캐릭터 참조")]
     [Tooltip("Home 씬의 mage 오브젝트 (비우면 이름으로 자동 탐색)")]
     public GameObject mageRef;
@@ -32,11 +36,21 @@ public class HomeStageInitializer : MonoBehaviour
 
     private bool _fetchedOnce = false;
     private static bool sDidFirstHomeInit = false; // 앱 시작 후 최초 _Persistent→Home 처리 여부
+    private static string sLastStageCached = string.Empty; // 씬 간 사용 가능한 캐시
+
+    public static string LastStage => sLastStageCached;
 
     private void OnEnable()
     {
         DontDestroyOnLoad(gameObject);
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        if (string.IsNullOrEmpty(sLastStageCached))
+        {
+            // PlayerPrefs 캐시 복구 시도
+            var cached = PlayerPrefs.GetString(stageCacheKey, string.Empty);
+            if (!string.IsNullOrEmpty(cached))
+                sLastStageCached = cached;
+        }
     }
 
     private void OnDisable()
@@ -137,6 +151,20 @@ public class HomeStageInitializer : MonoBehaviour
             }
 
             string stageStr = resp != null && resp.data != null ? (resp.data.stage ?? string.Empty) : string.Empty;
+            // 캐시 저장 (메모리 + PlayerPrefs)
+            sLastStageCached = stageStr;
+            try
+            {
+                if (!string.IsNullOrEmpty(stageCacheKey))
+                {
+                    PlayerPrefs.SetString(stageCacheKey, stageStr ?? string.Empty);
+                    PlayerPrefs.Save();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[HomeStage] PlayerPrefs 캐시 저장 실패: {e.Message}");
+            }
             ApplyStage(stageStr);
         }
     }
@@ -149,7 +177,7 @@ public class HomeStageInitializer : MonoBehaviour
         return path.StartsWith("/") ? baseUrl + path : baseUrl + "/" + path;
     }
 
-    private enum HomeProfile
+    public enum HomeProfile
     {
         Mage,
         Stage2Char,
@@ -161,10 +189,9 @@ public class HomeStageInitializer : MonoBehaviour
         var profile = ResolveProfile(stage);
         ToggleCharacters(profile);
         Debug.Log($"[HomeStage] stage '{stage}' → {profile}");
-        // TODO: 음성 선택 로직 연결 (Voice Manager가 있다면 여기에)
     }
 
-    private static HomeProfile ResolveProfile(string stage)
+    public static HomeProfile ResolveProfile(string stage)
     {
         if (string.IsNullOrWhiteSpace(stage))
             return HomeProfile.Mage;

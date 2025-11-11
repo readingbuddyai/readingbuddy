@@ -46,3 +46,13 @@ copilot-messages.log
 # System files
 .DS_Store
 .project/attachments/files/**
+
+# Unity auto-generated lighting & reflection data
+*.lighting
+*.lighting.meta
+*.exr
+*.exr.meta
+
+# Hovl Studio Demo scenes (optional)
+Assets/Hovl Studio/Magic effects pack/Demo scene/
+Assets/3D Items - Wand Pack/Example SceneSettings.lighting*
