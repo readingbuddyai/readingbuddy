@@ -10954,8 +10954,8 @@ MonoBehaviour:
     \uB2EB\uD600\uC694"
   uiFont: {fileID: 0}
   useWorldSpaceForXR: 1
-  worldSpaceDistance: 1.25
-  worldSpaceSizeMeters: {x: 1.6, y: 0.9}
+  worldSpaceDistance: 2
+  worldSpaceSizeMeters: {x: 2, y: 1.2}
   parentToCamera: 1
   triggerPressThreshold: 0.6
   toggleFallbackKey: 109
