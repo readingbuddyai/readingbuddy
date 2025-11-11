@@ -326,108 +326,54 @@ public class Stage41Controller : MonoBehaviour
         ShowEndModal();
     }
 
-        private void ShowEndModal()
+    private void ShowEndModal()
     {
-        //버튼 prefab 자동 로드
-        if (againButtonPrefab == null)
-            againButtonPrefab = Resources.Load<Button>("UI/againbutton");
-        if (lobbyButtonPrefab == null)
-            lobbyButtonPrefab = Resources.Load<Button>("UI/lobbybutton");
-
+        // Canvas를 먼저 찾고, 그 하위에서 EndModal을 찾아 (비활성화 포함)
         var canvas = FindObjectOfType<Canvas>();
-        if (!canvas) return;
-
-        // 배경 오버레이
-        var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
-        overlay.layer = canvas.gameObject.layer;
-        var rt = overlay.GetComponent<RectTransform>();
-        rt.SetParent(canvas.transform, false);
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.sizeDelta = Vector2.zero;
-
-        var bg = overlay.GetComponent<Image>();
-        bg.color = new Color(0f, 0f, 0f, 0.65f);
-        bg.raycastTarget = true;
-
-        // 패널
-        var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
-        panel.layer = canvas.gameObject.layer;
-        var prt = panel.GetComponent<RectTransform>();
-        prt.SetParent(overlay.transform, false);
-        prt.anchorMin = new Vector2(0.5f, 0.5f);
-        prt.anchorMax = new Vector2(0.5f, 0.5f);
-        prt.pivot = new Vector2(0.5f, 0.5f);
-        prt.sizeDelta = new Vector2(2200f, 1500f);
-        var pbg = panel.GetComponent<Image>();
-        pbg.color = new Color(0.12f, 0.17f, 0.26f, 0.95f);
-
-        // 타이틀 텍스트
-        var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
-        title.layer = canvas.gameObject.layer;
-        var trt = title.GetComponent<RectTransform>();
-        trt.SetParent(panel.transform, false);
-        trt.anchorMin = new Vector2(0.5f, 1f);
-        trt.anchorMax = new Vector2(0.5f, 1f);
-        trt.pivot = new Vector2(0.5f, 1f);
-        trt.anchoredPosition = new Vector2(0f, -120f);
-        trt.sizeDelta = new Vector2(1600f, 200f);
-
-        var t = title.GetComponent<Text>();
-        t.text = "오늘의 마법 수업이 끝났어요!";
-        t.alignment = TextAnchor.MiddleCenter;
-        t.fontSize = 100;
-        t.fontStyle = FontStyle.Bold;
-        t.color = Color.white;
-        t.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-
-        // 버튼 크기와 위치
-        Vector2 btnSize = new Vector2(600f, 300f);
-        float gap = 50f;
-
-        // 다시 학습하기 버튼
-        var againBtn = Instantiate(againButtonPrefab, panel.transform);
-        var againRt = againBtn.GetComponent<RectTransform>();
-        againRt.anchorMin = new Vector2(0.5f, 0.5f);
-        againRt.anchorMax = new Vector2(0.5f, 0.5f);
-        againRt.pivot = new Vector2(1f, 0.5f);
-        againRt.sizeDelta = btnSize;
-        againRt.anchoredPosition = new Vector2(-gap * 0.5f, -150f);
-        againBtn.onClick.AddListener(() =>
+        if (!canvas)
         {
-            Destroy(overlay);
-            RestartStage();
-        });
+            Debug.LogWarning("[Stage41] Canvas를 찾을 수 없습니다.");
+            return;
+        }
 
-        // 로비로 나가기 버튼
-        var lobbyBtn = Instantiate(lobbyButtonPrefab, panel.transform);
-        var lobbyRt = lobbyBtn.GetComponent<RectTransform>();
-        lobbyRt.anchorMin = new Vector2(0.5f, 0.5f);
-        lobbyRt.anchorMax = new Vector2(0.5f, 0.5f);
-        lobbyRt.pivot = new Vector2(0f, 0.5f);
-        lobbyRt.sizeDelta = btnSize;
-        lobbyRt.anchoredPosition = new Vector2(gap * 0.5f, -150f);
-        lobbyBtn.onClick.AddListener(() =>
+        var modalTransform = canvas.transform.Find("EndModal");
+        if (modalTransform == null)
         {
-            Destroy(overlay);
-            GoToLobby();
-        });
+            Debug.LogWarning("[Stage41] Canvas 하위에 EndModal 오브젝트를 찾을 수 없습니다.");
+            return;
+        }
+
+        modalTransform.gameObject.SetActive(true);
+        Debug.Log("[Stage41] EndModal 활성화 완료!");
     }
-    
-        private void RestartStage()
+
+    public void OnClickAgainButton()
     {
+        Debug.Log("[Stage41] 다시 학습하기 버튼 클릭됨");
+
+        // EndModal 비활성화
+        var modal = GameObject.Find("EndModal");
+        if (modal) modal.SetActive(false);
+
+        // 세션 초기화 후 스테이지 재시작
         StopAllCoroutines();
         stageSessionId = string.Empty;
         StartCoroutine(RunStage());
     }
 
-    private void GoToLobby()
+    public void OnClickLobbyButton()
     {
+        Debug.Log("[Stage41] 로비로 나가기 버튼 클릭됨");
+
+        // EndModal 비활성화
+        var modal = GameObject.Find("EndModal");
+        if (modal) modal.SetActive(false);
+
+        // 로비 씬 이동
         if (SceneLoader.Instance != null)
             SceneLoader.Instance.LoadScene(SceneId.Lobby);
         else
-            SceneManager.LoadScene(SceneId.Lobby);
+            SceneManager.LoadScene("Lobby");  // 직접 이름으로 로드
     }
 
     // 드래그로 재배열 완료 시 외부에서 호출: 초/중/종 순
