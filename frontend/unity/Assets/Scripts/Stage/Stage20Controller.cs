@@ -7,6 +7,7 @@ using UnityEngine.Events;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
+using Stage.UI;
 
 /// <summary>
 /// Stage 2.1 진행 컨트롤러 (마법 돌 퍼즐)
@@ -39,6 +40,20 @@ public class Stage20Controller : MonoBehaviour
     public Text progressText;
     public TMP_Text progressTextTMP;
     public TMP_Text wordLabel;
+
+    [Header("Intro Tutorial")]
+    public StageTutorialProfile tutorialProfile;
+    public Sprite introTutorialImage;
+    public List<StageTutorialController.IntroOption> introOptions = new List<StageTutorialController.IntroOption>();
+    public StageTutorialController.IntroOptionCursor introOptionCursor;
+    public PanelAnimator introTutorialPanelAnimator;
+    public GameObject introTutorialPanel;
+    public GameObject guide3DCharacter;
+    [Header("Intro Tutorial Controls")]
+    public bool requireTriggerAfterTutorial = false;
+    [Range(0.05f, 1f)] public float tutorialTriggerThreshold = 0.6f;
+    public KeyCode tutorialFallbackKey = KeyCode.Space;
+    [Min(0f)] public float tutorialClipGapSeconds = 0.9f;
 
     [Header("오디오 재생")]
     public AudioSource audioSource;
@@ -93,6 +108,9 @@ public class Stage20Controller : MonoBehaviour
     private StageAudioController _audioController;
     private StageAudioDependencies _audioDependencies;
     private readonly StageQuestionController<Problem> _questionController = new StageQuestionController<Problem>();
+    private StageTutorialController _tutorialController;
+    private StageTutorialDependencies _tutorialDependencies;
+    private Coroutine _stoneCountdownCoroutine;
 
     private bool _waitingForStoneCount;
     private int? _pendingStoneCount;
@@ -107,6 +125,8 @@ public class Stage20Controller : MonoBehaviour
         authToken = EnvConfig.ResolveAuthToken(authToken);
         ConfigureSessionController();
         ConfigureAudioController();
+        ConfigureTutorialController();
+        _tutorialController?.PrepareForStageStart();
         ResetStoneUI();
         StartCoroutine(RunStage());
     }
@@ -146,6 +166,9 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator RunStage()
     {
+        ConfigureTutorialController();
+        _tutorialController?.ResetAfterStageRestart();
+
         var sessionController = GetSessionController();
 
         if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
@@ -168,7 +191,15 @@ public class Stage20Controller : MonoBehaviour
         }
 
         if (sfxStart) yield return PlayClip(sfxStart);
-        yield return RunIntroSequence();
+        if (_tutorialController != null)
+        {
+            yield return _tutorialController.RunIntroSequence();
+            yield return _tutorialController.RunIntroTutorial();
+        }
+        else
+        {
+            yield return RunIntroSequence();
+        }
 
         List<Problem> problems = null;
         yield return FetchProblems(sessionController, result => problems = result);
@@ -577,6 +608,11 @@ public class Stage20Controller : MonoBehaviour
     {
         _waitingForStoneCount = false;
         _pendingStoneCount = null;
+        if (_stoneCountdownCoroutine != null)
+        {
+            StopCoroutine(_stoneCountdownCoroutine);
+            _stoneCountdownCoroutine = null;
+        }
         ResetStonePositions();
         if (stoneBoard) stoneBoard.SetActive(false);
         if (countdownText)
@@ -615,6 +651,183 @@ public class Stage20Controller : MonoBehaviour
             return null;
         }
         return Microphone.Start(null, false, seconds, sampleRate);
+    }
+
+    private void ConfigureTutorialController()
+    {
+        bool enableTutorial = tutorialProfile != null;
+        if (!enableTutorial)
+        {
+            enableTutorial =
+                (introOptions != null && introOptions.Count > 0) ||
+                introTutorialImage != null ||
+                introOptionCursor != null ||
+                introTutorialPanelAnimator != null ||
+                introTutorialPanel != null ||
+                guide3DCharacter != null;
+        }
+
+        if (!enableTutorial)
+        {
+            _tutorialController = null;
+            _tutorialDependencies = null;
+            return;
+        }
+
+        if (_tutorialController == null)
+            _tutorialController = new StageTutorialController();
+
+        if (_tutorialDependencies == null)
+            _tutorialDependencies = new StageTutorialDependencies();
+
+        _tutorialDependencies.PlayClip = PlayClip;
+        _tutorialDependencies.StartCoroutine = routine => StartCoroutine(routine);
+        _tutorialDependencies.StopCoroutine = routine =>
+        {
+            if (routine != null)
+                StopCoroutine(routine);
+        };
+        _tutorialDependencies.ProgressText = progressText;
+        _tutorialDependencies.EnsureProgressText = EnsureProgressText;
+        _tutorialDependencies.MainImage = null;
+        _tutorialDependencies.OptionsContainer = null;
+        _tutorialDependencies.OptionButtonPrefab = null;
+        _tutorialDependencies.CorrectSfx = null;
+        _tutorialDependencies.MoveCursorSmooth = null;
+        _tutorialDependencies.PulseOption = null;
+        _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
+        _tutorialDependencies.Log = message => Debug.Log(message);
+        _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
+        _tutorialDependencies.VerboseLogging = verboseLogging;
+
+        if (tutorialProfile != null)
+        {
+            _tutorialController.ApplyProfile(tutorialProfile);
+            _tutorialController.introOptions = tutorialProfile.introOptions != null
+                ? tutorialProfile.introOptions
+                    .Where(opt => opt != null)
+                    .Select(opt => new StageTutorialController.IntroOption { label = opt.label, isCorrect = opt.isCorrect })
+                    .ToList()
+                : new List<StageTutorialController.IntroOption>();
+            if (tutorialProfile.introTutorialImage)
+                _tutorialController.introTutorialImage = tutorialProfile.introTutorialImage;
+        }
+        else
+        {
+            _tutorialController.introTutorialImage = introTutorialImage;
+            _tutorialController.introOptions = introOptions != null
+                ? introOptions
+                    .Where(opt => opt != null)
+                    .Select(opt => new StageTutorialController.IntroOption { label = opt.label, isCorrect = opt.isCorrect })
+                    .ToList()
+                : new List<StageTutorialController.IntroOption>();
+            _tutorialController.requireTriggerAfterTutorial = requireTriggerAfterTutorial;
+            _tutorialController.tutorialTriggerThreshold = tutorialTriggerThreshold;
+            _tutorialController.tutorialFallbackKey = tutorialFallbackKey;
+            _tutorialController.tutorialClipGapSeconds = tutorialClipGapSeconds;
+        }
+
+        _tutorialController.introOptionCursor = introOptionCursor;
+        _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
+        _tutorialController.introTutorialPanel = introTutorialPanel;
+        _tutorialController.guide3DCharacter = guide3DCharacter;
+        _tutorialController.Initialize(_tutorialDependencies);
+    }
+
+    private Text EnsureProgressText()
+    {
+        return progressText;
+    }
+
+    private IEnumerator ExecuteTutorialCustomStep(string actionId)
+    {
+        if (string.IsNullOrWhiteSpace(actionId))
+            yield break;
+
+        string command = actionId;
+        string parameter = string.Empty;
+        int separator = actionId.IndexOf(':');
+        if (separator >= 0)
+        {
+            command = actionId.Substring(0, separator);
+            parameter = actionId.Substring(separator + 1);
+        }
+
+        command = command.Trim().ToLowerInvariant();
+
+        switch (command)
+        {
+            case "showstoneboard":
+                if (stoneBoard) stoneBoard.SetActive(true);
+                break;
+            case "hidestoneboard":
+                if (stoneBoard) stoneBoard.SetActive(false);
+                break;
+            case "resetstoneboard":
+                ResetStonePositions();
+                break;
+            case "startstonecountdown":
+                {
+                    float seconds = countdownSeconds;
+                    if (!string.IsNullOrWhiteSpace(parameter) && float.TryParse(parameter, out var parsed))
+                        seconds = parsed;
+                    yield return StartStoneCountdown(seconds);
+                    break;
+                }
+            case "setcountdownvisible":
+                {
+                    bool visible = true;
+                    if (!string.IsNullOrWhiteSpace(parameter))
+                        bool.TryParse(parameter, out visible);
+                    if (countdownText)
+                    {
+                        countdownText.gameObject.SetActive(visible);
+                        if (!visible)
+                            countdownText.text = string.Empty;
+                    }
+                    break;
+                }
+            default:
+                Debug.LogWarning($"[Stage20] Unknown tutorial custom action: {actionId}");
+                break;
+        }
+    }
+
+    private IEnumerator StartStoneCountdown(float seconds)
+    {
+        if (countdownText == null || seconds <= 0f)
+            yield break;
+
+        if (_stoneCountdownCoroutine != null)
+        {
+            StopCoroutine(_stoneCountdownCoroutine);
+            _stoneCountdownCoroutine = null;
+        }
+
+        _stoneCountdownCoroutine = StartCoroutine(StoneCountdownRoutine(seconds));
+        yield return _stoneCountdownCoroutine;
+        _stoneCountdownCoroutine = null;
+    }
+
+    private IEnumerator StoneCountdownRoutine(float seconds)
+    {
+        if (countdownText == null)
+            yield break;
+
+        countdownText.gameObject.SetActive(true);
+        float remaining = Mathf.Max(0f, seconds);
+
+        while (remaining > 0f)
+        {
+            countdownText.text = Mathf.CeilToInt(remaining).ToString();
+            yield return new WaitForSeconds(1f);
+            remaining -= 1f;
+        }
+
+        countdownText.text = "0";
+        yield return new WaitForSeconds(0.5f);
+        countdownText.text = string.Empty;
+        countdownText.gameObject.SetActive(false);
     }
 
     [Serializable]
