@@ -234,9 +234,66 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private void Start()
     {
+        StartCoroutine(InitializeWithAuth());
+    }
+
+    /// <summary>
+    /// AuthManager 연동 초기화
+    /// </summary>
+    private IEnumerator InitializeWithAuth()
+    {
+        Debug.Log("[Stage11] Waiting for AuthManager...");
+
+        // AuthManager가 준비될 때까지 대기 (최대 5초)
+        float timeout = 5f;
+        float elapsed = 0f;
+        while (AuthManager.Instance == null && elapsed < timeout)
+        {
+            yield return new WaitForSeconds(0.1f);
+            elapsed += 0.1f;
+        }
+
+        if (AuthManager.Instance == null)
+        {
+            Debug.LogError("[Stage11] ⚠️ AuthManager.Instance is null after timeout! Returning to Home.");
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            }
+            yield break;
+        }
+
+        Debug.Log("[Stage11] AuthManager found!");
+
+        // 로그인 상태 확인
+        if (!AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.LogError("[Stage11] ⚠️ User is not logged in! Returning to Home.");
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            }
+            yield break;
+        }
+
+        Debug.Log("[Stage11] User is logged in!");
+
         // baseUrl 자동 해석 (ENV > Resources > Inspector)
-        baseUrl   = EnvConfig.ResolveBaseUrl(baseUrl);
-        authToken = EnvConfig.ResolveAuthToken(authToken);
+        baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
+
+        // AuthManager에서 토큰 가져오기 (우선순위)
+        // EnvConfig는 fallback으로만 사용
+        if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
+        {
+            authToken = AuthManager.Instance.GetAccessToken();
+            Debug.Log("[Stage11] ✓ Access token retrieved from AuthManager");
+        }
+        else
+        {
+            authToken = EnvConfig.ResolveAuthToken(authToken);
+            Debug.Log("[Stage11] Using authToken from EnvConfig (fallback)");
+        }
+
         if (applyAutoLayout)
             TryApplyAutoLayout();
         // 가이드 시작 크기는 최초 1회만 적용
