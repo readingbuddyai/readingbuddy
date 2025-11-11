@@ -356,10 +356,10 @@ public class DashBoardService {
 
         // 세션별로 문제 정보 조회 및 변환
         List<StageProblemListResponse.SessionInfo> sessionInfos = sessions.stream()
-                .map(session -> {
+                .map(stage -> {
                     // 해당 세션의 모든 문제 이력 조회
                     List<TrainedProblemHistories> problems = trainedProblemHistoriesRepository
-                            .findByTrainedStageHistories(session);
+                            .findByTrainedStageHistories(stage);
 
                     // 문제 정보를 DTO로 변환
                     List<StageProblemListResponse.ProblemInfo> problemInfos = problems.stream()
@@ -379,12 +379,12 @@ public class DashBoardService {
 
                     // 세션 정보 생성
                     return StageProblemListResponse.SessionInfo.builder()
-                            .sessionId(session.getId())
-                            .stage(session.getStage())
-                            .startedAt(session.getStartedAt())
-                            .totalCount(session.getTotalCount())
-                            .correctCount(session.getCorrectCount())
-                            .wrongCount(session.getWrongCount())
+                            .trainedStageHistoryId(stage.getId())
+                            .stage(stage.getStage())
+                            .startedAt(stage.getStartedAt())
+                            .totalCount(stage.getTotalCount())
+                            .correctCount(stage.getCorrectCount())
+                            .wrongCount(stage.getWrongCount())
                             .problems(problemInfos)
                             .build();
                 }).collect(Collectors.toList());

@@ -26,7 +26,7 @@ public class StageProblemListResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class SessionInfo {
-        private Long sessionId;
+        private Long trainedStageHistoryId;
         private String stage;
         private LocalDateTime startedAt;
         private Integer totalCount;
