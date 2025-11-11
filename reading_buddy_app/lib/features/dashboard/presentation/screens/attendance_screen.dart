@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/attendance_provider.dart';
 
 class AttendanceScreen extends ConsumerStatefulWidget {
@@ -53,7 +54,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             Icons.local_fire_department,
                             '연속 출석',
                             '${attendanceState.consecutiveDays}일',
-                            Colors.orange,
+                            AppTheme.warningColor,
                           ),
                           Container(
                             width: 1,
@@ -65,7 +66,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             Icons.calendar_month,
                             '이달 출석',
                             '${attendanceState.monthlyAttendDays}일',
-                            Colors.blue,
+                            theme.colorScheme.primary,
                           ),
                         ],
                       ),
@@ -111,8 +112,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                             shape: BoxShape.circle,
                           ),
                           // 출석한 날짜에 마커 표시
-                          markerDecoration: BoxDecoration(
-                            color: Colors.green,
+                          markerDecoration: const BoxDecoration(
+                            color: AppTheme.successColor,
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -135,7 +136,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                                   width: 6,
                                   height: 6,
                                   decoration: const BoxDecoration(
-                                    color: Colors.green,
+                                    color: AppTheme.successColor,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -229,14 +230,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           children: [
             Icon(
               isAttended ? Icons.check_circle : Icons.cancel,
-              color: isAttended ? Colors.green : Colors.grey,
+              color: AppTheme.getAttendanceColor(isAttended),
               size: 20,
             ),
             const SizedBox(width: 8),
             Text(
               isAttended ? '출석' : '미출석',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: isAttended ? Colors.green : Colors.grey,
+                color: AppTheme.getAttendanceColor(isAttended),
                 fontWeight: FontWeight.bold,
               ),
             ),

@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 import '../../../../core/providers/providers.dart';
 import '../../data/models/stage_info_response.dart';
 import '../../data/models/stage_try_avg_response.dart';
 import '../../data/models/stage_correct_rate_response.dart';
+import '../../data/models/stage_mastery_response.dart';
 import '../../data/models/phoneme_rank_response.dart';
 
 /// 학습 분석 화면 상태
@@ -16,6 +18,7 @@ class AnalysisState {
   final StageInfoResponse? stageInfo;
   final StageTryAvgResponse? tryAvg;
   final StageCorrectRateResponse? correctRate;
+  final StageMasteryResponse? mastery;
 
   // 음소 랭킹
   final List<PhonemeRankResponse>? weakPhonemes;
@@ -28,6 +31,7 @@ class AnalysisState {
     this.stageInfo,
     this.tryAvg,
     this.correctRate,
+    this.mastery,
     this.weakPhonemes,
     this.practicedPhonemes,
   });
@@ -39,6 +43,7 @@ class AnalysisState {
     StageInfoResponse? stageInfo,
     StageTryAvgResponse? tryAvg,
     StageCorrectRateResponse? correctRate,
+    StageMasteryResponse? mastery,
     List<PhonemeRankResponse>? weakPhonemes,
     List<PhonemeRankResponse>? practicedPhonemes,
   }) {
@@ -49,6 +54,7 @@ class AnalysisState {
       stageInfo: stageInfo ?? this.stageInfo,
       tryAvg: tryAvg ?? this.tryAvg,
       correctRate: correctRate ?? this.correctRate,
+      mastery: mastery ?? this.mastery,
       weakPhonemes: weakPhonemes ?? this.weakPhonemes,
       practicedPhonemes: practicedPhonemes ?? this.practicedPhonemes,
     );
@@ -68,44 +74,42 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      print('=== Analysis Data Load Start ===');
-      print('Selected Stage: ${state.selectedStage}');
+      debugPrint('=== Analysis Data Load Start ===');
+      debugPrint('Selected Stage: ${state.selectedStage}');
 
       // 실제 API 호출
       final stageInfo = await dashboardRepository.getStageInfo(state.selectedStage);
-      print('StageInfo: $stageInfo');
+      debugPrint('StageInfo loaded');
 
       final tryAvg = await dashboardRepository.getStageTryAvg(state.selectedStage);
-      print('TryAvg: $tryAvg (averageTryCount: ${tryAvg?.averageTryCount})');
+      debugPrint('TryAvg loaded: ${tryAvg?.averageTryCount}');
 
       final correctRate = await dashboardRepository.getStageCorrectRate(state.selectedStage);
-      print('CorrectRate: $correctRate (correctRate: ${correctRate?.correctRate})');
+      debugPrint('CorrectRate loaded: ${correctRate?.correctRate}');
 
       final weakPhonemes = await dashboardRepository.getWrongPhonemesRank(5);
-      print('WeakPhonemes: ${weakPhonemes?.length ?? 0} items');
-      if (weakPhonemes != null && weakPhonemes.isNotEmpty) {
-        print('First weak phoneme: ${weakPhonemes.first.value}, wrongCnt: ${weakPhonemes.first.wrongCnt}');
-      }
+      debugPrint('WeakPhonemes loaded: ${weakPhonemes.length} items');
 
       final practicedPhonemes = await dashboardRepository.getTryPhonemesRank(5);
-      print('PracticedPhonemes: ${practicedPhonemes?.length ?? 0} items');
-      if (practicedPhonemes != null && practicedPhonemes.isNotEmpty) {
-        print('First practiced phoneme: ${practicedPhonemes.first.value}, tryCnt: ${practicedPhonemes.first.tryCnt}');
-      }
+      debugPrint('PracticedPhonemes loaded: ${practicedPhonemes.length} items');
+
+      final mastery = await dashboardRepository.getStageMastery(state.selectedStage);
+      debugPrint('Mastery loaded: ${mastery?.averageMastery}');
 
       state = state.copyWith(
         isLoading: false,
         stageInfo: stageInfo,
         tryAvg: tryAvg,
         correctRate: correctRate,
+        mastery: mastery,
         weakPhonemes: weakPhonemes,
         practicedPhonemes: practicedPhonemes,
       );
-      print('=== Analysis Data Load Complete ===');
+      debugPrint('=== Analysis Data Load Complete ===');
     } catch (e, stackTrace) {
-      print('=== Analysis Data Load Error ===');
-      print('Error: $e');
-      print('StackTrace: $stackTrace');
+      debugPrint('=== Analysis Data Load Error ===');
+      debugPrint('Error: $e');
+      debugPrint('StackTrace: $stackTrace');
       state = state.copyWith(
         isLoading: false,
         errorMessage: '데이터를 불러오는데 실패했습니다.',
@@ -124,12 +128,14 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
       final stageInfo = await dashboardRepository.getStageInfo(stage);
       final tryAvg = await dashboardRepository.getStageTryAvg(stage);
       final correctRate = await dashboardRepository.getStageCorrectRate(stage);
+      final mastery = await dashboardRepository.getStageMastery(stage);
 
       state = state.copyWith(
         isLoading: false,
         stageInfo: stageInfo,
         tryAvg: tryAvg,
         correctRate: correctRate,
+        mastery: mastery,
       );
     } catch (e) {
       state = state.copyWith(

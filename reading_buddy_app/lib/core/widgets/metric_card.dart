@@ -52,9 +52,7 @@ class MetricCard extends StatelessWidget {
               // 레이블
               Text(
                 label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 4),
 

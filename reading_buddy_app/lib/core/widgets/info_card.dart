@@ -58,9 +58,7 @@ class InfoCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                      style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -73,9 +71,7 @@ class InfoCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         subtitle!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[500],
-                        ),
+                        style: theme.textTheme.bodySmall,
                       ),
                     ],
                   ],
@@ -86,7 +82,7 @@ class InfoCard extends StatelessWidget {
               if (onTap != null)
                 Icon(
                   Icons.chevron_right,
-                  color: Colors.grey[400],
+                  color: theme.colorScheme.onSurface.withOpacity(0.4),
                 ),
             ],
           ),

@@ -25,8 +25,6 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
       body: _screens[_currentIndex],
       floatingActionButton: FloatingActionButton(

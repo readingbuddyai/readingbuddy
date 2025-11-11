@@ -1,8 +1,10 @@
 import '../../data/models/stage_info_response.dart';
 import '../../data/models/stage_try_avg_response.dart';
 import '../../data/models/stage_correct_rate_response.dart';
+import '../../data/models/stage_mastery_response.dart';
 import '../../data/models/attendance_response.dart';
 import '../../data/models/phoneme_rank_response.dart';
+import '../../data/models/last_played_stage_response.dart';
 
 /// Dashboard Repository 인터페이스
 abstract class DashboardRepository {
@@ -29,4 +31,10 @@ abstract class DashboardRepository {
 
   /// 시도 많은 음소 랭킹
   Future<List<PhonemeRankResponse>> getTryPhonemesRank(int limit);
+
+  /// 스테이지별 숙련도 조회
+  Future<StageMasteryResponse?> getStageMastery(String stage);
+
+  /// 마지막으로 플레이한 스테이지 조회
+  Future<LastPlayedStageResponse?> getLastPlayedStage();
 }

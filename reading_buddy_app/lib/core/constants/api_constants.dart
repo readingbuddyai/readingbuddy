@@ -25,6 +25,9 @@ class ApiConstants {
   static const String kcMasteryTrend = '/api/dashboard/kc/mastery-trend';
   static const String stageMastery = '/api/dashboard/stage/mastery';
 
+  // Train Endpoints
+  static const String lastStage = '/api/train/last/stage';
+
   // Headers
   static const String contentType = 'application/json';
   static const String authorization = 'Authorization';

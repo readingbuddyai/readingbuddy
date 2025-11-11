@@ -1,27 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../providers/home_provider.dart';
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final homeState = ref.watch(homeProvider);
     final theme = Theme.of(context);
 
@@ -47,11 +34,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Reading Buddy',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Reading Buddy',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            if (homeState.consecutiveDays > 0)
+                              Text(
+                                '🔥 ${homeState.consecutiveDays}일 연속 출석 중!',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.warningColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       IconButton(
@@ -67,97 +67,147 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
 
-              // 스와이프 가능한 카드 영역
+              // 오늘의 학습 현황
               SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: 160,
-                      child: PageView(
-                        controller: _pageController,
-                        onPageChanged: (index) {
-                          setState(() {
-                            _currentPage = index;
-                          });
-                        },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Card(
+                    color: homeState.attendedToday
+                        ? AppTheme.successColor.withOpacity(0.1)
+                        : theme.colorScheme.surface,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 카드 1: 오늘의 출석 현황
-                          InfoCard(
-                            title: '오늘의 출석',
-                            value: homeState.attendedToday ? '출석 완료' : '미출석',
-                            subtitle: '학습 시간: ${homeState.todayPlaytime}',
-                            icon: homeState.attendedToday
-                                ? Icons.check_circle
-                                : Icons.circle_outlined,
-                            color: homeState.attendedToday ? Colors.green : Colors.grey,
-                          ),
-
-                          // 카드 2: 이번 주 학습 시간
-                          InfoCard(
-                            title: '이번 주 학습',
-                            value: homeState.weeklyPlaytime,
-                            subtitle: '${homeState.weeklyAttendDays}일 출석',
-                            icon: Icons.timer,
-                            color: theme.colorScheme.primary,
-                          ),
-
-                          // 카드 3: 최근 학습 스테이지
-                          InfoCard(
-                            title: '최근 학습 스테이지',
-                            value: homeState.lastStage ?? '-',
-                            subtitle: homeState.lastCorrectRate != null
-                                ? '정답률: ${homeState.lastCorrectRate!.toStringAsFixed(1)}%'
-                                : null,
-                            icon: Icons.school,
-                            color: Colors.orange,
+                          Row(
+                            children: [
+                              Icon(
+                                homeState.attendedToday
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
+                                color: homeState.attendedToday
+                                    ? AppTheme.successColor
+                                    : theme.colorScheme.onSurface.withOpacity(0.5),
+                                size: 28,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      homeState.attendedToday ? '오늘 학습 완료!' : '오늘 학습 시작하기',
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      '오늘 학습 시간: ${homeState.todayPlaytime}',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-
-                    // 페이지 인디케이터
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(3, (index) {
-                        return Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _currentPage == index
-                                ? theme.colorScheme.primary
-                                : Colors.grey[600],
-                          ),
-                        );
-                      }),
-                    ),
-                  ],
+                  ),
                 ),
               ),
 
-              // 2열 메트릭 카드
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+              // 오늘의 추천 학습
+              if (homeState.recommendedStageName != null)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.lightbulb,
+                                  color: theme.colorScheme.primary,
+                                  size: 24,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '오늘의 추천 학습',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.school,
+                                  size: 20,
+                                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    homeState.recommendedStageName!,
+                                    style: theme.textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (homeState.recommendedMessage != null) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                homeState.recommendedMessage!,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+              // 이번 주 학습 요약
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Row(
                     children: [
                       Expanded(
                         child: MetricCard(
-                          label: '연속 출석',
-                          value: '${homeState.consecutiveDays}일',
-                          icon: Icons.local_fire_department,
-                          color: Colors.orange,
+                          label: '이번 주 출석',
+                          value: '${homeState.weeklyAttendDays}일',
+                          icon: Icons.calendar_today,
+                          color: theme.colorScheme.primary,
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: MetricCard(
-                          label: '오늘 학습',
-                          value: homeState.todayPlaytime,
-                          icon: Icons.access_time,
-                          color: Colors.blue,
+                          label: '이번 주 학습',
+                          value: homeState.weeklyPlaytime,
+                          icon: Icons.timer,
+                          color: theme.colorScheme.secondary,
                         ),
                       ),
                     ],
@@ -165,61 +215,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
               ),
 
-              // 최근 학습 정답률 섹션
-              SliverToBoxAdapter(
-                child: SectionHeader(
-                  title: '최근 학습 성과',
-                  subtitle: homeState.lastStage != null
-                      ? '${homeState.lastStage}'
-                      : '학습 기록이 없습니다',
-                ),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-              // 정답률 간단 표시
-              if (homeState.lastCorrectRate != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  '정답률',
-                                  style: theme.textTheme.titleMedium,
-                                ),
-                                Text(
-                                  '${homeState.lastCorrectRate!.toStringAsFixed(1)}%',
-                                  style: theme.textTheme.titleLarge?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: _getCorrectRateColor(
-                                        homeState.lastCorrectRate!),
-                                  ),
-                                ),
-                              ],
+              // 전체 학습 성과
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '전체 학습 성과',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: homeState.lastCorrectRate! / 100,
-                                minHeight: 8,
-                                backgroundColor: Colors.grey[800],
-                                color: _getCorrectRateColor(
-                                    homeState.lastCorrectRate!),
+                          ),
+                          const SizedBox(height: 20),
+                          Row(
+                            children: [
+                              // 평균 숙련도 원형 차트
+                              if (homeState.averageMastery != null)
+                                MasteryCircularChart(
+                                  percentage: homeState.averageMastery!,
+                                  label: '평균 숙련도',
+                                  size: 140,
+                                  strokeWidth: 12,
+                                )
+                              else
+                                const MasteryCircularChart(
+                                  percentage: 0,
+                                  label: '평균 숙련도',
+                                  size: 140,
+                                  strokeWidth: 12,
+                                ),
+                              const SizedBox(width: 32),
+                              // 통계 정보
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildStatRow(
+                                      '완료 스테이지',
+                                      '${homeState.completedStageCount}개',
+                                      theme,
+                                      AppTheme.successColor,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildStatRow(
+                                      '최근 30일 출석',
+                                      '${homeState.totalAttendDays ?? 0}일',
+                                      theme,
+                                      theme.colorScheme.primary,
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ),
+              ),
 
               // 하단 여백
               const SliverToBoxAdapter(
@@ -232,14 +293,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// 정답률에 따른 색상 반환
-  Color _getCorrectRateColor(double rate) {
-    if (rate >= 80) {
-      return Colors.green;
-    } else if (rate >= 60) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
+  Widget _buildStatRow(String label, String value, ThemeData theme, Color color) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }

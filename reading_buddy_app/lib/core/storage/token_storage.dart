@@ -89,12 +89,85 @@ class TokenStorage {
     return _prefs.getString(StorageConstants.selectedTheme);
   }
 
+  // ==================== 로그인 설정 ====================
+
+  /// 저장된 이메일 저장 (아이디 저장용)
+  Future<void> saveSavedEmail(String email) async {
+    await _prefs.setString(StorageConstants.savedEmail, email);
+  }
+
+  /// 저장된 이메일 조회
+  String? getSavedEmail() {
+    return _prefs.getString(StorageConstants.savedEmail);
+  }
+
+  /// 저장된 이메일 삭제
+  Future<void> clearSavedEmail() async {
+    await _prefs.remove(StorageConstants.savedEmail);
+  }
+
+  /// 저장된 비밀번호 저장 (자동 로그인용, Secure Storage)
+  Future<void> saveSavedPassword(String password) async {
+    await _secureStorage.write(
+      key: StorageConstants.savedPassword,
+      value: password,
+    );
+  }
+
+  /// 저장된 비밀번호 조회
+  Future<String?> getSavedPassword() async {
+    return await _secureStorage.read(key: StorageConstants.savedPassword);
+  }
+
+  /// 저장된 비밀번호 삭제
+  Future<void> clearSavedPassword() async {
+    await _secureStorage.delete(key: StorageConstants.savedPassword);
+  }
+
+  /// 아이디 저장 설정 저장
+  Future<void> setRememberEmail(bool remember) async {
+    await _prefs.setBool(StorageConstants.rememberEmail, remember);
+  }
+
+  /// 아이디 저장 설정 조회
+  bool isRememberEmail() {
+    return _prefs.getBool(StorageConstants.rememberEmail) ?? false;
+  }
+
+  /// 자동 로그인 설정 저장
+  Future<void> setAutoLogin(bool autoLogin) async {
+    await _prefs.setBool(StorageConstants.autoLogin, autoLogin);
+  }
+
+  /// 자동 로그인 설정 조회
+  bool isAutoLogin() {
+    return _prefs.getBool(StorageConstants.autoLogin) ?? false;
+  }
+
   // ==================== Utility ====================
 
   /// 모든 데이터 삭제 (로그아웃 시)
+  /// 아이디 저장, 자동 로그인 설정은 유지
   Future<void> clearAll() async {
+    // 로그인 설정 백업
+    final rememberEmail = isRememberEmail();
+    final savedEmail = getSavedEmail();
+    final autoLogin = isAutoLogin();
+    final selectedTheme = getSelectedTheme();
+
+    // 모든 데이터 삭제
     await _secureStorage.deleteAll();
     await _prefs.clear();
+
+    // 로그인 설정 복원
+    if (rememberEmail && savedEmail != null) {
+      await setRememberEmail(true);
+      await saveSavedEmail(savedEmail);
+    }
+    await setAutoLogin(autoLogin);
+    if (selectedTheme != null) {
+      await saveSelectedTheme(selectedTheme);
+    }
   }
 
   /// 토큰만 삭제

@@ -3,8 +3,10 @@ import '../../domain/repositories/dashboard_repository.dart';
 import '../models/stage_info_response.dart';
 import '../models/stage_try_avg_response.dart';
 import '../models/stage_correct_rate_response.dart';
+import '../models/stage_mastery_response.dart';
 import '../models/attendance_response.dart';
 import '../models/phoneme_rank_response.dart';
+import '../models/last_played_stage_response.dart';
 import '../../../../core/network/api_client.dart';
 
 /// Dashboard Repository 구현체
@@ -113,6 +115,34 @@ class DashboardRepositoryImpl implements DashboardRepository {
     } catch (e) {
       _logger.e('시도 많은 음소 랭킹 조회 실패: $e');
       return [];
+    }
+  }
+
+  @override
+  Future<StageMasteryResponse?> getStageMastery(String stage) async {
+    try {
+      final response = await _apiClient.getStageMastery(stage, null, null);
+      if (response.isSuccess && response.data != null) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      _logger.e('스테이지 숙련도 조회 실패: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<LastPlayedStageResponse?> getLastPlayedStage() async {
+    try {
+      final response = await _apiClient.getLastPlayedStage();
+      if (response.isSuccess && response.data != null) {
+        return response.data;
+      }
+      return null;
+    } catch (e) {
+      _logger.e('마지막 플레이 스테이지 조회 실패: $e');
+      return null;
     }
   }
 }

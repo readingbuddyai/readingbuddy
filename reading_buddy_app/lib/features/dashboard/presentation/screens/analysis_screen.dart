@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/widgets/widgets.dart';
+import '../../../../core/theme/app_theme.dart';
+import '../../../../core/constants/stage_constants.dart';
 import '../providers/analysis_provider.dart';
 
 class AnalysisScreen extends ConsumerWidget {
@@ -30,80 +32,94 @@ class AnalysisScreen extends ConsumerWidget {
                 ),
               ),
 
-              // 스테이지 선택 탭
+              // 스테이지 선택 드롭다운
               SliverToBoxAdapter(
-                child: _buildStageSelector(context, ref, analysisState),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: _buildStageDropdown(context, ref, analysisState),
+                ),
               ),
 
-              // 스테이지 통계 (2열 그리드)
-              if (analysisState.tryAvg != null &&
+              // 스테이지 숙련도 및 통계
+              if (analysisState.mastery != null ||
+                  analysisState.tryAvg != null ||
                   analysisState.correctRate != null)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: MetricCard(
-                            label: '평균 시도',
-                            value:
-                                '${analysisState.tryAvg!.averageTryCount.toStringAsFixed(1)}회',
-                            icon: Icons.replay,
-                            color: Colors.blue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: MetricCard(
-                            label: '정답률',
-                            value:
-                                '${analysisState.correctRate!.correctRate.toStringAsFixed(1)}%',
-                            icon: Icons.check_circle,
-                            color: _getCorrectRateColor(
-                                analysisState.correctRate!.correctRate),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              // 스테이지 상세 정보
-              if (analysisState.stageInfo != null)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24.0,
+                          vertical: 32.0,
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              '스테이지 통계',
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
+                            // 좌측: 원형 차트 (숙련도) - 크게!
+                            if (analysisState.mastery != null)
+                              MasteryCircularChart(
+                                percentage: analysisState.mastery!.masteryPercent,
+                                label: '숙련도',
+                                size: 180,
+                                strokeWidth: 14,
+                              )
+                            else
+                              MasteryCircularChart(
+                                percentage: 0,
+                                label: '숙련도',
+                                size: 180,
+                                strokeWidth: 14,
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            _buildStatRow(
-                              '총 시도 횟수',
-                              '${analysisState.stageInfo!.totalTryCount}회',
-                              theme,
-                            ),
-                            const SizedBox(height: 8),
-                            _buildStatRow(
-                              '정답 수',
-                              '${analysisState.stageInfo!.totalCorrectCount}회',
-                              theme,
-                              color: Colors.green,
-                            ),
-                            const SizedBox(height: 8),
-                            _buildStatRow(
-                              '오답 수',
-                              '${analysisState.stageInfo!.totalWrongCount}회',
-                              theme,
-                              color: Colors.red,
+
+                            const SizedBox(width: 32),
+
+                            // 우측: 3개 통계
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // 1. 전체 정답률
+                                  _buildStatItem(
+                                    icon: Icons.check_circle,
+                                    label: '전체 정답률',
+                                    value: _calculateOverallCorrectRate(analysisState),
+                                    color: AppTheme.getScoreColor(
+                                      _getOverallCorrectRateValue(analysisState),
+                                    ),
+                                    theme: theme,
+                                  ),
+                                  const SizedBox(height: 20),
+
+                                  // 2. 평균 시도
+                                  if (analysisState.tryAvg != null)
+                                    _buildStatItem(
+                                      icon: Icons.replay,
+                                      label: '평균 시도',
+                                      value: '${analysisState.tryAvg!.averageTryCount.toStringAsFixed(1)}회',
+                                      color: theme.colorScheme.primary,
+                                      theme: theme,
+                                    )
+                                  else
+                                    _buildStatItem(
+                                      icon: Icons.replay,
+                                      label: '평균 시도',
+                                      value: '-',
+                                      color: theme.colorScheme.primary,
+                                      theme: theme,
+                                    ),
+                                  const SizedBox(height: 20),
+
+                                  // 3. 숙련된 음소
+                                  _buildStatItem(
+                                    icon: Icons.psychology,
+                                    label: '숙련된 음소',
+                                    value: _getMasteredKcCount(analysisState),
+                                    color: AppTheme.successColor,
+                                    theme: theme,
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
@@ -115,7 +131,7 @@ class AnalysisScreen extends ConsumerWidget {
               const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
               // 취약 음소 섹션
-              SliverToBoxAdapter(
+              const SliverToBoxAdapter(
                 child: SectionHeader(
                   title: '취약 음소 TOP 5',
                   subtitle: '가장 많이 틀린 음소',
@@ -141,13 +157,13 @@ class AnalysisScreen extends ConsumerWidget {
                   ),
                 )
               else
-                const SliverToBoxAdapter(
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(32),
                     child: Center(
                       child: Text(
                         '아직 데이터가 없습니다',
-                        style: TextStyle(color: Colors.grey),
+                        style: theme.textTheme.bodyMedium,
                       ),
                     ),
                   ),
@@ -156,7 +172,7 @@ class AnalysisScreen extends ConsumerWidget {
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // 많이 연습한 음소 섹션
-              SliverToBoxAdapter(
+              const SliverToBoxAdapter(
                 child: SectionHeader(
                   title: '많이 연습한 음소 TOP 5',
                   subtitle: '가장 많이 시도한 음소',
@@ -182,13 +198,13 @@ class AnalysisScreen extends ConsumerWidget {
                   ),
                 )
               else
-                const SliverToBoxAdapter(
+                SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.all(32),
+                    padding: const EdgeInsets.all(32),
                     child: Center(
                       child: Text(
                         '아직 데이터가 없습니다',
-                        style: TextStyle(color: Colors.grey),
+                        style: theme.textTheme.bodyMedium,
                       ),
                     ),
                   ),
@@ -203,40 +219,86 @@ class AnalysisScreen extends ConsumerWidget {
     );
   }
 
-  /// 스테이지 선택 탭
-  Widget _buildStageSelector(
+  /// 스테이지 선택 드롭다운
+  Widget _buildStageDropdown(
       BuildContext context, WidgetRef ref, AnalysisState state) {
-    final stages = ['1.1.1', '1.1.2', '1.2.1', '1.2.2', '2', '3', '4'];
+    final stages = StageConstants.allStages;
     final theme = Theme.of(context);
 
-    return SizedBox(
-      height: 50,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: stages.length,
-        itemBuilder: (context, index) {
-          final stage = stages[index];
-          final isSelected = state.selectedStage == stage;
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: ChoiceChip(
-              label: Text('Stage $stage'),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  ref.read(analysisProvider.notifier).selectStage(stage);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: theme.colorScheme.outline.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.filter_list,
+            size: 20,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            '스테이지',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: DropdownButton<String>(
+              value: state.selectedStage,
+              isExpanded: true,
+              underline: const SizedBox(),
+              icon: Icon(
+                Icons.keyboard_arrow_down,
+                color: theme.colorScheme.primary,
+              ),
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              items: stages.map((stageConfig) {
+                return DropdownMenuItem<String>(
+                  value: stageConfig.id,
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          stageConfig.category,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(stageConfig.displayName),
+                    ],
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  ref.read(analysisProvider.notifier).selectStage(value);
                 }
               },
-              selectedColor: theme.colorScheme.primary,
-              labelStyle: TextStyle(
-                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
             ),
-          );
-        },
+          ),
+        ],
       ),
     );
   }
@@ -264,14 +326,75 @@ class AnalysisScreen extends ConsumerWidget {
     );
   }
 
-  /// 정답률에 따른 색상 반환
-  Color _getCorrectRateColor(double rate) {
-    if (rate >= 80) {
-      return Colors.green;
-    } else if (rate >= 60) {
-      return Colors.orange;
-    } else {
-      return Colors.red;
-    }
+  /// 통계 아이템 (아이콘 + 레이블 + 값)
+  Widget _buildStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+    required ThemeData theme,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: color,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
+
+  /// 전체 정답률 계산 (stageInfo 기반)
+  String _calculateOverallCorrectRate(AnalysisState state) {
+    if (state.stageInfo == null) return '-';
+
+    final correctRate = state.stageInfo!.correctRate;
+    return '${correctRate.toStringAsFixed(1)}%';
+  }
+
+  /// 전체 정답률 숫자 값 (색상 계산용)
+  double _getOverallCorrectRateValue(AnalysisState state) {
+    if (state.stageInfo == null) return 0.0;
+    return state.stageInfo!.correctRate;
+  }
+
+  /// 숙련된 음소 개수 계산 (mastery >= 70%)
+  String _getMasteredKcCount(AnalysisState state) {
+    if (state.mastery?.kcMasteries == null) return '-';
+
+    final kcMasteries = state.mastery!.kcMasteries!;
+    final totalCount = kcMasteries.length;
+
+    // pLearn >= 0.7인 KC 개수 계산
+    final masteredCount = kcMasteries.where((kc) {
+      return (kc.pLearn ?? 0.0) >= 0.7;
+    }).length;
+
+    return '$masteredCount개 / $totalCount개';
+  }
+
 }

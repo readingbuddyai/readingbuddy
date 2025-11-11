@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/providers/providers.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +17,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
+  bool _rememberEmail = false;
+  bool _autoLogin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedSettings();
+  }
+
+  /// 저장된 설정 불러오기
+  Future<void> _loadSavedSettings() async {
+    final tokenStorage = ref.read(tokenStorageProvider);
+
+    // 아이디 저장 설정 불러오기
+    final rememberEmail = tokenStorage.isRememberEmail();
+    if (rememberEmail) {
+      final savedEmail = tokenStorage.getSavedEmail();
+      if (savedEmail != null) {
+        _emailController.text = savedEmail;
+        setState(() {
+          _rememberEmail = true;
+        });
+      }
+    }
+
+    // 자동 로그인 설정 불러오기
+    final autoLogin = tokenStorage.isAutoLogin();
+    setState(() {
+      _autoLogin = autoLogin;
+    });
+  }
 
   @override
   void dispose() {
@@ -27,13 +59,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final tokenStorage = ref.read(tokenStorageProvider);
+
     final authNotifier = ref.read(authStateProvider.notifier);
-    final success = await authNotifier.login(
-      _emailController.text.trim(),
-      _passwordController.text,
-    );
+    final success = await authNotifier.login(email, password);
 
     if (success && mounted) {
+      // 아이디 저장 처리
+      if (_rememberEmail) {
+        await tokenStorage.setRememberEmail(true);
+        await tokenStorage.saveSavedEmail(email);
+      } else {
+        await tokenStorage.setRememberEmail(false);
+        await tokenStorage.clearSavedEmail();
+      }
+
+      // 자동 로그인 처리
+      if (_autoLogin) {
+        await tokenStorage.setAutoLogin(true);
+        await tokenStorage.saveSavedPassword(password);
+      } else {
+        await tokenStorage.setAutoLogin(false);
+        await tokenStorage.clearSavedPassword();
+      }
+
       context.go(AppRouter.main);
     } else if (mounted) {
       final errorMessage = ref.read(authStateProvider).errorMessage;
@@ -133,7 +184,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 8),
+
+                  // 아이디 저장 체크박스
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _rememberEmail,
+                        onChanged: (value) {
+                          setState(() {
+                            _rememberEmail = value ?? false;
+                          });
+                        },
+                      ),
+                      const Text('아이디 저장'),
+                      const SizedBox(width: 24),
+                      Checkbox(
+                        value: _autoLogin,
+                        onChanged: (value) {
+                          setState(() {
+                            _autoLogin = value ?? false;
+                            // 자동 로그인 체크하면 아이디 저장도 자동으로 체크
+                            if (_autoLogin) {
+                              _rememberEmail = true;
+                            }
+                          });
+                        },
+                      ),
+                      const Text('자동 로그인'),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
 
                   // 로그인 버튼
                   ElevatedButton(
@@ -152,14 +233,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   OutlinedButton(
                     onPressed: () => context.push(AppRouter.signup),
                     child: const Text('회원가입'),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // VR 기기 연결 버튼
-                  TextButton.icon(
-                    onPressed: () => context.push(AppRouter.deviceAuth),
-                    icon: const Icon(Icons.vrpano),
-                    label: const Text('VR 기기 연결'),
                   ),
                 ],
               ),

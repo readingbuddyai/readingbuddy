@@ -11,8 +11,10 @@ import '../../features/auth/data/models/empty_response.dart';
 import '../../features/dashboard/data/models/stage_info_response.dart';
 import '../../features/dashboard/data/models/stage_try_avg_response.dart';
 import '../../features/dashboard/data/models/stage_correct_rate_response.dart';
+import '../../features/dashboard/data/models/stage_mastery_response.dart';
 import '../../features/dashboard/data/models/attendance_response.dart';
 import '../../features/dashboard/data/models/phoneme_rank_response.dart';
+import '../../features/dashboard/data/models/last_played_stage_response.dart';
 
 part 'api_client.g.dart';
 
@@ -111,9 +113,15 @@ abstract class ApiClient {
 
   /// Stage별 현재 숙련도 조회
   @GET(ApiConstants.stageMastery)
-  Future<HttpResponse<dynamic>> getStageMastery(
+  Future<ApiResponse<StageMasteryResponse>> getStageMastery(
     @Query('stage') String stage,
     @Query('startdate') String? startDate,
     @Query('enddate') String? endDate,
   );
+
+  // ==================== Train APIs ====================
+
+  /// 마지막으로 플레이한 스테이지 조회
+  @GET(ApiConstants.lastStage)
+  Future<ApiResponse<LastPlayedStageResponse>> getLastPlayedStage();
 }

@@ -111,7 +111,7 @@ class _DeviceAuthScreenState extends ConsumerState<DeviceAuthScreen> {
                         ),
                         const SizedBox(height: 12),
                         _buildStep(1, 'VR 기기에서 "앱으로 로그인" 선택'),
-                        _buildStep(2, 'VR 화면에 표시된 10자리 코드 확인'),
+                        _buildStep(2, 'VR 화면에 표시된 4자리 코드 확인'),
                         _buildStep(3, '아래 입력란에 코드 입력'),
                         _buildStep(4, '인증 버튼 클릭'),
                       ],
@@ -149,7 +149,7 @@ class _DeviceAuthScreenState extends ConsumerState<DeviceAuthScreen> {
                 // 코드 입력
                 TextFormField(
                   controller: _codeController,
-                  maxLength: 10,
+                  maxLength: 4,
                   textCapitalization: TextCapitalization.characters,
                   style: const TextStyle(
                     fontSize: 24,
@@ -159,7 +159,7 @@ class _DeviceAuthScreenState extends ConsumerState<DeviceAuthScreen> {
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(
                     labelText: '인증 코드',
-                    hintText: 'ABCD1234EF',
+                    hintText: '1234',
                     prefixIcon: Icon(Icons.vpn_key),
                   ),
                   inputFormatters: [
@@ -170,8 +170,8 @@ class _DeviceAuthScreenState extends ConsumerState<DeviceAuthScreen> {
                     if (value == null || value.isEmpty) {
                       return '인증 코드를 입력해주세요';
                     }
-                    if (value.length != 10) {
-                      return '인증 코드는 10자리입니다';
+                    if (value.length != 4) {
+                      return '인증 코드는 4자리입니다';
                     }
                     return null;
                   },
@@ -342,7 +342,7 @@ class _DeviceAuthContentState extends ConsumerState<DeviceAuthContent> {
                     ),
                     const SizedBox(height: 12),
                     _buildStep(1, 'VR 기기에서 "앱으로 로그인" 선택'),
-                    _buildStep(2, 'VR 화면에 표시된 10자리 코드 확인'),
+                    _buildStep(2, 'VR 화면에 표시된 4자리 코드 확인'),
                     _buildStep(3, '아래 입력란에 코드 입력'),
                     _buildStep(4, '인증 버튼 클릭'),
                   ],
@@ -380,7 +380,7 @@ class _DeviceAuthContentState extends ConsumerState<DeviceAuthContent> {
             // 코드 입력
             TextFormField(
               controller: _codeController,
-              maxLength: 10,
+              maxLength: 4,
               textCapitalization: TextCapitalization.characters,
               style: const TextStyle(
                 fontSize: 24,
@@ -390,7 +390,7 @@ class _DeviceAuthContentState extends ConsumerState<DeviceAuthContent> {
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 labelText: '인증 코드',
-                hintText: 'ABCD1234EF',
+                hintText: '1234',
                 prefixIcon: Icon(Icons.vpn_key),
               ),
               inputFormatters: [
@@ -401,8 +401,8 @@ class _DeviceAuthContentState extends ConsumerState<DeviceAuthContent> {
                 if (value == null || value.isEmpty) {
                   return '인증 코드를 입력해주세요';
                 }
-                if (value.length != 10) {
-                  return '인증 코드는 10자리입니다';
+                if (value.length != 4) {
+                  return '인증 코드는 4자리입니다';
                 }
                 return null;
               },

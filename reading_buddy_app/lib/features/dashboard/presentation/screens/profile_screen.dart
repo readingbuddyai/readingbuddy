@@ -187,10 +187,10 @@ class ProfileScreen extends ConsumerWidget {
 
               // 로그아웃
               ListTile(
-                leading: const Icon(Icons.logout, color: Colors.red),
+                leading: const Icon(Icons.logout, color: AppTheme.errorColor),
                 title: const Text(
                   '로그아웃',
-                  style: TextStyle(color: Colors.red),
+                  style: TextStyle(color: AppTheme.errorColor),
                 ),
                 onTap: () {
                   _showLogoutDialog(context, ref);
@@ -249,29 +249,21 @@ class ProfileScreen extends ConsumerWidget {
             _buildThemeOption(
               context,
               ref,
-              AppTheme.warm,
-              'Warm',
-              '따뜻한 주황색 테마',
-              Colors.orange,
-              currentTheme == AppTheme.warm,
+              AppTheme.light,
+              '라이트 모드',
+              '밝은 테마',
+              Icons.light_mode,
+              currentTheme == AppTheme.light,
             ),
+            const SizedBox(height: 8),
             _buildThemeOption(
               context,
               ref,
-              AppTheme.cool,
-              'Cool',
-              '시원한 파란색 테마',
-              Colors.blue,
-              currentTheme == AppTheme.cool,
-            ),
-            _buildThemeOption(
-              context,
-              ref,
-              AppTheme.green,
-              'Green',
-              '자연스러운 초록색 테마',
-              Colors.green,
-              currentTheme == AppTheme.green,
+              AppTheme.dark,
+              '다크 모드',
+              '어두운 테마',
+              Icons.dark_mode,
+              currentTheme == AppTheme.dark,
             ),
           ],
         ),
@@ -286,23 +278,32 @@ class ProfileScreen extends ConsumerWidget {
     String themeValue,
     String title,
     String subtitle,
-    Color color,
+    IconData icon,
     bool isSelected,
   ) {
+    final theme = Theme.of(context);
     return ListTile(
       leading: Icon(
-        isSelected ? Icons.check_circle : Icons.circle,
-        color: color,
+        icon,
+        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withOpacity(0.6),
       ),
-      title: Text(title),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
       subtitle: Text(subtitle),
+      trailing: isSelected
+          ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
+          : null,
       selected: isSelected,
       onTap: () async {
         await ref.read(themeProvider.notifier).setTheme(themeValue);
         if (context.mounted) {
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$title 테마가 적용되었습니다')),
+            SnackBar(content: Text('$title가 적용되었습니다')),
           );
         }
       },
@@ -332,7 +333,7 @@ class ProfileScreen extends ConsumerWidget {
             },
             child: const Text(
               '로그아웃',
-              style: TextStyle(color: Colors.red),
+              style: TextStyle(color: AppTheme.errorColor),
             ),
           ),
         ],

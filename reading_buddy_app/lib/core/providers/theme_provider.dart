@@ -7,7 +7,7 @@ import 'providers.dart';
 class ThemeNotifier extends StateNotifier<String> {
   final TokenStorage _tokenStorage;
 
-  ThemeNotifier(this._tokenStorage) : super(AppTheme.warm) {
+  ThemeNotifier(this._tokenStorage) : super(AppTheme.light) {
     _loadSavedTheme();
   }
 
@@ -15,15 +15,29 @@ class ThemeNotifier extends StateNotifier<String> {
   Future<void> _loadSavedTheme() async {
     final savedTheme = _tokenStorage.getSelectedTheme();
     if (savedTheme != null) {
-      state = savedTheme;
+      // 기존 테마 이름을 새 테마 모드로 마이그레이션
+      if (savedTheme == 'warm' || savedTheme == 'cool' || savedTheme == 'green') {
+        state = AppTheme.light;
+      } else {
+        state = savedTheme;
+      }
     }
   }
 
-  /// 테마 변경
-  Future<void> setTheme(String themeName) async {
-    state = themeName;
-    await _tokenStorage.saveSelectedTheme(themeName);
+  /// 테마 모드 변경
+  Future<void> setTheme(String themeMode) async {
+    state = themeMode;
+    await _tokenStorage.saveSelectedTheme(themeMode);
   }
+
+  /// 다크 모드 토글
+  Future<void> toggleTheme() async {
+    final newTheme = state == AppTheme.light ? AppTheme.dark : AppTheme.light;
+    await setTheme(newTheme);
+  }
+
+  /// 현재 다크 모드 여부
+  bool get isDarkMode => state == AppTheme.dark;
 }
 
 /// 테마 Provider

@@ -1,11 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../../../core/providers/providers.dart';
+import '../../../../core/storage/token_storage.dart';
 
 /// 로그인 상태 Provider
 final authStateProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   final authRepository = ref.watch(authRepositoryProvider);
-  return AuthNotifier(authRepository);
+  final tokenStorage = ref.watch(tokenStorageProvider);
+  return AuthNotifier(authRepository, tokenStorage);
 });
 
 /// 로그인 상태
@@ -36,8 +38,9 @@ class AuthState {
 /// Auth Notifier
 class AuthNotifier extends StateNotifier<AuthState> {
   final AuthRepository authRepository;
+  final TokenStorage tokenStorage;
 
-  AuthNotifier(this.authRepository) : super(AuthState()) {
+  AuthNotifier(this.authRepository, this.tokenStorage) : super(AuthState()) {
     _checkLoginStatus();
   }
 
@@ -45,6 +48,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _checkLoginStatus() async {
     final isLoggedIn = await authRepository.isLoggedIn();
     state = state.copyWith(isLoggedIn: isLoggedIn);
+  }
+
+  /// 자동 로그인 확인 및 실행
+  Future<bool> checkAutoLogin() async {
+    // 자동 로그인 설정 확인
+    final isAutoLoginEnabled = tokenStorage.isAutoLogin();
+    if (!isAutoLoginEnabled) return false;
+
+    // 저장된 이메일과 비밀번호 가져오기
+    final savedEmail = tokenStorage.getSavedEmail();
+    final savedPassword = await tokenStorage.getSavedPassword();
+
+    if (savedEmail == null || savedPassword == null) {
+      // 저장된 정보가 없으면 자동 로그인 설정 해제
+      await tokenStorage.setAutoLogin(false);
+      return false;
+    }
+
+    // 자동 로그인 시도
+    return await login(savedEmail, savedPassword);
   }
 
   /// 로그인
