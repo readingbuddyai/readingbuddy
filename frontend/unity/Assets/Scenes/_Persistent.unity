@@ -334,8 +334,9 @@ MonoBehaviour:
   homeSceneName: Home
   apiBaseUrl: https://readingbuddyai.co.kr
   lastStageEndpoint: /api/train/last/stage
-  tokenPlayerPrefsKey: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2Mjc0NzEzNywiZXhwIjoxNzYyODMzNTM3fQ.n1r80E4R_uqDZaIuOnTibQRMIvvv-DkJ8FlGSNLDSK4olvkqelpZZkIdmbgVAryK
+  tokenPlayerPrefsKey: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjgyNjM2OSwiZXhwIjoxNzYyOTEyNzY5fQ.fHNUCgrvNDIaTR1VBRuksI76L77CAZkMs1sCM117kRBRkiRH1dx0_tgDXUmGeLdU
   debugToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2Mjc0NzEzNywiZXhwIjoxNzYyODMzNTM3fQ.n1r80E4R_uqDZaIuOnTibQRMIvvv-DkJ8FlGSNLDSK4olvkqelpZZkIdmbgVAryK
+  stageCacheKey: lastStage
   mageRef: {fileID: 0}
   stage2Ref: {fileID: 0}
   stage4Ref: {fileID: 0}
@@ -21738,7 +21739,7 @@ PrefabInstance:
   serializedVersion: 2
   m_Modification:
     serializedVersion: 3
-    m_TransformParent: {fileID: 706755743}
+    m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 626974558288523493, guid: f9a72f54790b38d44a29dffd8c178966, type: 3}
       propertyPath: playOnAwake
@@ -21833,11 +21834,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f9a72f54790b38d44a29dffd8c178966, type: 3}
---- !u!4 &1509603342 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 7716787213216967546, guid: f9a72f54790b38d44a29dffd8c178966, type: 3}
-  m_PrefabInstance: {fileID: 1509603341}
-  m_PrefabAsset: {fileID: 0}
 --- !u!198 &1509603343 stripped
 ParticleSystem:
   m_CorrespondingSourceObject: {fileID: 7725261777084656217, guid: f9a72f54790b38d44a29dffd8c178966, type: 3}
@@ -21892,7 +21888,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 706755743}
   - {fileID: 2091785692}
   m_Father: {fileID: 388209130}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -27301,3 +27296,4 @@ SceneRoots:
   - {fileID: 656887328}
   - {fileID: 854956243}
   - {fileID: 892094008}
+  - {fileID: 1509603341}
