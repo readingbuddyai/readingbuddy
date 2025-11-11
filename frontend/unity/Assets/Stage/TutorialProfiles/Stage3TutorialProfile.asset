@@ -295,7 +295,7 @@ MonoBehaviour:
     pulseDuration: 0
     pulseLoops: 0
     progressText: 
-    customActionId: "SetOptionWord:\uC232"
+    customActionId: "SetWordLabel:\uC232"
     awaitRelease: 0
   - name: "\uC74C\uC131 \uC548\uB0B4(\uC790 \uC774\uB807\uAC8C)"
     phase: 1
@@ -642,29 +642,6 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uCEE4\uC11C ON"
-    phase: 1
-    action: 8
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
   - name: "\uC74C\uC131 \uC548\uB0B4(\uB2E4 \uC62E\uACBC)"
     phase: 1
     action: 0
@@ -680,47 +657,6 @@ MonoBehaviour:
       m_Curve: []
       m_PreInfinity: 0
       m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C \uC774\uB3D9"
-    phase: 1
-    action: 9
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 3
-    cursorMoveSeconds: 1.5
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 1
-        value: 1
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
       m_RotationOrder: 4
     enablePulse: 0
     pulseScale: 0
@@ -797,6 +733,29 @@ MonoBehaviour:
     pulseLoops: 0
     progressText: 
     customActionId: 
+    awaitRelease: 0
+  - name: "\uB2E8\uC5B4 OFF"
+    phase: 1
+    action: 13
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    progressText: 
+    customActionId: HidWordLabel
     awaitRelease: 0
   - name: "\uC635\uC158 OFF"
     phase: 1

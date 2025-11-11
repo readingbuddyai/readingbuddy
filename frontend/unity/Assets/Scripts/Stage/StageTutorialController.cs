@@ -313,6 +313,18 @@ public class StageTutorialController
             case StageTutorialActionType.HideOptions:
                 HideIntroOptions();
                 break;
+            case StageTutorialActionType.ShowSlots:
+                yield return ToggleSlots(true, step.boolValue);
+                break;
+            case StageTutorialActionType.HideSlots:
+                yield return ToggleSlots(false, step.boolValue);
+                break;
+            case StageTutorialActionType.ShowChoices:
+                yield return ToggleChoices(true, step.boolValue);
+                break;
+            case StageTutorialActionType.HideChoices:
+                yield return ToggleChoices(false, step.boolValue);
+                break;
             case StageTutorialActionType.SetCursorActive:
                 SetCursorActive(step.boolValue);
                 break;
@@ -321,6 +333,12 @@ public class StageTutorialController
                 break;
             case StageTutorialActionType.PulseOption:
                 yield return PulseOptionAt(step);
+                break;
+            case StageTutorialActionType.PulseSlot:
+                yield return PulseSlotAt(step);
+                break;
+            case StageTutorialActionType.AnimateChoiceDrag:
+                yield return AnimateChoiceDrag(step);
                 break;
             case StageTutorialActionType.AwaitTrigger:
                 yield return WaitForRightTriggerPress(step.awaitRelease);
@@ -407,6 +425,264 @@ public class StageTutorialController
         if (_deps.ManageOptionsContainerContents)
             ClearIntroOptionButtons();
         _deps.OptionsContainer.gameObject.SetActive(false);
+    }
+
+    private IEnumerator ToggleSlots(bool show, bool flag)
+    {
+        _ = flag;
+        bool handled = false;
+        if (_deps.ToggleSlots != null)
+        {
+            yield return ExecuteCoroutine(_deps.ToggleSlots(show));
+            handled = true;
+        }
+
+        if (!handled && _deps.ManageSlotsVisibility)
+        {
+            if (_deps.SlotsContainer != null)
+            {
+                _deps.SlotsContainer.gameObject.SetActive(show);
+                if (show)
+                {
+                    Canvas.ForceUpdateCanvases();
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(_deps.SlotsContainer);
+                }
+            }
+            else if (_deps.SlotsRoot != null)
+            {
+                _deps.SlotsRoot.SetActive(show);
+            }
+            else
+            {
+                ToggleSlotRect(_deps.ChoseongSlot, show);
+                ToggleSlotRect(_deps.JungseongSlot, show);
+                ToggleSlotRect(_deps.JongsungSlot, show);
+            }
+        }
+    }
+
+    private IEnumerator ToggleChoices(bool show, bool flag)
+    {
+        _ = flag;
+        bool handled = false;
+        if (_deps.ToggleChoices != null)
+        {
+            yield return ExecuteCoroutine(_deps.ToggleChoices(show));
+            handled = true;
+        }
+
+        if (!handled && _deps.ManageChoicesVisibility)
+        {
+            GameObject target = null;
+            if (_deps.ChoicesContainer != null)
+                target = _deps.ChoicesContainer.gameObject;
+            else if (_deps.ChoicesRoot != null)
+                target = _deps.ChoicesRoot;
+
+            if (target != null)
+            {
+                target.SetActive(show);
+                if (show && _deps.ChoicesContainer != null)
+                {
+                    Canvas.ForceUpdateCanvases();
+                    LayoutRebuilder.ForceRebuildLayoutImmediate(_deps.ChoicesContainer);
+                }
+            }
+        }
+    }
+
+    private IEnumerator PulseSlotAt(StageTutorialStep step)
+    {
+        if (step == null || step.slotTarget == StageTutorialSlotTarget.None)
+            yield break;
+
+        float scale = step.enablePulse ? step.pulseScale : 1.1f;
+        float duration = step.enablePulse ? step.pulseDuration : 0.35f;
+        int loops = step.enablePulse ? Mathf.Max(1, step.pulseLoops) : 1;
+
+        if (_deps.PulseSlot != null)
+        {
+            yield return ExecuteCoroutine(_deps.PulseSlot(step.slotTarget, scale, duration, loops));
+            yield break;
+        }
+
+        var target = ResolveSlotRect(step.slotTarget);
+        if (target == null)
+        {
+            LogWarning($"[StageTutorial] PulseSlot target '{step.slotTarget}' could not be resolved.");
+            yield break;
+        }
+
+        if (_deps.PulseOption != null)
+        {
+            yield return ExecuteCoroutine(_deps.PulseOption(target, scale, duration, loops));
+            yield break;
+        }
+
+        yield return Co_PulseRectTransform(target, scale, duration, loops);
+    }
+
+    private IEnumerator AnimateChoiceDrag(StageTutorialStep step)
+    {
+        if (step == null)
+            yield break;
+
+        string tileKey = !string.IsNullOrEmpty(step.choiceTileKey) ? step.choiceTileKey : step.customActionId;
+        if (string.IsNullOrEmpty(tileKey))
+        {
+            LogWarning("[StageTutorial] AnimateChoiceDrag requires choiceTileKey or customActionId.");
+            yield break;
+        }
+
+        float seconds = step.cursorMoveSeconds > 0f ? step.cursorMoveSeconds : 0.6f;
+        var curve = step.cursorMoveCurve ?? AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        bool keepInSlot = !step.choiceReturnToOrigin;
+
+        if (_deps.AnimateChoiceDrag != null)
+        {
+            yield return ExecuteCoroutine(_deps.AnimateChoiceDrag(tileKey, step.slotTarget, seconds, curve, keepInSlot));
+            yield break;
+        }
+
+        var tile = ResolveChoiceTile(tileKey);
+        var slot = ResolveSlotRect(step.slotTarget);
+
+        if (tile == null)
+        {
+            LogWarning($"[StageTutorial] AnimateChoiceDrag could not resolve tile '{tileKey}'.");
+            yield break;
+        }
+
+        if (slot == null)
+        {
+            LogWarning($"[StageTutorial] AnimateChoiceDrag target slot '{step.slotTarget}' could not be resolved.");
+            yield break;
+        }
+
+        yield return Co_AnimateChoiceDrag(tile, slot, seconds, curve, keepInSlot);
+    }
+
+    private RectTransform ResolveSlotRect(StageTutorialSlotTarget target)
+    {
+        if (_deps.ResolveSlotTarget != null)
+        {
+            var resolved = _deps.ResolveSlotTarget(target);
+            if (resolved != null)
+                return resolved;
+        }
+
+        switch (target)
+        {
+            case StageTutorialSlotTarget.Choseong:
+                return _deps.ChoseongSlot;
+            case StageTutorialSlotTarget.Jungseong:
+                return _deps.JungseongSlot;
+            case StageTutorialSlotTarget.Jongsung:
+                return _deps.JongsungSlot;
+            default:
+                return null;
+        }
+    }
+
+    private RectTransform ResolveChoiceTile(string key)
+    {
+        if (_deps.ResolveChoiceTile != null)
+            return _deps.ResolveChoiceTile(key);
+
+        var container = _deps.ChoicesContainer;
+        if (container == null)
+            return null;
+
+        foreach (Transform child in container)
+        {
+            if (!child) continue;
+            if (string.Equals(child.name, key, StringComparison.OrdinalIgnoreCase))
+                return child.GetComponent<RectTransform>();
+            var text = child.GetComponentInChildren<TMP_Text>();
+            if (text != null && string.Equals(text.text, key, StringComparison.OrdinalIgnoreCase))
+                return child.GetComponent<RectTransform>();
+        }
+        return null;
+    }
+
+    private IEnumerator Co_PulseRectTransform(RectTransform target, float scale, float duration, int loops)
+    {
+        if (target == null)
+            yield break;
+
+        loops = Mathf.Max(1, loops);
+        float singleDuration = Mathf.Max(0.01f, duration);
+        var originalScale = target.localScale;
+        var targetScale = originalScale * scale;
+
+        for (int i = 0; i < loops; i++)
+        {
+            float elapsed = 0f;
+            while (elapsed < singleDuration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / singleDuration);
+                float eased = Mathf.Sin(t * Mathf.PI);
+                target.localScale = Vector3.Lerp(originalScale, targetScale, eased);
+                yield return null;
+            }
+        }
+
+        target.localScale = originalScale;
+    }
+
+    private IEnumerator Co_AnimateChoiceDrag(RectTransform tile, RectTransform slot, float seconds, AnimationCurve curve, bool keepInSlot)
+    {
+        if (tile == null || slot == null)
+            yield break;
+
+        Transform originalParent = tile.parent;
+        int originalIndex = tile.GetSiblingIndex();
+        Vector3 startPos = tile.position;
+        Vector3 endPos = slot.position;
+        float duration = Mathf.Max(0.01f, seconds);
+
+        var dragRoot = _deps.ChoiceDragRoot != null ? _deps.ChoiceDragRoot : tile.parent;
+        if (dragRoot != null)
+            tile.SetParent(dragRoot, true);
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = curve != null ? curve.Evaluate(t) : t;
+            tile.position = Vector3.Lerp(startPos, endPos, eased);
+            yield return null;
+        }
+        tile.position = endPos;
+
+        if (!keepInSlot)
+        {
+            elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / duration);
+                float eased = curve != null ? curve.Evaluate(t) : t;
+                tile.position = Vector3.Lerp(endPos, startPos, eased);
+                yield return null;
+            }
+            tile.position = startPos;
+            tile.SetParent(originalParent, false);
+            tile.SetSiblingIndex(originalIndex);
+        }
+        else
+        {
+            tile.SetParent(slot, false);
+            tile.anchoredPosition = Vector2.zero;
+        }
+    }
+
+    private static void ToggleSlotRect(RectTransform rect, bool show)
+    {
+        if (rect == null) return;
+        rect.gameObject.SetActive(show);
     }
 
     private void SetCursorActive(bool active)
@@ -835,6 +1111,22 @@ public class StageTutorialDependencies
     public AudioClip CorrectSfx;
     public Func<Transform, RectTransform, float, AnimationCurve, IEnumerator> MoveCursorSmooth;
     public Func<RectTransform, float, float, int, IEnumerator> PulseOption;
+    public Func<bool, IEnumerator> ToggleSlots;
+    public Func<bool, IEnumerator> ToggleChoices;
+    public RectTransform SlotsContainer;
+    public GameObject SlotsRoot;
+    public RectTransform ChoicesContainer;
+    public GameObject ChoicesRoot;
+    public bool ManageSlotsVisibility = true;
+    public bool ManageChoicesVisibility = true;
+    public RectTransform ChoseongSlot;
+    public RectTransform JungseongSlot;
+    public RectTransform JongsungSlot;
+    public Func<StageTutorialSlotTarget, RectTransform> ResolveSlotTarget;
+    public Func<StageTutorialSlotTarget, float, float, int, IEnumerator> PulseSlot;
+    public Func<string, RectTransform> ResolveChoiceTile;
+    public Func<string, StageTutorialSlotTarget, float, AnimationCurve, bool, IEnumerator> AnimateChoiceDrag;
+    public Transform ChoiceDragRoot;
     public Func<string, IEnumerator> ExecuteCustomStep;
     public Action<string> Log;
     public Action<string> LogWarning;

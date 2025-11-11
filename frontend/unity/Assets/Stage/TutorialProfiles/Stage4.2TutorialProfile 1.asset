@@ -389,52 +389,6 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uCEE4\uC11C ON"
-    phase: 1
-    action: 8
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C \uC774\uB3D9"
-    phase: 1
-    action: 9
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
   - name: "\uBC15\uC2A4 Drag"
     phase: 1
     action: 13
@@ -462,29 +416,6 @@ MonoBehaviour:
     phase: 1
     action: 0
     audioClip: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C OFF"
-    phase: 1
-    action: 8
-    audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -596,52 +527,6 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uCEE4\uC11C ON"
-    phase: 1
-    action: 8
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C \uC774\uB3D9"
-    phase: 1
-    action: 9
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
   - name: "\uBC15\uC2A4 Drag"
     phase: 1
     action: 13
@@ -669,29 +554,6 @@ MonoBehaviour:
     phase: 1
     action: 0
     audioClip: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C OFF"
-    phase: 1
-    action: 8
-    audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -807,52 +669,6 @@ MonoBehaviour:
     phase: 1
     action: 0
     audioClip: {fileID: 8300000, guid: 9a30dc79f4a4a3143a419d635251bff7, type: 3}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C ON"
-    phase: 1
-    action: 8
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C \uC774\uB3D9"
-    phase: 1
-    action: 9
-    audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -1036,29 +852,6 @@ MonoBehaviour:
   - name: "\uBCF4\uAE30 OFF"
     phase: 1
     action: 13
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    progressText: 
-    customActionId: 
-    awaitRelease: 0
-  - name: "\uCEE4\uC11C OFF"
-    phase: 1
-    action: 8
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0

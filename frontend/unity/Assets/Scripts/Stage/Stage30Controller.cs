@@ -126,6 +126,7 @@ public class Stage30Controller : MonoBehaviour
     private readonly List<PronunciationFeedback> _accumulatedFeedback = new List<PronunciationFeedback>();
     private readonly HashSet<string> _feedbackKeys = new HashSet<string>();
     private string _tutorialOptionWordCache = string.Empty;
+    private bool _tutorialOptionUseWordLabel;
 
     private void Start()
     {
@@ -759,6 +760,7 @@ public class Stage30Controller : MonoBehaviour
         }
 
         command = command.Trim().ToLowerInvariant();
+        parameter = parameter?.Trim() ?? string.Empty;
 
         switch (command)
         {
@@ -793,12 +795,18 @@ public class Stage30Controller : MonoBehaviour
                     break;
                 }
             case "setoptionword":
-                SetTutorialOptionWord(parameter, true);
+            case "setword":
+                SetTutorialOptionWord(parameter, true, false);
+                break;
+            case "setwordlabel":
+                SetTutorialOptionWord(parameter, true, true);
                 break;
             case "showoptionword":
-                SetTutorialOptionWord(_tutorialOptionWordCache, true);
+            case "showwordlabel":
+                ApplyTutorialOptionWord(_tutorialOptionWordCache, true);
                 break;
             case "hideoptionword":
+            case "hidewordlabel":
                 ApplyTutorialOptionWord(string.Empty, false);
                 break;
             case "movestone":
@@ -826,15 +834,18 @@ public class Stage30Controller : MonoBehaviour
         _stoneCountdownCoroutine = null;
     }
 
-    private void SetTutorialOptionWord(string text, bool showImmediately)
+    private void SetTutorialOptionWord(string text, bool showImmediately, bool forceWordLabel)
     {
         _tutorialOptionWordCache = text ?? string.Empty;
+        _tutorialOptionUseWordLabel = forceWordLabel;
         ApplyTutorialOptionWord(_tutorialOptionWordCache, showImmediately);
     }
 
     private void ApplyTutorialOptionWord(string text, bool show)
     {
-        var target = tutorialOptionWordText != null ? tutorialOptionWordText : wordLabel;
+        var target = !_tutorialOptionUseWordLabel && tutorialOptionWordText != null
+            ? tutorialOptionWordText
+            : wordLabel;
         if (target == null)
             return;
 
@@ -883,6 +894,7 @@ public class Stage30Controller : MonoBehaviour
 
         yield return AnimateStoneToSlot(stone, targetSlot);
         AttachStoneToSlot(stone, targetSlot);
+        ReportStoneCount(CalculateCurrentStoneCount());
     }
 
     private IEnumerator AnimateStoneToSlot(StoneDraggable stone, StoneDropZone slot)
@@ -962,6 +974,52 @@ public class Stage30Controller : MonoBehaviour
             cg.blocksRaycasts = true;
             cg.alpha = 1f;
         }
+    }
+
+    private int CalculateCurrentStoneCount()
+    {
+        if (stoneBoard == null)
+            return 0;
+
+        var dropZones = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        if (dropZones == null || dropZones.Length == 0)
+            return 0;
+
+        Transform targetParent = null;
+        foreach (var zone in dropZones)
+        {
+            if (zone == null)
+                continue;
+
+            targetParent = zone.slotParent != null ? zone.slotParent : zone.transform;
+            if (targetParent != null)
+                break;
+        }
+
+        if (targetParent == null)
+            return 0;
+
+        return CountPlacedStonesRecursive(targetParent);
+    }
+
+    private int CountPlacedStonesRecursive(Transform root)
+    {
+        if (root == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var child = root.GetChild(i);
+
+            if (child.GetComponent<StoneDraggable>() != null && child.GetComponent<StoneDropZone>() == null)
+                count++;
+
+            if (child.childCount > 0)
+                count += CountPlacedStonesRecursive(child);
+        }
+
+        return count;
     }
 
     private IEnumerator PulseTutorialTarget(RectTransform target, float scaleMultiplier, float duration, int loops)
