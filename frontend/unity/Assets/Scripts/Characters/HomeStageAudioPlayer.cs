@@ -12,61 +12,45 @@ public class HomeStageAudioPlayer : MonoBehaviour
     public AudioClip[] returnVisitClips;
 
     [Header("설정")]
-    [Tooltip("클립 사이 간격 (초)")]
     public float delayBetweenClips = 0.3f;
-
-    // 씬 재진입 시 중복 재생 방지용
-    private static bool playedOnce = false;
 
     private MageHomeCutscene activeCutscene;
 
-    private void Start()
+    private IEnumerator Start()
     {
-        // 이미 한 번 재생된 적 있으면 바로 종료
-        if (playedOnce)
-        {
-            Debug.Log("[AudioPlayer] 이미 HomeStageAudioPlayer가 한 번 재생되어 다시 실행하지 않습니다.");
-            return;
-        }
+        // 씬이 완전히 로드되고 캐릭터가 Awake/Start를 끝낼 때까지 잠시 대기
+        yield return new WaitForSeconds(0.8f);
 
-        StartCoroutine(PlayStageAudioSequence());
-    }
-
-    private IEnumerator PlayStageAudioSequence()
-    {
-        // 1. 캐시된 스테이지 확인
+        // 1. 스테이지 정보 확인
         string stage = "";
         try { stage = HomeStageInitializer.LastStage; }
         catch { }
-
         if (string.IsNullOrEmpty(stage))
             stage = PlayerPrefs.GetString("lastStage", "");
 
-        bool isFirstVisit = stage == "마지막으로 플레이한 스테이지가 없습니다";
-
-        // 2. 현재 스테이지에 맞는 캐릭터 컷신 자동 탐색
+        // 2. 컷신 자동 탐색 (씬 내에서)
         activeCutscene = FindActiveCutsceneByStage(stage);
+
         if (activeCutscene == null)
         {
-            Debug.Log("[AudioPlayer] 활성 캐릭터 컷신을 찾지 못했습니다. 재생 생략.");
+            Debug.LogWarning("[AudioPlayer] 컷신을 자동으로 찾지 못했습니다. 종료합니다.");
             yield break;
         }
 
-        // 캐릭터가 비활성 상태라면 아무 것도 하지 않음
+        // 캐릭터가 비활성 상태면 재생하지 않음
         if (!activeCutscene.gameObject.activeInHierarchy)
         {
             Debug.Log("[AudioPlayer] 캐릭터가 비활성 상태이므로 오디오 재생을 생략합니다.");
             yield break;
         }
 
-        // 3. 오디오 세트 선택
+        // 3. 방문 여부 판별
+        bool isFirstVisit = stage == "마지막으로 플레이한 스테이지가 없습니다";
         AudioClip[] clipsToPlay = isFirstVisit ? firstVisitClips : returnVisitClips;
+
         Debug.Log($"[AudioPlayer] {(isFirstVisit ? "첫 방문" : "재방문")} 오디오 재생 시작");
 
-        // 재생 플래그 설정 (한 번만 실행되도록)
-        playedOnce = true;
-
-        // 4. 오디오 순차 재생
+        // 4. 순차 재생
         for (int i = 0; i < clipsToPlay.Length; i++)
         {
             var clip = clipsToPlay[i];
@@ -76,16 +60,15 @@ public class HomeStageAudioPlayer : MonoBehaviour
             audioSource.Play();
             Debug.Log($"[AudioPlayer] Clip {i} 재생 시작: {clip.name}");
 
-            // 특정 시점에 캐릭터 컷신 트리거
             if (isFirstVisit && i == 3)
             {
                 yield return new WaitForSeconds(clip.length * 0.5f);
-                TriggerCharacterRun();
+                activeCutscene.StartRunNow();
             }
             else if (!isFirstVisit && i == 0)
             {
                 yield return new WaitForSeconds(clip.length * 0.5f);
-                TriggerCharacterRun();
+                activeCutscene.StartRunNow();
             }
 
             yield return new WaitWhile(() => audioSource.isPlaying);
@@ -96,25 +79,12 @@ public class HomeStageAudioPlayer : MonoBehaviour
         Debug.Log("[AudioPlayer] 모든 오디오 클립 재생 완료");
     }
 
-    private void TriggerCharacterRun()
-    {
-        if (activeCutscene == null)
-        {
-            Debug.LogWarning("[AudioPlayer] 컷신이 지정되지 않아 실행할 수 없습니다.");
-            return;
-        }
-
-        activeCutscene.StartRunNow();
-        Debug.Log($"[AudioPlayer] {activeCutscene.gameObject.name} 컷신 실행됨");
-    }
-
-    // 현재 스테이지 정보를 기반으로 캐릭터 컷신 자동 탐색
     private MageHomeCutscene FindActiveCutsceneByStage(string stage)
     {
         MageHomeCutscene[] all = FindObjectsOfType<MageHomeCutscene>(true);
         if (all == null || all.Length == 0)
         {
-            Debug.LogWarning("[AudioPlayer] MageHomeCutscene이 씬에 존재하지 않습니다.");
+            Debug.LogWarning("[AudioPlayer] 씬에 MageHomeCutscene이 없습니다.");
             return null;
         }
 
@@ -134,11 +104,5 @@ public class HomeStageAudioPlayer : MonoBehaviour
 
         Debug.LogWarning($"[AudioPlayer] '{targetName}' 캐릭터를 찾지 못했습니다.");
         return null;
-    }
-
-    // 필요 시 다른 코드에서 호출해서 초기화할 수 있도록
-    public static void ResetAudioFlag()
-    {
-        playedOnce = false;
     }
 }
