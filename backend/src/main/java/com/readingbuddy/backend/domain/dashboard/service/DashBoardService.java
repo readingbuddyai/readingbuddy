@@ -184,7 +184,7 @@ public class DashBoardService {
 
         int correctCount = history.getCorrectCount() != null ? history.getCorrectCount() : 0;
         int wrongCount = history.getWrongCount() != null ? history.getWrongCount() : 0;
-        int totalProblems = correctCount + wrongCount;
+        int totalProblems = history.getTotalCount() != null ? history.getTotalCount() : 0;
 
         // 정답률 계산 (0~100 사이의 값)
         double correctRate = 0.0;
