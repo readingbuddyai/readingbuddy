@@ -6680,7 +6680,7 @@ MonoBehaviour:
   stageSet: 4.1
   stageTwoPart: 4.1
   count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IjEyMyIsImlhdCI6MTc2MjgzMzY0OSwiZXhwIjoxNzYyOTIwMDQ5fQ.uL9HmphryAKCcytF4aSlf0QU6oyydJWs4lpVGp-skBqGL4J3jJ_pRAsmpcZqpn7U
+  authToken: 
   stageSessionId: 
   progressText: {fileID: 0}
   guideImage: {fileID: 291308516}

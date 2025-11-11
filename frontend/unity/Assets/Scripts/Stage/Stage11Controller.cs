@@ -15,6 +15,8 @@ using UnityEngine.InputSystem.Controls;
 #endif
 using UnityEngine.XR;
 using Stage.UI;
+using QuestionDto = StageQuestionModels.QuestionDto;
+using OptionDto = StageQuestionModels.OptionDto;
 
 // Stage 1.1 진행 컨트롤러
 // - GET: /api/train/set?stage=1.1.1&count=5
@@ -59,6 +61,7 @@ using Stage.UI;
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
 
     [Header("Intro Tutorial")]
+    public StageTutorialProfile tutorialProfile;
     public Sprite introTutorialImage;
     public List<IntroOption> introOptions = new List<IntroOption>();
     public IntroOptionCursor introOptionCursor;
@@ -97,19 +100,19 @@ using Stage.UI;
     public AudioClip sfxNext;            // (다음 문제로 넘어가는 효과음)
 
     // 도입 대사
-    public AudioClip introClip1;         // [1.1.1] 안녕~ 꼬마 마법사!
-    public AudioClip introClip2;         // [1.1.2] 지금부터 ‘마법 주문’ 수업을 시작할 거야!
-    public AudioClip introClip3;         // [1.1.2.1] 내가 먼저 해볼테니, 잘 봐야해!
-    public AudioClip introClip4;         // [1.1.2.2] 자, 이렇게 앞에 마법 그림이 떠오르면,
-    public AudioClip introClip5;         // [1.1.2.3] 들리는 소리에 맞춰서, 주문을 따라 외우면 돼!
-    public AudioClip introDemoClip1;     // [1.1.2.4] (준비된 audioClip_1)
-    public AudioClip introClip6;         // [1.1.2.5] 내가 먼저 해볼게!
-    public AudioClip introDemoClip2;     // [1.1.2.6] (준비된 audioClip_2)
-    public AudioClip introClip7;         // [1.1.2.7] 그 다음, 아래에서 주문이랑 똑같은 그림을 클릭!
-    public AudioClip introClip8;         // [1.1.2.8] 여기까지, 첫 번째 마법수업!
-    public AudioClip introClip9;         // [1.1.2.9] 어때? 어렵지 않지?
-    public AudioClip introClip10;        // [1.1.2.10] 나와 함께 마법사가 될 준비가 됐다면,
-    public AudioClip introClip11;        // [1.1.2.11] 오른손의 버튼을 꾹 눌러줘!
+    [HideInInspector] public AudioClip introClip1;         // [1.1.1] 안녕~ 꼬마 마법사!
+    [HideInInspector] public AudioClip introClip2;         // [1.1.2] 지금부터 ‘마법 주문’ 수업을 시작할 거야!
+    [HideInInspector] public AudioClip introClip3;
+    [HideInInspector] public AudioClip introClip4;
+    [HideInInspector] public AudioClip introClip5;
+    [HideInInspector] public AudioClip introClip6;
+    [HideInInspector] public AudioClip introClip7;
+    [HideInInspector] public AudioClip introClip8;
+    [HideInInspector] public AudioClip introClip9;
+    [HideInInspector] public AudioClip introClip10;
+    [HideInInspector] public AudioClip introClip11;
+    [HideInInspector] public AudioClip introDemoClip1;
+    [HideInInspector] public AudioClip introDemoClip2;
 
     // 각 문제 흐름 대사
     public AudioClip clipSeeAndChant;    // [1.1.3] 앞에 떠오른 마법 그림을 잘 보고...
@@ -156,16 +159,15 @@ using Stage.UI;
         private bool _guideLocked;
         private Vector2 _guideFinalPos;
         private Vector2 _guideFinalSize;
-        private int _currentProblemNumber = 0; // 현재 문제 번호 (attempt 로깅용)
-        private readonly List<string> _remedialPhonemes = new List<string>();
-        private readonly HashSet<string> _remedialPhonemeSet = new HashSet<string>(StringComparer.Ordinal);
-        private readonly List<QuestionDto> _lastQuestions = new List<QuestionDto>();
-#if ENABLE_INPUT_SYSTEM
-        private AxisControl _rightTriggerAxis;
-        private ButtonControl _rightTriggerButton;
-#endif
-        private static readonly List<UnityEngine.XR.InputDevice> RightHandDevices = new List<UnityEngine.XR.InputDevice>();
-
+        private StageSessionController _sessionController;
+        private readonly StageQuestionController<QuestionDto> _questionController = new StageQuestionController<QuestionDto>();
+        private StageTutorialController _tutorialController;
+        private StageTutorialDependencies _tutorialDependencies;
+        private StageAudioController _audioController;
+        private StageAudioDependencies _audioDependencies;
+        private StageSupplementController _supplementController;
+        private StageSupplementDependencies _supplementDependencies;
+        private int _currentProblemNumber;
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
         public bool applyAutoLayout = true;
@@ -217,63 +219,10 @@ using Stage.UI;
     public enum OptionLabelMode { UnicodeOnly, ValueOnly, UnicodeThenValue, ValueThenUnicode }
 
     [Serializable]
-    public class OptionDto
-    {
-        public int id;
-        public string value;
-        public string unicode;
-    }
+    public class IntroOption : StageTutorialController.IntroOption { }
 
     [Serializable]
-    public class IntroOption
-    {
-        public string label;
-        public bool isCorrect;
-    }
-
-    [Serializable]
-    public class IntroOptionCursor
-    {
-        public GameObject handCursor;
-        public RectTransform wrongOptionTransform;
-        public RectTransform correctOptionTransform;
-        public float wrongHoverSeconds = 1f;
-        public float correctHoverSeconds = 1f;
-        public float cursorMoveSeconds = 0.35f;
-        public AnimationCurve cursorMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-        [Header("Correct Pulse")]
-        public bool enableCorrectPulse = true;
-        public float correctPulseScale = 1.1f;
-        public float correctPulseDuration = 0.35f;
-        public int correctPulseLoops = 1;
-    }
-
-    [Serializable]
-    public class RemedialPracticeResource
-    {
-        [Tooltip("stage/complete 응답의 voiceResult 항목과 매칭할 값 (예: phonemeId 혹은 'ㅏ')")]
-        public string key;
-        [Tooltip("보충 학습에 사용할 이미지(없으면 기존 문제 이미지 활용)")]
-        public Sprite image;
-        [Tooltip("보충 학습에 사용할 로컬 오디오 클립(없으면 remote URL 또는 기존 문제 음성 사용)")]
-        public AudioClip localAudioClip;
-        [Tooltip("보충 학습에 사용할 원격 오디오 URL(있을 경우 우선 사용)")]
-        public string remoteAudioUrl;
-    }
-
-    [Serializable]
-    public class QuestionDto
-    {
-        public int id;            // fallback: 일부 응답에서 questionId 대신 id 사용 가능
-        public int questionId;
-        public int phonemeId;     // 정답 판정용: 옵션의 id와 일치하는 항목이 정답
-        public string problemWord;
-        public string value;      // 정답 값(예: "ㅏ")
-        public string unicode;
-        public string voiceUrl;   // 정답 음성 샘플 URL
-        public string imageUrl;   // 입모양 이미지 URL
-        public List<OptionDto> options;
-    }
+    public class IntroOptionCursor : StageTutorialController.IntroOptionCursor { }
 
     [Serializable]
     public class QuestionListResponse
@@ -303,15 +252,168 @@ using Stage.UI;
         {
             optionsContainer.gameObject.SetActive(false);
         }
-        HideIntroPanel();
+        ConfigureAudioController();
+        ConfigureTutorialController();
+        ConfigureSupplementController();
+        _tutorialController?.PrepareForStageStart();
         if (micIndicator)
         {
             micIndicator.SetActive(false);
         }
-        // 시작 시: 패널이 꺼져 있으므로 캐릭터는 보이도록
-        if (guide3DCharacter)
-            guide3DCharacter.SetActive(true);
         StartCoroutine(RunStage());
+    }
+
+    private StageSessionController GetSessionController()
+    {
+        if (_sessionController == null)
+            _sessionController = new StageSessionController();
+
+        _sessionController.Configure(baseUrl, authToken);
+        _sessionController.Log = Debug.Log;
+        _sessionController.LogWarning = Debug.LogWarning;
+        _sessionController.LogError = Debug.LogError;
+        return _sessionController;
+    }
+
+    private void ConfigureAudioController()
+    {
+        if (_audioController == null)
+            _audioController = new StageAudioController();
+
+        if (_audioDependencies == null)
+            _audioDependencies = new StageAudioDependencies();
+
+        _audioDependencies.AudioSource = audioSource;
+        _audioDependencies.Log = message => Debug.Log(message);
+        _audioDependencies.LogWarning = message => Debug.LogWarning(message);
+
+        _audioController.Initialize(_audioDependencies);
+    }
+
+    private void ConfigureTutorialController()
+    {
+        if (_tutorialController == null)
+            _tutorialController = new StageTutorialController();
+
+        if (_tutorialDependencies == null)
+        {
+            _tutorialDependencies = new StageTutorialDependencies
+            {
+                PlayClip = PlayClip,
+                StartCoroutine = routine => StartCoroutine(routine),
+                StopCoroutine = routine =>
+                {
+                    if (routine != null)
+                        StopCoroutine(routine);
+                },
+                ProgressText = progressText,
+                EnsureProgressText = EnsureProgressText,
+                MainImage = mainImage,
+                OptionsContainer = optionsContainer,
+                OptionButtonPrefab = optionButtonPrefab,
+                CorrectSfx = sfxCorrectClip,
+                MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve),
+                PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops),
+                Log = message => Debug.Log(message),
+                LogWarning = message => Debug.LogWarning(message),
+                VerboseLogging = verboseLogging
+            };
+        }
+        else
+        {
+            _tutorialDependencies.PlayClip = PlayClip;
+            _tutorialDependencies.StartCoroutine = routine => StartCoroutine(routine);
+            _tutorialDependencies.StopCoroutine = routine =>
+            {
+                if (routine != null)
+                    StopCoroutine(routine);
+            };
+            _tutorialDependencies.ProgressText = progressText;
+            _tutorialDependencies.EnsureProgressText = EnsureProgressText;
+            _tutorialDependencies.MainImage = mainImage;
+            _tutorialDependencies.OptionsContainer = optionsContainer;
+            _tutorialDependencies.OptionButtonPrefab = optionButtonPrefab;
+            _tutorialDependencies.CorrectSfx = sfxCorrectClip;
+            _tutorialDependencies.MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve);
+            _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops);
+            _tutorialDependencies.Log = message => Debug.Log(message);
+            _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
+            _tutorialDependencies.VerboseLogging = verboseLogging;
+        }
+
+        if (tutorialProfile != null)
+        {
+            _tutorialController.ApplyProfile(tutorialProfile);
+        }
+        else
+        {
+            _tutorialController.introTutorialImage = introTutorialImage;
+            if (introOptions != null)
+                _tutorialController.introOptions = introOptions.ConvertAll<StageTutorialController.IntroOption>(io => (StageTutorialController.IntroOption)io);
+            else
+                _tutorialController.introOptions = new List<StageTutorialController.IntroOption>();
+            _tutorialController.guideHideLeadSeconds = guideHideLeadSeconds;
+            _tutorialController.showGuideWhenPanelOff = showGuideWhenPanelOff;
+            _tutorialController.guideShowDelayAfterPanelOff = guideShowDelayAfterPanelOff;
+            _tutorialController.requireTriggerAfterTutorial = requireTriggerAfterTutorial;
+            _tutorialController.tutorialTriggerThreshold = tutorialTriggerThreshold;
+            _tutorialController.tutorialFallbackKey = tutorialFallbackKey;
+            _tutorialController.tutorialClipGapSeconds = tutorialClipGapSeconds;
+            _tutorialController.introClip1 = introClip1;
+            _tutorialController.introClip2 = introClip2;
+            _tutorialController.introClip3 = introClip3;
+            _tutorialController.introClip4 = introClip4;
+            _tutorialController.introClip5 = introClip5;
+            _tutorialController.introClip6 = introClip6;
+            _tutorialController.introClip7 = introClip7;
+            _tutorialController.introClip8 = introClip8;
+            _tutorialController.introClip9 = introClip9;
+            _tutorialController.introClip10 = introClip10;
+            _tutorialController.introClip11 = introClip11;
+            _tutorialController.introDemoClip1 = introDemoClip1;
+            _tutorialController.introDemoClip2 = introDemoClip2;
+        }
+
+        _tutorialController.introOptionCursor = introOptionCursor;
+        _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
+        _tutorialController.introTutorialPanel = introTutorialPanel;
+        _tutorialController.guide3DCharacter = guide3DCharacter;
+
+        _tutorialController.Initialize(_tutorialDependencies);
+
+        if (_tutorialDependencies.OptionButtonPrefab != null && optionButtonPrefab == null)
+            optionButtonPrefab = _tutorialDependencies.OptionButtonPrefab;
+    }
+
+    private void ConfigureSupplementController()
+    {
+        if (_supplementController == null)
+            _supplementController = new StageSupplementController();
+
+        if (_supplementDependencies == null)
+        {
+            _supplementDependencies = new StageSupplementDependencies();
+        }
+
+        _supplementDependencies.QuestionController = _questionController;
+        _supplementDependencies.MainImage = mainImage;
+        _supplementDependencies.ProgressText = progressText;
+        _supplementDependencies.PlayClip = clip => PlayClip(clip);
+        _supplementDependencies.PlayVoiceUrl = url => PlayVoiceUrl(url);
+        _supplementDependencies.LoadAndShowImage = url => LoadAndShowImage(url);
+        _supplementDependencies.Log = message => Debug.Log(message);
+        _supplementDependencies.LogWarning = message => Debug.LogWarning(message);
+        _supplementDependencies.VerboseLogging = verboseLogging;
+
+        _supplementController.Initialize(_supplementDependencies);
+        _supplementController.remedialResources = remedialResources ?? new List<RemedialPracticeResource>();
+        _supplementController.clipRemedialNeedPractice = clipRemedialNeedPractice;
+        _supplementController.clipRemedialPracticeIntro = clipRemedialPracticeIntro;
+        _supplementController.clipRemedialFirstEncourage = clipRemedialFirstEncourage;
+        _supplementController.clipRemedialSecondEncourage = clipRemedialSecondEncourage;
+        _supplementController.clipRemedialPerfect = clipRemedialPerfect;
+        _supplementController.clipRemedialNextLesson = clipRemedialNextLesson;
+        _supplementController.remedialEncouragePauseSeconds = remedialEncouragePauseSeconds;
     }
 
     private Text EnsureProgressText()
@@ -384,6 +486,9 @@ using Stage.UI;
 
     private IEnumerator RunStage()
     {
+        ConfigureTutorialController();
+        _tutorialController?.ResetAfterStageRestart();
+
         // 새 실행 시작 시 상태 초기화
         _guideMoved = false;
         if (_guideMoveCo != null) { StopCoroutine(_guideMoveCo); _guideMoveCo = null; }
@@ -394,13 +499,24 @@ using Stage.UI;
             mainImage.sprite = null;
         }
         // 0) 시작 효과음
-        _remedialPhonemes.Clear();
-        _lastQuestions.Clear();
+        ConfigureSupplementController();
+        _supplementController?.Clear();
+        _questionController.Clear();
         yield return PlayClip(sfxStart);
 
         // 0-1) 도입 대사 (가이드 이미지는 고정, 이동은 sfxNext 타이밍에 수행)
-        yield return RunIntroSequence();
-        yield return RunIntroTutorial();
+        if (_tutorialController != null)
+        {
+            yield return _tutorialController.RunIntroSequence();
+            yield return _tutorialController.RunIntroTutorial();
+        }
+        else
+        {
+            if (introClip1) yield return PlayClip(introClip1);
+            if (introClip2) yield return PlayClip(introClip2);
+            if (introClip3) yield return PlayClip(introClip3);
+            if (introClip4) yield return PlayClip(introClip4);
+        }
         if (guideImage && _guideMoveCo == null && (!_guideMoved || !guideMoveOnlyOnce))
         {
             Debug.Log("[Stage11] Guide move: trigger after intro");
@@ -408,77 +524,90 @@ using Stage.UI;
             _guideMoved = true;
         }
 
+        var sessionController = GetSessionController();
+
         // 0-2) 세션 시작 호출로 stageSessionId 확보 (테스트 시 우회 가능)
         if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
         {
-            yield return StartStageSession();
-            if (string.IsNullOrWhiteSpace(stageSessionId))
+            string stageParamSource = string.IsNullOrWhiteSpace(stageTwoPart) ? stage : stageTwoPart;
+            StageSessionController.StageStartResult startResult = null;
+            yield return sessionController.StartStageSession(stageParamSource, count, r => startResult = r);
+            if (startResult != null && startResult.Success && !string.IsNullOrWhiteSpace(startResult.StageSessionId))
+            {
+                stageSessionId = startResult.StageSessionId;
+            }
+            else if (string.IsNullOrWhiteSpace(stageSessionId))
             {
                 Debug.LogWarning("[Stage11] stageSessionId 발급 실패. bypassStartRequest=true 이므로 계속 진행합니다.");
             }
         }
 
         // 문제 요청
-        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}");
-        if (!string.IsNullOrWhiteSpace(stageSessionId))
-            url += $"&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}";
-        using (var req = UnityWebRequest.Get(url))
+        StageSessionController.QuestionSetResult questionResult = null;
+        yield return sessionController.FetchQuestionSet(stage, count, stageSessionId, r => questionResult = r);
+        if (questionResult == null || !questionResult.Success)
         {
-            ApplyCommonHeaders(req);
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
-                Debug.LogError($"[Stage11] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
-                yield break;
-            }
+            Debug.LogError($"[Stage11] 문제 요청 실패: 응답 코드={questionResult?.ResponseCode}\nRaw={questionResult?.RawBody}");
+            yield break;
+        }
 
-            var json = req.downloadHandler.text;
-            var questions = ExtractQuestions(json);
-            if (questions == null || questions.Count == 0)
+        var json = questionResult.RawBody;
+        var questions = ExtractQuestions(json);
+        if (questions == null || questions.Count == 0)
+        {
+            Debug.LogError($"[Stage11] 응답 파싱 실패 또는 데이터 없음\nRaw={json}");
+            yield break;
+        }
+        else
+        {
+            Debug.Log($"[Stage11] 문제 수신: {questions.Count}개");
+            if (logQuestionsVerbose)
             {
-                Debug.LogError($"[Stage11] 응답 파싱 실패 또는 데이터 없음\nRaw={json}");
-                yield break;
-            }
-            else
-            {
-                Debug.Log($"[Stage11] 문제 수신: {questions.Count}개");
-                if (logQuestionsVerbose)
+                for (int qi = 0; qi < questions.Count; qi++)
                 {
-                    for (int qi = 0; qi < questions.Count; qi++)
-                    {
-                        var qd = questions[qi];
-                        string opts = (qd.options != null) ? string.Join(", ", qd.options.Select(o => o.value)) : "(no options)";
-                        Debug.Log($"[Stage11] Q{qi + 1}: id={qd.id}, qid={qd.questionId}, phonemeId={qd.phonemeId}, value={qd.value}, imageUrl={qd.imageUrl}, voiceUrl={qd.voiceUrl}, options=[{opts}]");
-                    }
-                }
-            }
-
-            _lastQuestions.Clear();
-            if (questions != null)
-                _lastQuestions.AddRange(questions);
-
-            for (int i = 0; i < questions.Count; i++)
-            {
-                var q = questions[i];
-                yield return RunOneQuestion(i + 1, questions.Count, q);
-                // 다음 문제로 넘어가는 효과음 (마지막 문제 제외)
-                if (i < questions.Count - 1)
-                {
-                    // sfxNext 재생과 동시에 가이드 이미지 이동/축소(최초 1회)
-                    if (enableGuideMoveBetweenQuestions && guideImage && _guideMoveCo == null && (!_guideMoved || !guideMoveOnlyOnce))
-                    {
-                        Debug.Log("[Stage11] Guide move: trigger between questions");
-                        _guideMoveCo = StartCoroutine(MoveGuideAndScaleOverTime(guideMoveDuration));
-                        _guideMoved = true;
-                    }
-                    yield return PlayClip(sfxNext);
+                    var qd = questions[qi];
+                    string opts = (qd.options != null) ? string.Join(", ", qd.options.Select(o => o.value)) : "(no options)";
+                    Debug.Log($"[Stage11] Q{qi + 1}: id={qd.id}, qid={qd.questionId}, phonemeId={qd.phonemeId}, value={qd.value}, imageUrl={qd.imageUrl}, voiceUrl={qd.voiceUrl}, options=[{opts}]");
                 }
             }
         }
 
+        _questionController.SetQuestions(questions);
+
+        int totalQuestions = _questionController.Count;
+        for (int i = 0; i < totalQuestions; i++)
+        {
+            int questionNumber = i + 1;
+            _questionController.SetCurrentQuestionNumber(questionNumber);
+            var q = _questionController.GetQuestionByNumber(questionNumber);
+            yield return RunOneQuestion(questionNumber, totalQuestions, q);
+            // 다음 문제로 넘어가는 효과음 (마지막 문제 제외)
+            if (i < totalQuestions - 1)
+            {
+                // sfxNext 재생과 동시에 가이드 이미지 이동/축소(최초 1회)
+                if (enableGuideMoveBetweenQuestions && guideImage && _guideMoveCo == null && (!_guideMoved || !guideMoveOnlyOnce))
+                {
+                    Debug.Log("[Stage11] Guide move: trigger between questions");
+                    _guideMoveCo = StartCoroutine(MoveGuideAndScaleOverTime(guideMoveDuration));
+                    _guideMoved = true;
+                }
+                yield return PlayClip(sfxNext);
+            }
+        }
+
         // 세션 완료 보고 (best-effort)
-        yield return CompleteStageSession();
+        _supplementController?.Clear();
+        StageSessionController.StageCompleteResult completeResult = null;
+        yield return sessionController.CompleteStageSession(stageSessionId, r => completeResult = r);
+        if (completeResult != null)
+        {
+            if (!string.IsNullOrWhiteSpace(completeResult.StageSessionId))
+                stageSessionId = completeResult.StageSessionId;
+            if (completeResult.VoiceResultTokens.Count > 0)
+            {
+                _supplementController?.SetRemedialTokens(completeResult.VoiceResultTokens);
+            }
+        }
         yield return RunRemedialSequence();
         ShowEndModal();
     }
@@ -508,129 +637,6 @@ using Stage.UI;
         public QuestionSet data;
     }
 
-    [Serializable]
-    private class StartStageBody
-    {
-        public string stage;
-        public int totalProblems;
-    }
-
-    [Serializable]
-    private class StartStageData
-    {
-        public string stageSessionId;
-        public string stage;
-        public int totalProblems;
-        public string startAt;
-    }
-
-    [Serializable]
-    private class StartStageResponse
-    {
-        public bool success;
-        public string message;
-        public StartStageData data;
-    }
-
-    [Serializable]
-    private class CompleteStageData
-    {
-        public string stageSessionId;
-        public List<string> voiceResult;
-    }
-
-    [Serializable]
-    private class CompleteStageDataInt
-    {
-        public string stageSessionId;
-        public List<int> voiceResult;
-    }
-
-    [Serializable]
-    private class CompleteStageResponse
-    {
-        public bool success;
-        public string message;
-        public CompleteStageData data;
-    }
-
-    [Serializable]
-    private class CompleteStageResponseInt
-    {
-        public bool success;
-        public string message;
-        public CompleteStageDataInt data;
-    }
-
-    private void AddRemedialKeyInternal(string key)
-    {
-        if (string.IsNullOrWhiteSpace(key))
-            return;
-
-        string normalized = NormalizeRemedialKey(key);
-        if (string.IsNullOrEmpty(normalized))
-            return;
-
-        if (_remedialPhonemeSet.Add(normalized))
-            _remedialPhonemes.Add(normalized);
-    }
-
-    private void AddRemedialKeysForQuestion(QuestionDto question)
-    {
-        if (question == null)
-            return;
-
-        AddRemedialKeyInternal(question.value);
-        AddRemedialKeyInternal(question.unicode);
-
-        if (question.phonemeId != 0)
-            AddRemedialKeyInternal(question.phonemeId.ToString());
-
-        if (question.id != 0)
-            AddRemedialKeyInternal(question.id.ToString());
-
-        if (question.questionId != 0)
-            AddRemedialKeyInternal(question.questionId.ToString());
-    }
-
-    private bool AddRemedialKeyFromQuestionIndex(int questionIndex)
-    {
-        if (questionIndex <= 0)
-            return false;
-
-        if (_lastQuestions == null || _lastQuestions.Count == 0)
-        {
-            Debug.LogWarning($"[Stage11] voiceResult 인덱스 {questionIndex} 처리 실패: 저장된 문제가 없습니다.");
-            return false;
-        }
-
-        int arrayIndex = questionIndex - 1;
-        if (arrayIndex < 0 || arrayIndex >= _lastQuestions.Count)
-        {
-            Debug.LogWarning($"[Stage11] voiceResult 인덱스 {questionIndex} 처리 실패: 범위를 벗어났습니다(_lastQuestions.Count={_lastQuestions.Count}).");
-            return false;
-        }
-
-        AddRemedialKeysForQuestion(_lastQuestions[arrayIndex]);
-        return true;
-    }
-
-    private void AddRemedialKeyFromToken(string token)
-    {
-        if (string.IsNullOrWhiteSpace(token))
-            return;
-
-        token = token.Trim();
-
-        if (int.TryParse(token, out int indexToken))
-        {
-            if (AddRemedialKeyFromQuestionIndex(indexToken))
-                return;
-        }
-
-        AddRemedialKeyInternal(token);
-    }
-
     // 일부 서버가 data를 문자열(JSON)로 감싸서 반환하는 경우 대응
     [Serializable]
     private class QuestionStringDataWrapper
@@ -647,118 +653,7 @@ using Stage.UI;
         return raw;
     }
 
-    // 세션 시작: /api/train/stage/start
-    private IEnumerator StartStageSession()
-    {
-        // Use query parameters (e.g., /api/train/stage/start?stage=1.1&totalProblems=5)
-        string stageParamSource = string.IsNullOrWhiteSpace(stageTwoPart) ? stage : stageTwoPart;
-        string stageParam = UnityWebRequest.EscapeURL(stageParamSource);
-        string url = ComposeUrl($"/api/train/stage/start?stage={stageParam}&totalProblems={count}");
-        var payload = new StartStageBody
-        {
-            stage = stageParamSource,
-            totalProblems = Mathf.Max(1, count)
-        };
-        var payloadJson = JsonUtility.ToJson(payload);
-        var payloadBytes = Encoding.UTF8.GetBytes(payloadJson ?? "{}");
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
-        {
-            ApplyCommonHeaders(req);
-            req.uploadHandler = new UploadHandlerRaw(payloadBytes);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                var resp = req.downloadHandler != null ? req.downloadHandler.text : "";
-                Debug.LogError($"[Stage11] stage/start 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={resp}");
-                yield break;
-            }
-            var respJson = req.downloadHandler.text;
-            try
-            {
-                var resp = JsonUtility.FromJson<StartStageResponse>(respJson);
-                if (resp != null && resp.data != null && !string.IsNullOrWhiteSpace(resp.data.stageSessionId))
-                {
-                    stageSessionId = resp.data.stageSessionId;
-                    Debug.Log($"[Stage11] stageSessionId 발급: {stageSessionId}");
-                }
-                else
-                {
-                    Debug.LogError($"[Stage11] stage/start 응답 파싱 실패\nRaw={respJson}");
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[Stage11] stage/start 파싱 예외: {e.Message}\nRaw={respJson}");
-            }
-        }
-    }
-
     // userId 관련 토큰 파싱 로직 제거됨
-
-    // 세션 완료: /api/train/stage/complete
-    private IEnumerator CompleteStageSession()
-    {
-        if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
-        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
-        {
-            ApplyCommonHeaders(req);
-            req.uploadHandler = null;
-            req.downloadHandler = new DownloadHandlerBuffer();
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                var resp = req.downloadHandler != null ? req.downloadHandler.text : "";
-                Debug.LogWarning($"[Stage11] stage/complete 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={resp}");
-                yield break;
-            }
-            var respText = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
-            Debug.Log($"[Stage11] stage/complete OK\nBody={respText}");
-            _remedialPhonemes.Clear();
-            _remedialPhonemeSet.Clear();
-            if (!string.IsNullOrWhiteSpace(respText))
-            {
-                try
-                {
-                    var resp = JsonUtility.FromJson<CompleteStageResponse>(respText);
-                    bool parsed = false;
-                    if (resp != null && resp.data != null && resp.data.voiceResult != null && resp.data.voiceResult.Count > 0)
-                    {
-                        foreach (var item in resp.data.voiceResult)
-                        {
-                            AddRemedialKeyFromToken(item);
-                        }
-                        parsed = true;
-                    }
-
-                    if (!parsed)
-                    {
-                        var respInt = JsonUtility.FromJson<CompleteStageResponseInt>(respText);
-                        if (respInt != null && respInt.data != null && respInt.data.voiceResult != null && respInt.data.voiceResult.Count > 0)
-                        {
-                            foreach (var item in respInt.data.voiceResult)
-                            {
-                                if (!AddRemedialKeyFromQuestionIndex(item))
-                                    AddRemedialKeyInternal(item.ToString());
-                            }
-                            parsed = true;
-                        }
-                    }
-
-                    if (parsed && _remedialPhonemes.Count > 0)
-                    {
-                        Debug.Log($"[Stage11] stage/complete voiceResult 수신: {_remedialPhonemes.Count}개");
-                    }
-                }
-                catch (Exception e)
-                {
-                    Debug.LogWarning($"[Stage11] stage/complete voiceResult 파싱 실패: {e.Message}\nRaw={respText}");
-                }
-            }
-        }
-    }
 
     // 서버 응답 형태가 몇 가지 변형일 수 있으므로 유연하게 파싱
     private List<QuestionDto> ExtractQuestions(string raw)
@@ -926,38 +821,18 @@ using Stage.UI;
 
     private IEnumerator PlayClip(AudioClip clip)
     {
-        if (!clip || !audioSource) yield break;
-        audioSource.Stop();
-        audioSource.clip = clip;
-        audioSource.Play();
-        yield return new WaitWhile(() => audioSource.isPlaying);
+        if (_audioController == null)
+            yield break;
+
+        yield return _audioController.PlayClip(clip);
     }
 
     private IEnumerator PlayVoiceUrl(string voiceUrl)
     {
-        if (string.IsNullOrEmpty(voiceUrl) || !audioSource) yield break;
+        if (_audioController == null)
+            yield break;
 
-        // S3 경로에 '+'가 포함된 파일명을 안전하게 로드하기 위해
-        // 경로 부분의 '+'를 '%2B'로 인코딩한다. (쿼리스트링은 유지)
-        string safeUrl = EncodePlusInPath(voiceUrl);
-
-        var audioType = GuessAudioType(safeUrl);
-        using (var req = UnityWebRequestMultimedia.GetAudioClip(safeUrl, audioType))
-        {
-            // 외부(S3/CloudFront 등)일 수 있으므로 인증 헤더는 붙이지 않음
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage11] 음성 로드 실패: {req.error}\nURL(raw)={voiceUrl}\nURL(safe)={safeUrl}");
-                yield break;
-            }
-
-            var clip = DownloadHandlerAudioClip.GetContent(req);
-            audioSource.Stop();
-            audioSource.clip = clip;
-            audioSource.Play();
-            yield return new WaitWhile(() => audioSource.isPlaying);
-        }
+        yield return _audioController.PlayVoiceUrl(voiceUrl);
     }
 
     private void ApplyOptionsLayoutConfig()
@@ -986,102 +861,6 @@ using Stage.UI;
 
     // URL의 경로 부분에 포함된 '+'를 '%2B'로 치환한다.
     // 쿼리스트링(서명 등)은 변경하지 않도록 주의.
-    private string EncodePlusInPath(string url)
-    {
-        if (string.IsNullOrEmpty(url)) return url;
-        try
-        {
-            int q = url.IndexOf('?');
-            int schemeIdx = url.IndexOf("://");
-            int pathStart;
-            if (schemeIdx >= 0)
-            {
-                // 스킴 이후 첫 '/'
-                pathStart = url.IndexOf('/', schemeIdx + 3);
-                if (pathStart < 0)
-                {
-                    // 경로가 없으면 그대로 반환
-                    return url;
-                }
-            }
-            else
-            {
-                // 상대경로 또는 루트 경로
-                pathStart = 0;
-            }
-
-            int pathEnd = (q >= 0) ? q : url.Length;
-            if (pathEnd <= pathStart) return url;
-
-            string prefix = url.Substring(0, pathStart);
-            string path = url.Substring(pathStart, pathEnd - pathStart);
-            string suffix = (q >= 0) ? url.Substring(q) : string.Empty;
-
-            // 경로 내 '+'만 인코딩
-            path = path.Replace("+", "%2B");
-            return prefix + path + suffix;
-        }
-        catch
-        {
-            return url;
-        }
-    }
-
-    private AudioType GuessAudioType(string url)
-    {
-        url = url.ToLowerInvariant();
-        if (url.EndsWith(".mp3")) return AudioType.MPEG;
-        if (url.EndsWith(".wav") || url.EndsWith(".wave")) return AudioType.WAV;
-        if (url.EndsWith(".ogg")) return AudioType.OGGVORBIS;
-        return AudioType.UNKNOWN;
-    }
-
-    // /api/train/attempt 로깅
-    private IEnumerator SendAttemptLog(int problemNumber, int attemptNumber, string phonemes, string selectedAnswer, bool isCorrect, string word)
-    {
-        string url = ComposeUrl("/api/train/attempt");
-        string ssid = stageSessionId ?? string.Empty;
-        string stg = stage ?? string.Empty;
-        string ans = selectedAnswer ?? string.Empty;
-        string problemWord = word ?? string.Empty;
-        string audioUrl = string.Empty;
-        bool includeReplyResult = attemptNumber > 1;
-        string json = "{" +
-                      "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
-                      "\"problemNumber\":" + problemNumber + "," +
-                      "\"stage\":\"" + JsonEscape(stg) + "\"," +
-                      "\"problem\":\"" + JsonEscape(problemWord) + "\"," +
-                      "\"audioUrl\":\"" + JsonEscape(audioUrl) + "\"," +
-                      "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
-                      "\"isReplyCorrect\":" + (includeReplyResult ? (isCorrect ? "true" : "false") : "null") + "," +
-                      "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"answer\":\"" + JsonEscape(ans) + "\"" + "}";
-
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
-        {
-            byte[] body = System.Text.Encoding.UTF8.GetBytes(json);
-            req.uploadHandler = new UploadHandlerRaw(body);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            ApplyCommonHeaders(req); // Authorization, Accept
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage11] attempt 로깅 실패: {req.error} (code={req.responseCode})\\nURL={url}\\nBody={json}\\nResp={req.downloadHandler.text}");
-            }
-            else
-            {
-                Debug.Log($"[Stage11] attempt 로깅 OK: problem={problemNumber}, attempt={attemptNumber}, correct={isCorrect}");
-            }
-        }
-    }
-
-    private static string JsonEscape(string s)
-    {
-        if (string.IsNullOrEmpty(s)) return s ?? string.Empty;
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
-    }
-
     private static string NormalizeField(string s)
     {
         if (string.IsNullOrEmpty(s)) return string.Empty;
@@ -1146,48 +925,15 @@ using Stage.UI;
         string stageForUpload = !string.IsNullOrWhiteSpace(stage) ? stage : stageTwoPart;
         int problemNumber = Mathf.Max(1, _currentProblemNumber);
         string answerValue = ResolveAnswerValue(q);
-        string qs =
-            $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}" +
-            $"&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}" +
-            $"&problemNumber={UnityWebRequest.EscapeURL(problemNumber.ToString())}" +
-            $"&answer={UnityWebRequest.EscapeURL(answerValue ?? string.Empty)}";
-        string url = ComposeUrl($"/api/train/check/voice?{qs}");
-        var form = new WWWForm();
-        // multipart 필드명은 audio
-        form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
-
-        using (var req = UnityWebRequest.Post(url, form))
-        {
-            Debug.Log($"[Stage11] check/voice request\nURL={url}\nanswer={answerValue}\nwaveBytes={wav?.Length ?? 0}");
-            ApplyCommonHeaders(req);
-            // 일부 서버/프록시는 chunked 업로드를 거부합니다.
-            req.chunkedTransfer = false;
-            yield return req.SendWebRequest();
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
-                Debug.LogWarning($"[Stage11] 음성 업로드 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
-            }
-            else
-            {
-                var body = req.downloadHandler != null ? req.downloadHandler.text : "";
-                Debug.Log($"[Stage11] check/voice success\nBody={body}");
-            }
-        }
-    }
-
-    private void ApplyCommonHeaders(UnityWebRequest req)
-    {
-        if (!string.IsNullOrWhiteSpace(authToken))
-        {
-            var tokenTrim = authToken.Trim();
-            if (tokenTrim.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                tokenTrim = tokenTrim.Substring(7).Trim();
-            req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
-            // 디버그 
-            Debug.Log($"[Stage11] Auth header attached (len={tokenTrim.Length})");
-        }
-        req.SetRequestHeader("Accept", "application/json");
+        var sessionController = GetSessionController();
+        Debug.Log($"[Stage11] check/voice request (answer={answerValue}, bytes={wav?.Length ?? 0})");
+        yield return sessionController.CheckVoice(
+            stageSessionId,
+            stageForUpload,
+            problemNumber,
+            answerValue,
+            wav,
+            null);
     }
 
     private AudioClip StartMic(int seconds, int sampleRate)
@@ -1246,6 +992,8 @@ using Stage.UI;
             if (match != null) correctPhonemeValue = NormalizeField(match.value);
         }
         if (string.IsNullOrEmpty(correctPhonemeValue)) correctPhonemeValue = NormalizeField(q.value);
+
+        var sessionController = GetSessionController();
 
         void SetupOne(OptionDto opt)
         {
@@ -1325,7 +1073,18 @@ using Stage.UI;
             {
                 string selectedVal = NormalizeField(lastSelected.value);
                 int attemptNumber = attemptCount; // 1부터 증가
-                yield return SendAttemptLog(_currentProblemNumber, attemptNumber, correctPhonemeValue, selectedVal, correct, q != null ? q.problemWord : null);
+                bool includeReplyResult = attemptNumber > 1;
+                yield return sessionController.LogAttempt(
+                    stageSessionId,
+                    stage,
+                    _currentProblemNumber,
+                    attemptNumber,
+                    selectedVal,
+                    correct,
+                    q != null ? q.problemWord : null,
+                    correctPhonemeValue,
+                    includeReplyResult,
+                    null);
             }
 
             if (correct)
@@ -1524,7 +1283,8 @@ using Stage.UI;
                 Destroy(child.gameObject);
             optionsContainer.gameObject.SetActive(false);
         }
-        HideIntroPanel();
+        ConfigureTutorialController();
+        _tutorialController?.ResetAfterStageRestart();
         if (mainImage)
         {
             mainImage.enabled = false;
@@ -1544,579 +1304,12 @@ using Stage.UI;
     }
 
     // 도입 시퀀스: [1.1.1] + [1.1.2] 오디오만 재생 (이미지 이동은 sfxNext 타이밍)
-    private IEnumerator RunIntroSequence()
-    {
-        // 시작 크기 세팅(선택)
-        if (guideImage && guideStartSize.sqrMagnitude > 0)
-            guideImage.sizeDelta = guideStartSize;
-
-        // 도입 대사 재생(연속)
-        yield return PlayClip(introClip1);
-        yield return PlayClip(introClip2);
-        yield return PlayClip(introClip3);
-    }
-
-    private Coroutine _coShowPanel;
-    private void ShowIntroPanel(bool immediate = false)
-    {
-        // 패널을 켜기 직전에 캐릭터를 숨기는 리드 타임 적용
-        if (guide3DCharacter && guideHideLeadSeconds > 0f && !immediate)
-        {
-            if (_coShowPanel != null) StopCoroutine(_coShowPanel);
-            _coShowPanel = StartCoroutine(Co_ShowPanelWithGuideHide(immediate));
-            return;
-        }
-
-        if (guide3DCharacter)
-            guide3DCharacter.SetActive(false);
-
-        if (introTutorialPanelAnimator != null)
-        {
-            if (verboseLogging)
-                Debug.Log($"[Stage11][Intro] ShowIntroPanel via PanelAnimator (immediate={immediate})");
-            introTutorialPanelAnimator.Show(immediate);
-        }
-        else if (introTutorialPanel != null)
-        {
-            introTutorialPanel.SetActive(true);
-            if (verboseLogging)
-                Debug.Log($"[Stage11][Intro] ShowIntroPanel via SetActive (immediate={immediate})");
-        }
-        else if (verboseLogging)
-        {
-            Debug.LogWarning("[Stage11][Intro] ShowIntroPanel called but no panel assigned");
-        }
-    }
-
-    private IEnumerator Co_ShowPanelWithGuideHide(bool immediate)
-    {
-        // 1) 캐릭터 숨김
-        if (guide3DCharacter) guide3DCharacter.SetActive(false);
-        // 2) 리드 타임 대기 후 실제 패널 표시
-        yield return new WaitForSeconds(guideHideLeadSeconds);
-        _coShowPanel = null;
-
-        if (introTutorialPanelAnimator != null)
-        {
-            if (verboseLogging)
-                Debug.Log($"[Stage11][Intro] ShowIntroPanel via PanelAnimator (delayed, lead={guideHideLeadSeconds})");
-            introTutorialPanelAnimator.Show(immediate);
-        }
-        else if (introTutorialPanel != null)
-        {
-            introTutorialPanel.SetActive(true);
-            if (verboseLogging)
-                Debug.Log($"[Stage11][Intro] ShowIntroPanel via SetActive (delayed, lead={guideHideLeadSeconds})");
-        }
-        else if (verboseLogging)
-        {
-            Debug.LogWarning("[Stage11][Intro] ShowIntroPanel called but no panel assigned");
-        }
-    }
-
-    private void HideIntroPanel(bool immediate = false)
-    {
-        if (introTutorialPanelAnimator != null)
-        {
-            if (verboseLogging)
-                Debug.Log($"[Stage11][Intro] HideIntroPanel via PanelAnimator (immediate={immediate})");
-            introTutorialPanelAnimator.Hide(immediate);
-        }
-        else if (introTutorialPanel != null)
-        {
-            introTutorialPanel.SetActive(false);
-            if (verboseLogging)
-                Debug.Log($"[Stage11][Intro] HideIntroPanel via SetActive (immediate={immediate})");
-        }
-        else if (verboseLogging)
-        {
-            Debug.LogWarning("[Stage11][Intro] HideIntroPanel called but no panel assigned");
-        }
-
-        // 패널 OFF 직후 캐릭터 표시
-        if (guide3DCharacter && showGuideWhenPanelOff)
-        {
-            if (guideShowDelayAfterPanelOff > 0f)
-                StartCoroutine(Co_ShowGuideAfterDelay(guideShowDelayAfterPanelOff));
-            else
-                guide3DCharacter.SetActive(true);
-        }
-    }
-
-    private IEnumerator Co_ShowGuideAfterDelay(float seconds)
-    {
-        yield return new WaitForSeconds(seconds);
-        if (guide3DCharacter) guide3DCharacter.SetActive(true);
-    }
-
-    private IEnumerator RunIntroTutorial()
-    {
-        bool usedImage = false;
-
-        if (progressText != null)
-            progressText.text = string.Empty;
-        var pt = EnsureProgressText();
-        if (pt != null)
-            pt.text = string.Empty;
-
-        ShowIntroPanel();
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Tutorial panel ON (1.1.2.1)");
-
-        if (introTutorialImage != null && mainImage != null)
-        {
-            mainImage.sprite = introTutorialImage;
-            mainImage.enabled = true;
-            usedImage = true;
-        }
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.2");
-        yield return PlayClip(introClip4);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.3");
-        yield return PlayClip(introClip5);
-        if (tutorialClipGapSeconds > 0f)
-            yield return new WaitForSeconds(tutorialClipGapSeconds);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.4 (demo)");
-        yield return PlayClip(introDemoClip1);
-        if (tutorialClipGapSeconds > 0f)
-            yield return new WaitForSeconds(tutorialClipGapSeconds);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.5");
-        yield return PlayClip(introClip6);
-        if (tutorialClipGapSeconds > 0f)
-            yield return new WaitForSeconds(tutorialClipGapSeconds);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.6 (demo)");
-        yield return PlayClip(introDemoClip2);
-        if (tutorialClipGapSeconds > 0f)
-            yield return new WaitForSeconds(tutorialClipGapSeconds);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.7");
-        yield return PlayClip(introClip7);
-
-        if (optionsContainer != null)
-        {
-            optionsContainer.gameObject.SetActive(true);
-            if (verboseLogging)
-                Debug.Log("[Stage11][Intro] Options visible");
-            SetupIntroOptions();
-
-            if (introOptionCursor != null && introOptionCursor.handCursor != null)
-            {
-                var cursorGo = introOptionCursor.handCursor;
-                cursorGo.SetActive(true);
-
-                if (introOptionCursor.wrongOptionTransform != null)
-                {
-                    if (verboseLogging)
-                        Debug.Log("[Stage11][Intro] Cursor moving to wrong option");
-                    yield return MoveCursorSmooth(cursorGo.transform, introOptionCursor.wrongOptionTransform,
-                        introOptionCursor.cursorMoveSeconds, introOptionCursor.cursorMoveCurve);
-                    if (introOptionCursor.wrongHoverSeconds > 0f)
-                        yield return new WaitForSeconds(introOptionCursor.wrongHoverSeconds);
-                }
-
-                if (introOptionCursor.correctOptionTransform != null)
-                {
-                    if (verboseLogging)
-                        Debug.Log("[Stage11][Intro] Cursor moving to correct option");
-                    yield return MoveCursorSmooth(cursorGo.transform, introOptionCursor.correctOptionTransform,
-                        introOptionCursor.cursorMoveSeconds, introOptionCursor.cursorMoveCurve);
-
-                    if (introOptionCursor.enableCorrectPulse)
-                    {
-                        yield return PulseOption(introOptionCursor.correctOptionTransform,
-                            introOptionCursor.correctPulseScale,
-                            introOptionCursor.correctPulseDuration,
-                            introOptionCursor.correctPulseLoops);
-                    }
-
-                    if (introOptionCursor.correctHoverSeconds > 0f)
-                        yield return new WaitForSeconds(introOptionCursor.correctHoverSeconds);
-                }
-
-                cursorGo.SetActive(false);
-            }
-
-            if (verboseLogging)
-                Debug.Log("[Stage11][Intro] Play correct SFX");
-            yield return PlayClip(sfxCorrectClip);
-
-            HideIntroPanel();
-            if (verboseLogging)
-                Debug.Log("[Stage11][Intro] Tutorial panel OFF after correct SFX (1.1.2.7)");
-
-            optionsContainer.gameObject.SetActive(false);
-        }
-
-        if (usedImage && mainImage != null)
-        {
-            mainImage.enabled = false;
-            mainImage.sprite = null;
-        }
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.8");
-        yield return PlayClip(introClip8);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.9");
-        yield return PlayClip(introClip9);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.10");
-        yield return PlayClip(introClip10);
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Play clip 1.1.2.11");
-        yield return PlayClip(introClip11);
-
-        if (verboseLogging && requireTriggerAfterTutorial)
-            Debug.Log("[Stage11][Intro] Waiting for right trigger input to continue");
-        yield return WaitForRightTriggerPress();
-        ShowIntroPanel();
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Tutorial panel ON (after trigger)");
-
-        if (progressText != null)
-            progressText.text = string.Empty;
-        var progressTmp = EnsureProgressText();
-        if (progressTmp != null)
-            progressTmp.text = string.Empty;
-
-        if (verboseLogging)
-            Debug.Log("[Stage11][Intro] Tutorial end");
-    }
-
-    private void SetupIntroOptions()
-    {
-        if (optionsContainer == null || optionButtonPrefab == null)
-            return;
-
-        ClearOptionButtons();
-
-        RectTransform firstWrong = null;
-        RectTransform firstCorrect = null;
-
-        foreach (var option in introOptions)
-        {
-            var btn = Instantiate(optionButtonPrefab, optionsContainer);
-            btn.interactable = false;
-
-            var tmpText = btn.GetComponentInChildren<TMP_Text>();
-            if (tmpText != null)
-                tmpText.text = option.label;
-            else
-            {
-                var uguiText = btn.GetComponentInChildren<Text>();
-                if (uguiText != null)
-                    uguiText.text = option.label;
-            }
-
-            var rect = btn.GetComponent<RectTransform>();
-            if (option.isCorrect)
-                firstCorrect = rect;
-            else if (firstWrong == null)
-                firstWrong = rect;
-        }
-
-        if (introOptionCursor != null)
-        {
-            if (introOptionCursor.correctOptionTransform == null)
-                introOptionCursor.correctOptionTransform = firstCorrect;
-            if (introOptionCursor.wrongOptionTransform == null)
-                introOptionCursor.wrongOptionTransform = firstWrong;
-        }
-    }
-
-    private void ClearOptionButtons()
-    {
-        if (optionsContainer == null)
-            return;
-
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
-    }
-
-    private IEnumerator WaitForRightTriggerPress()
-    {
-        if (!requireTriggerAfterTutorial)
-            yield break;
-
-        bool wasPressed = CheckRightTriggerPressed();
-        if (wasPressed)
-        {
-            if (verboseLogging)
-                Debug.Log("[Stage11][Intro] Waiting for trigger release before monitoring press");
-            while (CheckRightTriggerPressed())
-                yield return null;
-            wasPressed = false;
-        }
-
-        while (true)
-        {
-            bool pressed = CheckRightTriggerPressed();
-            if (pressed && !wasPressed)
-            {
-                if (verboseLogging)
-                    Debug.Log("[Stage11][Intro] Right trigger detected");
-                break;
-            }
-            wasPressed = pressed;
-            yield return null;
-        }
-
-        // ensure button release so 다음 입력에서 중복 방지
-        while (CheckRightTriggerPressed())
-            yield return null;
-    }
-
-#if ENABLE_INPUT_SYSTEM
-    private void ResolveRightTriggerControls()
-    {
-        if (_rightTriggerAxis == null || _rightTriggerAxis.device == null || !_rightTriggerAxis.device.added)
-            _rightTriggerAxis = InputSystem.FindControl("<XRController>{RightHand}/trigger") as AxisControl;
-        if (_rightTriggerButton == null || _rightTriggerButton.device == null || !_rightTriggerButton.device.added)
-            _rightTriggerButton = InputSystem.FindControl("<XRController>{RightHand}/triggerPressed") as ButtonControl;
-    }
-#endif
-
-    private bool CheckRightTriggerPressed()
-    {
-        float threshold = Mathf.Clamp01(tutorialTriggerThreshold);
-
-#if ENABLE_INPUT_SYSTEM
-        ResolveRightTriggerControls();
-        if (_rightTriggerAxis != null && _rightTriggerAxis.ReadValue() >= threshold)
-            return true;
-        if (_rightTriggerButton != null && _rightTriggerButton.isPressed)
-            return true;
-#endif
-
-        RightHandDevices.Clear();
-        InputDevices.GetDevicesAtXRNode(XRNode.RightHand, RightHandDevices);
-        for (int i = 0; i < RightHandDevices.Count; i++)
-        {
-            var device = RightHandDevices[i];
-            if (!device.isValid) continue;
-            if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.triggerButton, out bool triggerButton) && triggerButton)
-                return true;
-            if (device.TryGetFeatureValue(UnityEngine.XR.CommonUsages.trigger, out float triggerValue) && triggerValue >= threshold)
-                return true;
-        }
-
-        if (tutorialFallbackKey != KeyCode.None && Input.GetKey(tutorialFallbackKey))
-            return true;
-
-        return false;
-    }
-
     private IEnumerator RunRemedialSequence()
     {
-        bool hasRemedial = _remedialPhonemes != null && _remedialPhonemes.Count > 0;
-        if (!hasRemedial)
-        {
-            if (clipRemedialPerfect)
-                yield return PlayClip(clipRemedialPerfect);
-            if (clipRemedialNextLesson)
-                yield return PlayClip(clipRemedialNextLesson);
+        ConfigureSupplementController();
+        if (_supplementController == null)
             yield break;
-        }
-
-        if (clipRemedialNeedPractice)
-            yield return PlayClip(clipRemedialNeedPractice);
-
-        if (clipRemedialPracticeIntro)
-            yield return PlayClip(clipRemedialPracticeIntro);
-
-        for (int i = 0; i < _remedialPhonemes.Count; i++)
-        {
-            string phonemeKey = _remedialPhonemes[i];
-            var resource = ResolveRemedialResource(phonemeKey, out QuestionDto fallbackQuestion);
-            yield return ShowRemedialPractice(phonemeKey, resource, fallbackQuestion);
-
-            AudioClip encourageClip = null;
-            if (i == 0 && clipRemedialFirstEncourage)
-                encourageClip = clipRemedialFirstEncourage;
-            else if (clipRemedialSecondEncourage)
-                encourageClip = clipRemedialSecondEncourage;
-
-            if (encourageClip)
-            {
-                yield return PlayClip(encourageClip);
-                if (remedialEncouragePauseSeconds > 0f)
-                    yield return new WaitForSeconds(remedialEncouragePauseSeconds);
-            }
-        }
-
-        if (clipRemedialNextLesson)
-            yield return PlayClip(clipRemedialNextLesson);
-
-        if (mainImage)
-        {
-            mainImage.enabled = false;
-            mainImage.sprite = null;
-        }
-    }
-
-    private RemedialPracticeResource ResolveRemedialResource(string key, out QuestionDto matchedQuestion)
-    {
-        matchedQuestion = null;
-        string normalizedKey = NormalizeRemedialKey(key);
-        if (string.IsNullOrEmpty(normalizedKey))
-            return null;
-
-        RemedialPracticeResource foundResource = null;
-        if (remedialResources != null)
-        {
-            for (int i = 0; i < remedialResources.Count; i++)
-            {
-                var res = remedialResources[i];
-                if (res == null || string.IsNullOrWhiteSpace(res.key)) continue;
-                if (string.Equals(NormalizeRemedialKey(res.key), normalizedKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    foundResource = res;
-                    break;
-                }
-            }
-        }
-
-        if (_lastQuestions != null)
-        {
-            for (int i = 0; i < _lastQuestions.Count; i++)
-            {
-                var q = _lastQuestions[i];
-                if (q == null) continue;
-
-                if (!string.IsNullOrEmpty(q.value) && string.Equals(NormalizeRemedialKey(q.value), normalizedKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    matchedQuestion = q;
-                    break;
-                }
-                if (!string.IsNullOrEmpty(q.unicode) && string.Equals(NormalizeRemedialKey(q.unicode), normalizedKey, StringComparison.OrdinalIgnoreCase))
-                {
-                    matchedQuestion = q;
-                    break;
-                }
-                if (q.phonemeId != 0 && string.Equals(q.phonemeId.ToString(), key, StringComparison.OrdinalIgnoreCase))
-                {
-                    matchedQuestion = q;
-                    break;
-                }
-                if (q.options != null)
-                {
-                    for (int oi = 0; oi < q.options.Count; oi++)
-                    {
-                        var opt = q.options[oi];
-                        if (opt == null) continue;
-                        if (!string.IsNullOrEmpty(opt.value) && string.Equals(NormalizeRemedialKey(opt.value), normalizedKey, StringComparison.OrdinalIgnoreCase))
-                        {
-                            matchedQuestion = q;
-                            break;
-                        }
-                        if (!string.IsNullOrEmpty(opt.unicode) && string.Equals(NormalizeRemedialKey(opt.unicode), normalizedKey, StringComparison.OrdinalIgnoreCase))
-                        {
-                            matchedQuestion = q;
-                            break;
-                        }
-                        if (opt.id != 0 && string.Equals(opt.id.ToString(), key, StringComparison.OrdinalIgnoreCase))
-                        {
-                            matchedQuestion = q;
-                            break;
-                        }
-                    }
-                }
-                if (matchedQuestion != null)
-                    break;
-            }
-        }
-
-        return foundResource;
-    }
-
-    private IEnumerator ShowRemedialPractice(string key, RemedialPracticeResource resource, QuestionDto fallbackQuestion)
-    {
-        if (verboseLogging)
-            Debug.Log($"[Stage11] Remedial practice start (key={key})");
-
-        if (progressText)
-            progressText.text = string.Empty;
-
-        if (mainImage)
-        {
-            if (resource != null && resource.image != null)
-            {
-                mainImage.sprite = resource.image;
-                mainImage.preserveAspect = true;
-                mainImage.enabled = true;
-            }
-            else if (fallbackQuestion != null && !string.IsNullOrEmpty(fallbackQuestion.imageUrl))
-            {
-                yield return LoadAndShowImage(fallbackQuestion.imageUrl);
-            }
-            else
-            {
-                mainImage.enabled = false;
-                mainImage.sprite = null;
-            }
-        }
-
-        bool audioPlayed = false;
-        if (resource != null)
-        {
-            if (!string.IsNullOrEmpty(resource.remoteAudioUrl))
-            {
-                yield return PlayVoiceUrl(resource.remoteAudioUrl);
-                audioPlayed = true;
-            }
-            else if (resource.localAudioClip)
-            {
-                yield return PlayClip(resource.localAudioClip);
-                audioPlayed = true;
-            }
-        }
-
-        if (!audioPlayed && fallbackQuestion != null && !string.IsNullOrEmpty(fallbackQuestion.voiceUrl))
-        {
-            yield return PlayVoiceUrl(fallbackQuestion.voiceUrl);
-            audioPlayed = true;
-        }
-
-        if (!audioPlayed)
-            yield return null;
-    }
-
-    private string NormalizeRemedialKey(string source)
-    {
-        if (string.IsNullOrWhiteSpace(source))
-            return string.Empty;
-
-        string s = source.Trim();
-        try
-        {
-            s = Regex.Replace(s, @"\\u([0-9A-Fa-f]{4})", m =>
-            {
-                int code = Convert.ToInt32(m.Groups[1].Value, 16);
-                return char.ConvertFromUtf32(code);
-            });
-            s = Regex.Replace(s, @"(?i)U\+([0-9A-Fa-f]{4,6})", m =>
-            {
-                int code = Convert.ToInt32(m.Groups[1].Value, 16);
-                return char.ConvertFromUtf32(code);
-            });
-        }
-        catch { }
-
-        try { s = s.Normalize(NormalizationForm.FormKC); } catch { }
-        return s;
+        yield return _supplementController.RunRemedialSequence();
     }
 
     private IEnumerator MoveCursorSmooth(Transform cursorTransform, RectTransform target, float moveSeconds, AnimationCurve curve)
@@ -2228,12 +1421,4 @@ using Stage.UI;
         return new Vector2(parentHalf.x - selfHalf.x, -(parentHalf.y - selfHalf.y));
     }
 
-    private string ComposeUrl(string path)
-    {
-        if (string.IsNullOrWhiteSpace(baseUrl)) return path; // 상대/절대 그대로
-        if (path.StartsWith("http")) return path;
-        if (!baseUrl.EndsWith("/")) baseUrl += "/";
-        if (path.StartsWith("/")) path = path.Substring(1);
-        return baseUrl + path;
-    }
 }

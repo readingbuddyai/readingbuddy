@@ -661,6 +661,10 @@ PrefabInstance:
       value: -600
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: count
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: stage
       value: 1.2.2
       objectReference: {fileID: 0}
@@ -670,7 +674,7 @@ PrefabInstance:
       objectReference: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: authToken
-      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNDE0NTE3LCJleHAiOjE3NjI1MDA5MTd9.OW1LZBVLXmWTQDQ0Hz2egGE0nL2fBza0SEIlDAB5QSTABbgvP_h_deHqUOJap0Ze
+      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyODQyMjU5LCJleHAiOjE3NjI5Mjg2NTl9.8uWZeR5EpQKWyuWSG0vbfr0cXcsy4k65KmBM_lHAC6eCAizHTo7w9w5rkHNe8i3s
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: micIndicator
