@@ -14,26 +14,15 @@ public class StageTutorialProfile : ScriptableObject
     public bool showGuideWhenPanelOff = true;
     [Min(0f)] public float guideShowDelayAfterPanelOff = 0f;
 
-    [Header("Tutorial Controls")]
-    public bool requireTriggerAfterTutorial = true;
+    [Header("Input Settings")]
     [Range(0.05f, 1f)] public float tutorialTriggerThreshold = 0.6f;
     public KeyCode tutorialFallbackKey = KeyCode.Space;
-    [Min(0f)] public float tutorialClipGapSeconds = 0.9f;
 
-    [Header("Intro Clips")]
-    public AudioClip introClip1;
-    public AudioClip introClip2;
-    public AudioClip introClip3;
-    public AudioClip introClip4;
-    public AudioClip introClip5;
-    public AudioClip introClip6;
-    public AudioClip introClip7;
-    public AudioClip introClip8;
-    public AudioClip introClip9;
-    public AudioClip introClip10;
-    public AudioClip introClip11;
-    public AudioClip introDemoClip1;
-    public AudioClip introDemoClip2;
+    [Header("Timing")]
+    [Min(0f)] public float defaultClipGapSeconds = 0.9f;
+
+    [Header("Tutorial Steps")]
+    public List<StageTutorialStep> steps = new List<StageTutorialStep>();
 }
 
 [Serializable]
@@ -43,3 +32,56 @@ public class StageTutorialOption
     public bool isCorrect;
 }
 
+[Serializable]
+public class StageTutorialStep
+{
+    public string name;
+    public StageTutorialStepPhase phase = StageTutorialStepPhase.Tutorial;
+    public StageTutorialActionType action = StageTutorialActionType.PlayClip;
+    public AudioClip audioClip;
+    public Sprite image;
+    public float waitSeconds = 0f;
+    public bool panelImmediate = false;
+    public bool boolValue;
+    public StageTutorialCursorTarget cursorTarget = StageTutorialCursorTarget.None;
+    public float cursorMoveSeconds = -1f;
+    public AnimationCurve cursorMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    public bool enablePulse = false;
+    public float pulseScale = 1.1f;
+    public float pulseDuration = 0.35f;
+    public int pulseLoops = 1;
+    public string progressText;
+    public string customActionId;
+    public bool awaitRelease = true;
+}
+
+public enum StageTutorialStepPhase
+{
+    Intro,
+    Tutorial
+}
+
+public enum StageTutorialActionType
+{
+    PlayClip,
+    WaitSeconds,
+    ShowPanel,
+    HidePanel,
+    SetMainImage,
+    ClearMainImage,
+    ShowOptions,
+    HideOptions,
+    SetCursorActive,
+    MoveCursor,
+    PulseOption,
+    AwaitTrigger,
+    SetProgressText,
+    CustomAction
+}
+
+public enum StageTutorialCursorTarget
+{
+    None,
+    WrongOption,
+    CorrectOption
+}

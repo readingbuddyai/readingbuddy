@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d60b2327687708e4b9358231732ccf74, type: 3}
-  m_Name: Stage1.1.1TutorialProfile
+  m_Name: Stage1.2.1TutorialProfile 1
   m_EditorClassIdentifier: 
   introTutorialImage: {fileID: 0}
   introOptions:
-  - label: l
-    isCorrect: 0
-  - label: "\u314F"
+  - label: "\u3131"
     isCorrect: 1
+  - label: "\u3137"
+    isCorrect: 0
   guideHideLeadSeconds: 0.5
   showGuideWhenPanelOff: 1
   guideShowDelayAfterPanelOff: 0
@@ -157,7 +157,7 @@ MonoBehaviour:
     phase: 1
     action: 4
     audioClip: {fileID: 0}
-    image: {fileID: 0}
+    image: {fileID: 21300000, guid: 358f9fa69fc1cb8499c46b380f0559b6, type: 3}
     waitSeconds: 0
     panelImmediate: 0
     boolValue: 0
@@ -225,7 +225,7 @@ MonoBehaviour:
   - name: "\uBB38\uC81C \uC74C\uC131"
     phase: 1
     action: 0
-    audioClip: {fileID: 8300000, guid: 8e115db44b631494680217e5a95732ff, type: 3}
+    audioClip: {fileID: 8300000, guid: 25c2110f0b57d9348a9a42dfe35c4482, type: 3}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -271,7 +271,7 @@ MonoBehaviour:
   - name: "\uB2F5\uBCC0 \uC74C\uC131"
     phase: 1
     action: 0
-    audioClip: {fileID: 8300000, guid: c90439b5bd450b44e8ef4edcfcc8b4f1, type: 3}
+    audioClip: {fileID: 8300000, guid: f95f313fa70645b4abbf2ce0871e6ef8, type: 3}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0

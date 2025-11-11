@@ -100,19 +100,19 @@ using OptionDto = StageQuestionModels.OptionDto;
     public AudioClip sfxNext;            // (다음 문제로 넘어가는 효과음)
 
     // 도입 대사
-    public AudioClip introClip1;         // [1.1.1] 안녕~ 꼬마 마법사!
-    public AudioClip introClip2;         // [1.1.2] 지금부터 ‘마법 주문’ 수업을 시작할 거야!
-    public AudioClip introClip3;         // [1.1.2.1] 내가 먼저 해볼테니, 잘 봐야해!
-    public AudioClip introClip4;         // [1.1.2.2] 자, 이렇게 앞에 마법 그림이 떠오르면,
-    public AudioClip introClip5;         // [1.1.2.3] 들리는 소리에 맞춰서, 주문을 따라 외우면 돼!
-    public AudioClip introDemoClip1;     // [1.1.2.4] (준비된 audioClip_1)
-    public AudioClip introClip6;         // [1.1.2.5] 내가 먼저 해볼게!
-    public AudioClip introDemoClip2;     // [1.1.2.6] (준비된 audioClip_2)
-    public AudioClip introClip7;         // [1.1.2.7] 그 다음, 아래에서 주문이랑 똑같은 그림을 클릭!
-    public AudioClip introClip8;         // [1.1.2.8] 여기까지, 첫 번째 마법수업!
-    public AudioClip introClip9;         // [1.1.2.9] 어때? 어렵지 않지?
-    public AudioClip introClip10;        // [1.1.2.10] 나와 함께 마법사가 될 준비가 됐다면,
-    public AudioClip introClip11;        // [1.1.2.11] 오른손의 버튼을 꾹 눌러줘!
+    [HideInInspector] public AudioClip introClip1;         // [1.1.1] 안녕~ 꼬마 마법사!
+    [HideInInspector] public AudioClip introClip2;         // [1.1.2] 지금부터 ‘마법 주문’ 수업을 시작할 거야!
+    [HideInInspector] public AudioClip introClip3;
+    [HideInInspector] public AudioClip introClip4;
+    [HideInInspector] public AudioClip introClip5;
+    [HideInInspector] public AudioClip introClip6;
+    [HideInInspector] public AudioClip introClip7;
+    [HideInInspector] public AudioClip introClip8;
+    [HideInInspector] public AudioClip introClip9;
+    [HideInInspector] public AudioClip introClip10;
+    [HideInInspector] public AudioClip introClip11;
+    [HideInInspector] public AudioClip introDemoClip1;
+    [HideInInspector] public AudioClip introDemoClip2;
 
     // 각 문제 흐름 대사
     public AudioClip clipSeeAndChant;    // [1.1.3] 앞에 떠오른 마법 그림을 잘 보고...
@@ -515,6 +515,7 @@ using OptionDto = StageQuestionModels.OptionDto;
             if (introClip1) yield return PlayClip(introClip1);
             if (introClip2) yield return PlayClip(introClip2);
             if (introClip3) yield return PlayClip(introClip3);
+            if (introClip4) yield return PlayClip(introClip4);
         }
         if (guideImage && _guideMoveCo == null && (!_guideMoved || !guideMoveOnlyOnce))
         {

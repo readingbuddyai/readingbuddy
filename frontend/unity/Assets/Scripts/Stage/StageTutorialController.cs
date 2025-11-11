@@ -56,6 +56,8 @@ public class StageTutorialController
 #endif
     private readonly List<UnityEngine.XR.InputDevice> _rightHandDevices = new List<UnityEngine.XR.InputDevice>();
     private Coroutine _guideShowCoroutine;
+    private readonly List<StageTutorialStep> _profileSteps = new List<StageTutorialStep>();
+    private float _defaultClipGapSeconds = 0.9f;
 
     public void ApplyProfile(StageTutorialProfile profile)
     {
@@ -84,24 +86,24 @@ public class StageTutorialController
         showGuideWhenPanelOff = profile.showGuideWhenPanelOff;
         guideShowDelayAfterPanelOff = Mathf.Max(0f, profile.guideShowDelayAfterPanelOff);
 
-        requireTriggerAfterTutorial = profile.requireTriggerAfterTutorial;
         tutorialTriggerThreshold = Mathf.Clamp01(profile.tutorialTriggerThreshold);
         tutorialFallbackKey = profile.tutorialFallbackKey;
-        tutorialClipGapSeconds = Mathf.Max(0f, profile.tutorialClipGapSeconds);
 
-        introClip1 = profile.introClip1;
-        introClip2 = profile.introClip2;
-        introClip3 = profile.introClip3;
-        introClip4 = profile.introClip4;
-        introClip5 = profile.introClip5;
-        introClip6 = profile.introClip6;
-        introClip7 = profile.introClip7;
-        introClip8 = profile.introClip8;
-        introClip9 = profile.introClip9;
-        introClip10 = profile.introClip10;
-        introClip11 = profile.introClip11;
-        introDemoClip1 = profile.introDemoClip1;
-        introDemoClip2 = profile.introDemoClip2;
+        _defaultClipGapSeconds = Mathf.Max(0f, profile.defaultClipGapSeconds);
+        tutorialClipGapSeconds = _defaultClipGapSeconds;
+
+        requireTriggerAfterTutorial = false;
+
+        _profileSteps.Clear();
+        if (profile.steps != null)
+        {
+            for (int i = 0; i < profile.steps.Count; i++)
+            {
+                var step = profile.steps[i];
+                if (step != null)
+                    _profileSteps.Add(step);
+            }
+        }
     }
 
     public void Initialize(StageTutorialDependencies deps)
@@ -130,6 +132,12 @@ public class StageTutorialController
     public IEnumerator RunIntroSequence()
     {
         EnsureInitialized();
+        if (HasProfileSteps(StageTutorialStepPhase.Intro))
+        {
+            yield return RunSteps(StageTutorialStepPhase.Intro);
+            yield break;
+        }
+
         yield return PlayClipSafe(introClip1);
         yield return PlayClipSafe(introClip2);
         yield return PlayClipSafe(introClip3);
@@ -138,6 +146,13 @@ public class StageTutorialController
     public IEnumerator RunIntroTutorial()
     {
         EnsureInitialized();
+
+        if (HasProfileSteps(StageTutorialStepPhase.Tutorial))
+        {
+            yield return RunSteps(StageTutorialStepPhase.Tutorial);
+            yield break;
+        }
+
         bool usedImage = false;
 
         SetProgressText(string.Empty);
@@ -161,7 +176,7 @@ public class StageTutorialController
         if (_deps.OptionsContainer != null)
         {
             _deps.OptionsContainer.gameObject.SetActive(true);
-            SetupIntroOptions();
+            SetupIntroOptions(false);
 
             if (introOptionCursor != null && introOptionCursor.handCursor != null)
             {
@@ -229,7 +244,7 @@ public class StageTutorialController
         if (requireTriggerAfterTutorial)
         {
             LogVerbose("[StageTutorial] Waiting for right trigger input to continue");
-            yield return WaitForRightTriggerPress();
+            yield return WaitForRightTriggerPress(true);
         }
 
         yield return ShowPanel(false);
@@ -237,6 +252,233 @@ public class StageTutorialController
 
         SetProgressText(string.Empty);
         LogVerbose("[StageTutorial] Tutorial end");
+    }
+
+    private bool HasProfileSteps(StageTutorialStepPhase phase)
+    {
+        if (_profileSteps == null || _profileSteps.Count == 0)
+            return false;
+
+        for (int i = 0; i < _profileSteps.Count; i++)
+        {
+            var step = _profileSteps[i];
+            if (step != null && step.phase == phase)
+                return true;
+        }
+
+        return false;
+    }
+
+    private IEnumerator RunSteps(StageTutorialStepPhase phase)
+    {
+        if (_profileSteps == null || _profileSteps.Count == 0)
+            yield break;
+
+        for (int i = 0; i < _profileSteps.Count; i++)
+        {
+            var step = _profileSteps[i];
+            if (step == null || step.phase != phase)
+                continue;
+
+            yield return ExecuteStep(step);
+        }
+    }
+
+    private IEnumerator ExecuteStep(StageTutorialStep step)
+    {
+        switch (step.action)
+        {
+            case StageTutorialActionType.PlayClip:
+                yield return ExecutePlayClip(step);
+                break;
+            case StageTutorialActionType.WaitSeconds:
+                if (step.waitSeconds > 0f)
+                    yield return new WaitForSeconds(step.waitSeconds);
+                break;
+            case StageTutorialActionType.ShowPanel:
+                yield return ShowPanel(step.panelImmediate);
+                break;
+            case StageTutorialActionType.HidePanel:
+                HidePanel(step.panelImmediate);
+                break;
+            case StageTutorialActionType.SetMainImage:
+                ExecuteSetMainImage(step.image);
+                break;
+            case StageTutorialActionType.ClearMainImage:
+                ClearMainImage();
+                break;
+            case StageTutorialActionType.ShowOptions:
+                yield return ShowIntroOptions(step.boolValue);
+                break;
+            case StageTutorialActionType.HideOptions:
+                HideIntroOptions();
+                break;
+            case StageTutorialActionType.SetCursorActive:
+                SetCursorActive(step.boolValue);
+                break;
+            case StageTutorialActionType.MoveCursor:
+                yield return MoveCursorTo(step);
+                break;
+            case StageTutorialActionType.PulseOption:
+                yield return PulseOptionAt(step);
+                break;
+            case StageTutorialActionType.AwaitTrigger:
+                yield return WaitForRightTriggerPress(step.awaitRelease);
+                break;
+            case StageTutorialActionType.SetProgressText:
+                SetProgressText(step.progressText ?? string.Empty);
+                break;
+            case StageTutorialActionType.CustomAction:
+                yield return ExecuteCustomAction(step.customActionId);
+                break;
+            default:
+                LogWarning($"[StageTutorial] Unknown tutorial action: {step.action}");
+                break;
+        }
+
+        if (step.action != StageTutorialActionType.PlayClip &&
+            step.action != StageTutorialActionType.WaitSeconds &&
+            step.waitSeconds > 0f)
+            yield return new WaitForSeconds(step.waitSeconds);
+    }
+
+    private IEnumerator ExecutePlayClip(StageTutorialStep step)
+    {
+        if (step.audioClip == null)
+            yield break;
+
+        yield return PlayClipSafe(step.audioClip);
+
+        float gap = step.waitSeconds > 0f ? step.waitSeconds : _defaultClipGapSeconds;
+        if (gap > 0f)
+            yield return new WaitForSeconds(gap);
+    }
+
+    private void ExecuteSetMainImage(Sprite imageOverride)
+    {
+        if (_deps.MainImage == null)
+            return;
+
+        var sprite = imageOverride != null ? imageOverride : introTutorialImage;
+        _deps.MainImage.sprite = sprite;
+        _deps.MainImage.enabled = sprite != null;
+
+        if (sprite != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(_deps.MainImage.rectTransform);
+            _deps.MainImage.gameObject.SetActive(true);
+        }
+        else if (_deps.MainImage != null)
+        {
+            _deps.MainImage.gameObject.SetActive(false);
+        }
+    }
+
+    private void ClearMainImage()
+    {
+        if (_deps.MainImage == null)
+            return;
+
+        _deps.MainImage.sprite = null;
+        _deps.MainImage.enabled = false;
+        _deps.MainImage.gameObject.SetActive(false);
+    }
+
+    private IEnumerator ShowIntroOptions(bool interactable)
+    {
+        if (_deps.OptionsContainer == null)
+            yield break;
+
+        _deps.OptionsContainer.gameObject.SetActive(true);
+        _deps.OptionsContainer.SetAsLastSibling();
+        SetupIntroOptions(interactable);
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(_deps.OptionsContainer);
+        yield return null;
+    }
+
+    private void HideIntroOptions()
+    {
+        if (_deps.OptionsContainer == null)
+            return;
+        ClearIntroOptionButtons();
+        _deps.OptionsContainer.gameObject.SetActive(false);
+    }
+
+    private void SetCursorActive(bool active)
+    {
+        if (introOptionCursor?.handCursor != null)
+            introOptionCursor.handCursor.SetActive(active);
+    }
+
+    private IEnumerator MoveCursorTo(StageTutorialStep step)
+    {
+        if (introOptionCursor == null || introOptionCursor.handCursor == null)
+            yield break;
+        var target = ResolveCursorTarget(step.cursorTarget);
+        if (target == null)
+            yield break;
+
+        introOptionCursor.handCursor.SetActive(true);
+
+        float seconds = step.cursorMoveSeconds > 0f ? step.cursorMoveSeconds : introOptionCursor.cursorMoveSeconds;
+        var curve = step.cursorMoveCurve ?? introOptionCursor.cursorMoveCurve;
+        yield return ExecuteCoroutine(_deps.MoveCursorSmooth?.Invoke(
+            introOptionCursor.handCursor.transform,
+            target,
+            seconds,
+            curve));
+
+        float hover = step.cursorTarget == StageTutorialCursorTarget.CorrectOption
+            ? introOptionCursor.correctHoverSeconds
+            : introOptionCursor.wrongHoverSeconds;
+        if (hover > 0f)
+            yield return new WaitForSeconds(hover);
+    }
+
+    private IEnumerator PulseOptionAt(StageTutorialStep step)
+    {
+        if (_deps.PulseOption == null)
+            yield break;
+
+        var target = ResolveCursorTarget(step.cursorTarget);
+        if (target == null)
+            yield break;
+
+        bool shouldPulse = step.enablePulse || (introOptionCursor?.enableCorrectPulse ?? false);
+        if (!shouldPulse)
+            yield break;
+
+        float scale = step.enablePulse ? step.pulseScale : introOptionCursor?.correctPulseScale ?? 1.1f;
+        float duration = step.enablePulse ? step.pulseDuration : introOptionCursor?.correctPulseDuration ?? 0.35f;
+        int loops = step.enablePulse ? step.pulseLoops : introOptionCursor?.correctPulseLoops ?? 1;
+
+        yield return ExecuteCoroutine(_deps.PulseOption?.Invoke(
+            target,
+            scale,
+            duration,
+            loops));
+    }
+
+    private RectTransform ResolveCursorTarget(StageTutorialCursorTarget target)
+    {
+        switch (target)
+        {
+            case StageTutorialCursorTarget.CorrectOption:
+                return introOptionCursor?.correctOptionTransform;
+            case StageTutorialCursorTarget.WrongOption:
+                return introOptionCursor?.wrongOptionTransform;
+            default:
+                return null;
+        }
+    }
+
+    private IEnumerator ExecuteCustomAction(string actionId)
+    {
+        if (string.IsNullOrWhiteSpace(actionId) || _deps.ExecuteCustomStep == null)
+            yield break;
+
+        yield return ExecuteCoroutine(_deps.ExecuteCustomStep(actionId));
     }
 
     public IEnumerator ShowPanel(bool immediate)
@@ -362,10 +604,10 @@ public class StageTutorialController
         yield return _deps.PlayClip(clip);
     }
 
-    private IEnumerator WaitForRightTriggerPress()
+    private IEnumerator WaitForRightTriggerPress(bool awaitRelease)
     {
         bool wasPressed = CheckRightTriggerPressed();
-        if (wasPressed)
+        if (awaitRelease && wasPressed)
         {
             LogVerbose("[StageTutorial] Waiting for trigger release before monitoring press");
             while (CheckRightTriggerPressed())
@@ -385,7 +627,7 @@ public class StageTutorialController
             yield return null;
         }
 
-        while (CheckRightTriggerPressed())
+        while (awaitRelease && CheckRightTriggerPressed())
             yield return null;
     }
 
@@ -429,7 +671,7 @@ public class StageTutorialController
     }
 #endif
 
-    private void SetupIntroOptions()
+    private void SetupIntroOptions(bool interactable)
     {
         if (_deps.OptionsContainer == null)
             return;
@@ -446,7 +688,7 @@ public class StageTutorialController
                 break;
 
             var btn = UnityEngine.Object.Instantiate(_deps.OptionButtonPrefab, _deps.OptionsContainer);
-            btn.interactable = false;
+            btn.interactable = interactable;
 
             var tmpText = btn.GetComponentInChildren<TMP_Text>();
             if (tmpText != null)
@@ -580,6 +822,7 @@ public class StageTutorialDependencies
     public AudioClip CorrectSfx;
     public Func<Transform, RectTransform, float, AnimationCurve, IEnumerator> MoveCursorSmooth;
     public Func<RectTransform, float, float, int, IEnumerator> PulseOption;
+    public Func<string, IEnumerator> ExecuteCustomStep;
     public Action<string> Log;
     public Action<string> LogWarning;
     public bool VerboseLogging;
