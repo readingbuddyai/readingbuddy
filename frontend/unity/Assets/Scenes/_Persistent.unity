@@ -334,8 +334,8 @@ MonoBehaviour:
   homeSceneName: Home
   apiBaseUrl: https://readingbuddyai.co.kr
   lastStageEndpoint: /api/train/last/stage
-  tokenPlayerPrefsKey: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2MjgyNjM2OSwiZXhwIjoxNzYyOTEyNzY5fQ.fHNUCgrvNDIaTR1VBRuksI76L77CAZkMs1sCM117kRBRkiRH1dx0_tgDXUmGeLdU
-  debugToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMSIsInVzZXJfZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwidXNlcl9uaWNrbmFtZSI6IuumrOuUqeuyhOuUlCIsImlhdCI6MTc2Mjc0NzEzNywiZXhwIjoxNzYyODMzNTM3fQ.n1r80E4R_uqDZaIuOnTibQRMIvvv-DkJ8FlGSNLDSK4olvkqelpZZkIdmbgVAryK
+  tokenPlayerPrefsKey: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IjEyMyIsImlhdCI6MTc2MjgzMzY0OSwiZXhwIjoxNzYyOTIwMDQ5fQ.uL9HmphryAKCcytF4aSlf0QU6oyydJWs4lpVGp-skBqGL4J3jJ_pRAsmpcZqpn7U
+  debugToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IjEyMyIsImlhdCI6MTc2MjgzMzY0OSwiZXhwIjoxNzYyOTIwMDQ5fQ.uL9HmphryAKCcytF4aSlf0QU6oyydJWs4lpVGp-skBqGL4J3jJ_pRAsmpcZqpn7U
   stageCacheKey: lastStage
   mageRef: {fileID: 0}
   stage2Ref: {fileID: 0}
@@ -5826,7 +5826,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
-  m_Volume: 0.45
+  m_Volume: 0.35
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -21118,7 +21118,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 0
-  m_Volume: 0.5
+  m_Volume: 0.4
   m_Pitch: 1
   Loop: 0
   Mute: 0
