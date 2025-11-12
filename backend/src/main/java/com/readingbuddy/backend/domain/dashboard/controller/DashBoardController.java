@@ -362,6 +362,31 @@ public class DashBoardController {
     }
 
     /**
+     * 모든 KC의 평균 숙련도 조회 API
+     * @param customUserDetails JWT로부터 추출한 사용자 정보
+     * @return 모든 KC의 현재 숙련도 및 전체 평균
+     */
+    @Operation(summary = "모든 KC 평균 숙련도 조회",
+               description = "사용자의 모든 KC에 대한 현재 숙련도와 전체 평균을 조회합니다.")
+    @GetMapping("/kc/all-mastery")
+    public ResponseEntity<ApiResponse<AllKcAverageMasteryResponse>> getAllKcAverageMastery(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails) {
+
+        try {
+            Long userId = customUserDetails.getId();
+
+            AllKcAverageMasteryResponse response = dashBoardService.getAllKcAverageMastery(userId);
+
+            return ResponseEntity.status(HttpStatus.OK)
+                    .body(ApiResponse.success("모든 KC의 평균 숙련도가 조회되었습니다.", response));
+        } catch (Exception e) {
+            log.error("모든 KC 평균 숙련도 조회 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("모든 KC 평균 숙련도 조회 중 오류가 발생했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
      * 사용자별 틀린 음소 조회 (내림차순)
      */
     @GetMapping("/mistake/phonemes/rank")
