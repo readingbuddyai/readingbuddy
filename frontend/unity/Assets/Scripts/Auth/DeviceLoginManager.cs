@@ -406,6 +406,7 @@ public class DeviceLoginManager : MonoBehaviour
         }
     }
 
+    public static event System.Action OnAccessTokenReady; // 액세스 토큰이 준비되었음을 알리는 이벤트
     /// <summary>
     /// 인증 성공 처리
     /// </summary>
@@ -440,7 +441,8 @@ public class DeviceLoginManager : MonoBehaviour
         {
             Debug.LogError("[DeviceLogin] AuthManager.Instance is null!");
         }
-
+        // 2) ★ 이벤트 발행 (홈 초기화가 이 신호를 기다린다)
+        OnAccessTokenReady?.Invoke();
         // 1초 후 로그인 UI 숨기기
         StartCoroutine(HideLoginUIAfterDelay(1f));
     }
