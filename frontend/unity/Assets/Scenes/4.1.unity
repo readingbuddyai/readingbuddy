@@ -6914,6 +6914,15 @@ MonoBehaviour:
   choicesContainer: {fileID: 841711254}
   consonantChoicesContainer: {fileID: 1267738133}
   vowelChoicesContainer: {fileID: 647116394}
+  clipRemedialNeedPractice: {fileID: 8300000, guid: ac2c10568c04e39428c18ca83f2165e5, type: 3}
+  clipRemedialPracticeIntro: {fileID: 8300000, guid: cd6e8d5abde36ab499a1c4258000482e, type: 3}
+  clipRemedialFirstEncourage: {fileID: 8300000, guid: 365c28e7ecd3d7a4286f8da9eaae7e52, type: 3}
+  clipRemedialSecondEncourage: {fileID: 8300000, guid: 6d343e2f82b44c947ad2ad9d301c6441, type: 3}
+  clipRemedialPerfect: {fileID: 8300000, guid: 40a38173ec36f674f9303d062b06bf30, type: 3}
+  clipRemedialNextLesson: {fileID: 8300000, guid: 3223a4899e7e9654584ea331e1ec64c5, type: 3}
+  remedialEncouragePauseSeconds: 3
+  remedialImage: {fileID: 0}
+  remedialResources: []
   clipStageCompleteVoice: {fileID: 8300000, guid: 40a38173ec36f674f9303d062b06bf30, type: 3}
   againButtonPrefab: {fileID: 1478194743}
   lobbyButtonPrefab: {fileID: 981522726}

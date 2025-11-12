@@ -54,6 +54,20 @@ public partial class Stage41Controller : MonoBehaviour
     [Tooltip("모음 후보 상자(중성 오답 시 표시)")]
     public GameObject vowelChoicesContainer;
 
+    [Header("추가 학습 시나리오")]
+    public AudioClip clipRemedialNeedPractice;
+    public AudioClip clipRemedialPracticeIntro;
+    public AudioClip clipRemedialFirstEncourage;
+    public AudioClip clipRemedialSecondEncourage;
+    public AudioClip clipRemedialPerfect;
+    public AudioClip clipRemedialNextLesson;
+    [Tooltip("격려 멘트 후 대기 시간(초)")]
+    public float remedialEncouragePauseSeconds = 3f;
+
+    [Header("추가 학습 리소스")]
+    public Image remedialImage;
+    public List<RemedialPracticeResource> remedialResources = new List<RemedialPracticeResource>();
+
     [Header("End Modal (Stage Complete)")]
     public AudioClip clipStageCompleteVoice;   // 종료 시 추가 재생할 음성
     public Button againButtonPrefab;
@@ -188,6 +202,11 @@ public partial class Stage41Controller : MonoBehaviour
         if (choicesContainer) choicesContainer.SetActive(false);
         if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
         if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
+        if (remedialImage)
+        {
+            remedialImage.enabled = false;
+            remedialImage.sprite = null;
+        }
         FocusBox(null);
         SetAllBoxAlpha(dimAlpha);
     }
@@ -212,16 +231,19 @@ public partial class Stage41Controller : MonoBehaviour
         if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
             yield return StartStageSession();
 
+        _supplementController?.Clear();
+
         List<QuestionDto> questions = null;
         yield return StartCoroutine(FetchQuestions(result => questions = result));
         if (logVerbose)
             Debug.Log($"[Stage41] set 완료 → count={(questions != null ? questions.Count : 0)}");
         if (questions == null || questions.Count == 0)
         {
-            Debug.LogWarning("[Stage41] 문제 세트를 불러오지 못했습니다.");
+            _supplementQuestionController.SetQuestions(null);
             yield break;
         }
 
+        UpdateSupplementQuestions(questions);
         _questionController.SetQuestions(questions);
 
         if ((enableGuideMoveBetweenQuestions || !_guideMoved) && guideRect)
@@ -333,7 +355,12 @@ public partial class Stage41Controller : MonoBehaviour
                 yield return PlayClip(sfxNext);
         }
         if (!string.IsNullOrWhiteSpace(stageSessionId))
+        {
+            _supplementController?.Clear();
             yield return CompleteStageSession();
+            if (_supplementController != null && _supplementController.RemedialPhonemes.Count > 0)
+                yield return RunRemedialSequence();
+        }
 
         // 완전 종료용 오디오 재생
         if (clipStageCompleteVoice)
@@ -377,6 +404,7 @@ public partial class Stage41Controller : MonoBehaviour
         // 세션 초기화 후 스테이지 재시작
         StopAllCoroutines();
         stageSessionId = string.Empty;
+        _supplementController?.Clear();
         StartCoroutine(RunStage());
     }
 
@@ -1264,9 +1292,7 @@ public partial class Stage41Controller : MonoBehaviour
         if (choseongBox) choseongBox.SetActive(true);
         if (jungseongBox) jungseongBox.SetActive(true);
         if (jongseongBox) jongseongBox.SetActive(true);
-        if (choicesContainer) choicesContainer.SetActive(true);
-        if (consonantChoicesContainer) consonantChoicesContainer.SetActive(true);
-        if (vowelChoicesContainer) vowelChoicesContainer.SetActive(true);
+        // choices stay in their current state; they will be shown per-slot when needed
     }
 
 
@@ -1337,6 +1363,13 @@ public partial class Stage41Controller : MonoBehaviour
         SetSlotAlpha(slotIndex, 1f);
         _finalizedSlots[slotIndex] = true;
         _awaitingUserArrangement = false;
+    }
+
+    private IEnumerator RunRemedialSequence()
+    {
+        if (_supplementController == null)
+            yield break;
+        yield return _supplementController.RunRemedialSequence();
     }
     #endregion
 }

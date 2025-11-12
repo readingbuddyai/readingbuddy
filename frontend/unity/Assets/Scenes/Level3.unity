@@ -510,6 +510,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -790
       objectReference: {fileID: 0}
+    - target: {fileID: 827386927575564547, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 992510693253336452, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: optionLabelMode
       value: 1
@@ -999,7 +1003,7 @@ MonoBehaviour:
   autoStartCountdown: 1
   clipFeedbackLackSense: {fileID: 8300000, guid: b9f2db0044bb96843bce662524be4d71, type: 3}
   clipFeedbackRetryPrompt: {fileID: 8300000, guid: 979998e671eab1c4fa19d9f4578e2dc9, type: 3}
-  clipFeedbackTryAgainFirst: {fileID: 8300000, guid: 2ffc70cb233ccbe4285b55b860c26702, type: 3}
+  clipFeedbackTryAgainFirst: {fileID: 8300000, guid: 6dd21759551265049b06febc034bdd9a, type: 3}
   clipFeedbackTryAgainSecond: {fileID: 8300000, guid: ca42e548555e2fd45be88f2608178f91, type: 3}
   clipFeedbackGreatJob: {fileID: 8300000, guid: 0426d53f0853494478ed2c9846db4946, type: 3}
   clipFinalEncouragement: {fileID: 8300000, guid: 2286a3c3e8a1b5442874e66157243bd5, type: 3}

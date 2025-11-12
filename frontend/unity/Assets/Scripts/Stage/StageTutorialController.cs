@@ -320,10 +320,10 @@ public class StageTutorialController
                 yield return ToggleSlots(false, step.boolValue);
                 break;
             case StageTutorialActionType.ShowChoices:
-                yield return ToggleChoices(true, step.boolValue);
+                yield return ToggleChoices(true, step);
                 break;
             case StageTutorialActionType.HideChoices:
-                yield return ToggleChoices(false, step.boolValue);
+                yield return ToggleChoices(false, step);
                 break;
             case StageTutorialActionType.SetCursorActive:
                 SetCursorActive(step.boolValue);
@@ -461,13 +461,13 @@ public class StageTutorialController
         }
     }
 
-    private IEnumerator ToggleChoices(bool show, bool flag)
+    private IEnumerator ToggleChoices(bool show, StageTutorialStep step)
     {
-        _ = flag;
+        StageTutorialSlotTarget slotTarget = step != null ? step.slotTarget : StageTutorialSlotTarget.None;
         bool handled = false;
         if (_deps.ToggleChoices != null)
         {
-            yield return ExecuteCoroutine(_deps.ToggleChoices(show));
+            yield return ExecuteCoroutine(_deps.ToggleChoices(show, slotTarget));
             handled = true;
         }
 
@@ -1112,7 +1112,7 @@ public class StageTutorialDependencies
     public Func<Transform, RectTransform, float, AnimationCurve, IEnumerator> MoveCursorSmooth;
     public Func<RectTransform, float, float, int, IEnumerator> PulseOption;
     public Func<bool, IEnumerator> ToggleSlots;
-    public Func<bool, IEnumerator> ToggleChoices;
+    public Func<bool, StageTutorialSlotTarget, IEnumerator> ToggleChoices;
     public RectTransform SlotsContainer;
     public GameObject SlotsRoot;
     public RectTransform ChoicesContainer;

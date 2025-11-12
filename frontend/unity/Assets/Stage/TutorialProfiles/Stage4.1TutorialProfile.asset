@@ -99,10 +99,10 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uD328\uB110 ON(sound)"
+  - name: "\uD328\uB110 ON"
     phase: 1
-    action: 0
-    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    action: 2
+    audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -125,10 +125,10 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uD328\uB110 ON"
+  - name: "\uD328\uB110 ON(sound)"
     phase: 1
-    action: 2
-    audioClip: {fileID: 0}
+    action: 0
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -300,7 +300,7 @@ MonoBehaviour:
     enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
-    pulseLoops: 0
+    pulseLoops: 3
     slotTarget: 1
     choiceTileKey: 
     choiceReturnToOrigin: 1
@@ -404,7 +404,7 @@ MonoBehaviour:
     enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
-    pulseLoops: 0
+    pulseLoops: 3
     slotTarget: 2
     choiceTileKey: 
     choiceReturnToOrigin: 1
@@ -508,7 +508,7 @@ MonoBehaviour:
     enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
-    pulseLoops: 0
+    pulseLoops: 3
     slotTarget: 3
     choiceTileKey: 
     choiceReturnToOrigin: 1
@@ -639,7 +639,7 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
-    slotTarget: 0
+    slotTarget: 3
     choiceTileKey: 
     choiceReturnToOrigin: 1
     progressText: 
@@ -664,7 +664,7 @@ MonoBehaviour:
     enablePulse: 1
     pulseScale: 0
     pulseDuration: 0
-    pulseLoops: 0
+    pulseLoops: 3
     slotTarget: 3
     choiceTileKey: 
     choiceReturnToOrigin: 1
@@ -814,8 +814,8 @@ MonoBehaviour:
     pulseDuration: 0
     pulseLoops: 0
     slotTarget: 3
-    choiceTileKey: "Tile_\u3141"
-    choiceReturnToOrigin: 1
+    choiceTileKey: "\u3141"
+    choiceReturnToOrigin: 0
     progressText: 
     customActionId: 
     awaitRelease: 0
@@ -943,7 +943,7 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
-    slotTarget: 0
+    slotTarget: 3
     choiceTileKey: 
     choiceReturnToOrigin: 1
     progressText: 
@@ -1027,10 +1027,10 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uD328\uB110 ON(sound)"
+  - name: "\uD328\uB110 ON"
     phase: 1
-    action: 0
-    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    action: 2
+    audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -1053,10 +1053,10 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uD328\uB110 ON"
+  - name: "\uD328\uB110 ON(sound)"
     phase: 1
-    action: 2
-    audioClip: {fileID: 0}
+    action: 0
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
