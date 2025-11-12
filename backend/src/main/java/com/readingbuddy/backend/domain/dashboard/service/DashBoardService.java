@@ -40,34 +40,60 @@ public class DashBoardService {
      * 사용자별 해당 스테이지의 통계 정보 조회
      * @param userId 사용자 ID
      * @param stage 스테이지 정보
-     * @return 스테이지 통계 정보
+     * @return 스테이지 통계 정보 (전체 문제 수, 맞힌 문제 수, 정답률)
      */
     public StageInfoResponse getStageInfo(Long userId, String stage) {
         // 해당 사용자의 특정 스테이지에 대한 모든 기록 조회
         List<TrainedStageHistories> histories = trainedStageHistoriesRepository.findByUserIdAndStage(userId, stage);
 
-        // 통계 집계
-        int totalTryCount = 0;
-        int totalCorrectCount = 0;
-        int totalWrongCount = 0;
+        if (histories.isEmpty()) {
+            return StageInfoResponse.builder()
+                    .stage(stage)
+                    .totalProblemCount(0)
+                    .correctProblemCount(0)
+                    .correctRate(0.0)
+                    .build();
+        }
 
-        for (TrainedStageHistories history : histories) {
-            if (history.getTryCount() != null) {
-                totalTryCount += history.getTryCount();
-            }
-            if (history.getCorrectCount() != null) {
-                totalCorrectCount += history.getCorrectCount();
-            }
-            if (history.getWrongCount() != null) {
-                totalWrongCount += history.getWrongCount();
-            }
+        // 모든 세션의 문제 이력 조회
+        List<TrainedProblemHistories> allProblems = histories.stream()
+                .flatMap(history -> trainedProblemHistoriesRepository.findByTrainedStageHistories(history).stream())
+                .collect(Collectors.toList());
+
+        // problemNumber와 solvedAt 날짜 조합으로 distinct하여 전체 문제 수 계산
+        int totalProblemCount = (int) allProblems.stream()
+                .map(problem -> new java.util.AbstractMap.SimpleEntry<>(
+                        problem.getProblemNumber(),
+                        problem.getSolvedAt().toLocalDate()
+                ))
+                .distinct()
+                .count();
+
+        // 맞힌 문제 수 계산 (각 problemNumber + solvedAt 날짜 조합별로 한 번이라도 맞혔으면 카운트)
+        int correctProblemCount = (int) allProblems.stream()
+                .collect(Collectors.groupingBy(problem ->
+                        new java.util.AbstractMap.SimpleEntry<>(
+                                problem.getProblemNumber(),
+                                problem.getSolvedAt().toLocalDate()
+                        )
+                ))
+                .entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().stream().anyMatch(TrainedProblemHistories::getIsCorrect))
+                .count();
+
+        // 정답률 계산 (0~100 사이의 값)
+        double correctRate = 0.0;
+        if (totalProblemCount > 0) {
+            correctRate = ((double) correctProblemCount / totalProblemCount) * 100.0;
+            correctRate = Math.round(correctRate * 100.0) / 100.0; // 소수점 2자리까지
         }
 
         return StageInfoResponse.builder()
                 .stage(stage)
-                .totalTryCount(totalTryCount)
-                .totalCorrectCount(totalCorrectCount)
-                .totalWrongCount(totalWrongCount)
+                .totalProblemCount(totalProblemCount)
+                .correctProblemCount(correctProblemCount)
+                .correctRate(correctRate)
                 .build();
     }
 
