@@ -18,7 +18,7 @@ public class HomeStageInitializer : MonoBehaviour
     public string lastStageEndpoint = "/api/train/last/stage";
     [Header("인증")]
     [Tooltip("PlayerPrefs 에 저장된 토큰 키(로그인 시 자동 저장 예정)")]
-    public string tokenPlayerPrefsKey = "accessToken";
+    public string tokenPlayerPrefsKey = "AccessToken";
     [Tooltip("개발/테스트용 수동 토큰 (우선 사용)")]
     public string debugToken = "";
 
