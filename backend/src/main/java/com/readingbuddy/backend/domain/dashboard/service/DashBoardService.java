@@ -213,7 +213,6 @@ public class DashBoardService {
                         .wrongCnt(((Number) row[3]).longValue())
                         .build())
                 .collect(Collectors.toList());
-
     }
 
     /**
@@ -361,6 +360,12 @@ public class DashBoardService {
                     List<TrainedProblemHistories> problems = trainedProblemHistoriesRepository
                             .findByTrainedStageHistories(stage);
 
+                    // 중복되지 않는 problemNumber의 개수 계산
+                    int totalCount = (int) problems.stream()
+                            .map(TrainedProblemHistories::getProblemNumber)
+                            .distinct()
+                            .count();
+
                     // 문제 정보를 DTO로 변환
                     List<StageProblemListResponse.ProblemInfo> problemInfos = problems.stream()
                             .map(problem -> StageProblemListResponse.ProblemInfo.builder()
@@ -382,7 +387,7 @@ public class DashBoardService {
                             .trainedStageHistoryId(stage.getId())
                             .stage(stage.getStage())
                             .startedAt(stage.getStartedAt())
-                            .totalCount(stage.getTotalCount())
+                            .totalCount(totalCount)
                             .correctCount(stage.getCorrectCount())
                             .wrongCount(stage.getWrongCount())
                             .problems(problemInfos)

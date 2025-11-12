@@ -280,7 +280,7 @@ class TrainedStageServiceTest {
                 .thenReturn(stageSessionId);
 
         // when
-        StageStartResponse response = trainedStageService.startStage(testUserId, stage, totalProblems);
+        StageStartResponse response = trainedStageService.startStage(testUserId, stage);
 
         // then
         assertNotNull(response);
@@ -307,7 +307,7 @@ class TrainedStageServiceTest {
         // when & then
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
-                () -> trainedStageService.startStage(testUserId, stage, totalProblems)
+                () -> trainedStageService.startStage(testUserId, stage)
         );
 
         assertTrue(exception.getMessage().contains("회원을 찾을 수 없습니다"));
@@ -331,7 +331,7 @@ class TrainedStageServiceTest {
 
         // when & then
         for (String stage : stages) {
-            StageStartResponse response = trainedStageService.startStage(testUserId, stage, totalProblems);
+            StageStartResponse response = trainedStageService.startStage(testUserId, stage);
 
             assertNotNull(response);
             assertNotNull(response.getStageSessionId());

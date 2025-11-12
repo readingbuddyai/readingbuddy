@@ -173,7 +173,7 @@ public class TrainController {
         try {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
-            StageStartResponse response = trainedStageService.startStage(userId, stage, totalProblems);
+            StageStartResponse response = trainedStageService.startStage(userId, stage);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
         } catch (Exception e) {
