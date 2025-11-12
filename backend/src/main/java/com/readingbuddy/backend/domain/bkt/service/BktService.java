@@ -2,6 +2,7 @@ package com.readingbuddy.backend.domain.bkt.service;
 
 import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
+import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
 import com.readingbuddy.backend.domain.train.dto.result.KcWithCorrectRate;
@@ -45,7 +46,7 @@ public class BktService {
                 .orElseThrow(() -> new IllegalArgumentException("UserKcMastery를 찾을 수 없습니다: userId=" + userId + ", kcId=" + kcId));
         /**
          * 정답을 맞출 확률 = 이미 알고 있을 확률  * 실수 하지 않을 확룰 + 모를 확률 * 찍어서 맞출 확률
-          */
+         */
         return userKcMastery.getPLearn() * (1 - userKcMastery.getPSlip()) + (1 - userKcMastery.getPLearn()) * (userKcMastery.getPGuess());
     }
 
@@ -60,8 +61,7 @@ public class BktService {
         float conditionalProbability = 0F;
         if (isCorrect) {
             conditionalProbability = (userKcMastery.getPLearn() * (1 - userKcMastery.getPSlip())) / correctRate;
-        }
-        else {
+        } else {
             conditionalProbability = (userKcMastery.getPLearn() * (userKcMastery.getPSlip())) / (1 - correctRate);
         }
 
@@ -178,5 +178,93 @@ public class BktService {
         log.info("candidateList 비트마스크: {} (binary: {})", candidateList, new BigInteger(candidateList).toString(2));
 
         return candidateList;
+    }
+
+    /**
+     * 4.1 초성(ONSET_1) 카테고리 전체 평균 mastery
+     */
+    public Double getOnset1AverageMastery(Long userId) {
+        List<KcCategory> onsetCategories = Arrays.asList(
+                KcCategory.LABIAL_ONSET_1,
+                KcCategory.VELAR_ONSET_1,
+                KcCategory.ALVEOLAR_ONSET_1,
+                KcCategory.PALATAL_ONSET_1,
+                KcCategory.ALVEOLAR_FRICATIVE_ONSET_1,
+                KcCategory.GLOTTAL_AND_ALVEOLAR_ONSET_1
+        );
+
+        return userKcMasteryRepository.getAverageMasteryByCategories(userId, onsetCategories);
+    }
+
+    /**
+     * 4.1 종성(CODA_1) 카테고리 전체 평균 mastery
+     */
+    public Double getCoda1AverageMastery(Long userId) {
+        List<KcCategory> codaCategories = Arrays.asList(
+                KcCategory.LABIAL_CODA_1,
+                KcCategory.VELAR_CODA_1,
+                KcCategory.ALVEOLAR_CODA_1,
+                KcCategory.PALATAL_CODA_1,
+                KcCategory.ALVEOLAR_FRICATIVE_CODA_1,
+                KcCategory.GLOTTAL_AND_ALVEOLAR_CODA_1
+        );
+
+        return userKcMasteryRepository.getAverageMasteryByCategories(userId, codaCategories);
+    }
+
+    /**
+     * 4.1 중성(NUCLEUS_1) 카테고리 전체 평균 mastery
+     */
+    public Double getNucleus1AverageMastery(Long userId) {
+        List<KcCategory> nucleusCategories = Arrays.asList(
+                KcCategory.MONOPHTHONG_NUCLEUS_1,
+                KcCategory.DIPHTHONG_NUCLEUS_1
+        );
+
+        return userKcMasteryRepository.getAverageMasteryByCategories(userId, nucleusCategories);
+    }
+
+    /**
+     * 4.2 초성(ONSET_2) 카테고리 전체 평균 mastery
+     */
+    public Double getOnset2AverageMastery(Long userId) {
+        List<KcCategory> onsetCategories = Arrays.asList(
+                KcCategory.LABIAL_ONSET_2,
+                KcCategory.VELAR_ONSET_2,
+                KcCategory.ALVEOLAR_ONSET_2,
+                KcCategory.PALATAL_ONSET_2,
+                KcCategory.ALVEOLAR_FRICATIVE_ONSET_2,
+                KcCategory.GLOTTAL_AND_ALVEOLAR_ONSET_2
+        );
+
+        return userKcMasteryRepository.getAverageMasteryByCategories(userId, onsetCategories);
+    }
+
+    /**
+     * 4.2 종성(CODA_2) 카테고리 전체 평균 mastery
+     */
+    public Double getCoda2AverageMastery(Long userId) {
+        List<KcCategory> codaCategories = Arrays.asList(
+                KcCategory.LABIAL_CODA_2,
+                KcCategory.VELAR_CODA_2,
+                KcCategory.ALVEOLAR_CODA_2,
+                KcCategory.PALATAL_CODA_2,
+                KcCategory.ALVEOLAR_FRICATIVE_CODA_2,
+                KcCategory.GLOTTAL_AND_ALVEOLAR_CODA_2
+        );
+
+        return userKcMasteryRepository.getAverageMasteryByCategories(userId, codaCategories);
+    }
+
+    /**
+     * 4.2 중성(NUCLEUS_2) 카테고리 전체 평균 mastery
+     */
+    public Double getNucleus2AverageMastery(Long userId) {
+        List<KcCategory> nucleusCategories = Arrays.asList(
+                KcCategory.MONOPHTHONG_NUCLEUS_2,
+                KcCategory.DIPHTHONG_NUCLEUS_2
+        );
+
+        return userKcMasteryRepository.getAverageMasteryByCategories(userId, nucleusCategories);
     }
 }
