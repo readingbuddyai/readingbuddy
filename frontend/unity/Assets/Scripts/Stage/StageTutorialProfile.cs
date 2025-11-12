@@ -50,6 +50,10 @@ public class StageTutorialStep
     public float pulseScale = 1.1f;
     public float pulseDuration = 0.35f;
     public int pulseLoops = 1;
+    [Header("Slots / Choices")]
+    public StageTutorialSlotTarget slotTarget = StageTutorialSlotTarget.None;
+    public string choiceTileKey;
+    public bool choiceReturnToOrigin = true;
     public string progressText;
     public string customActionId;
     public bool awaitRelease = true;
@@ -71,9 +75,15 @@ public enum StageTutorialActionType
     ClearMainImage,
     ShowOptions,
     HideOptions,
+    ShowSlots,
+    HideSlots,
+    ShowChoices,
+    HideChoices,
     SetCursorActive,
     MoveCursor,
     PulseOption,
+    PulseSlot,
+    AnimateChoiceDrag,
     AwaitTrigger,
     SetProgressText,
     CustomAction
@@ -83,5 +93,15 @@ public enum StageTutorialCursorTarget
 {
     None,
     WrongOption,
-    CorrectOption
+    CorrectOption,
+    DoneButton
+}
+
+public enum StageTutorialSlotTarget
+{
+    None,
+    Choseong,
+    Jungseong,
+    Jongsung,
+    Jongseong = Jongsung
 }

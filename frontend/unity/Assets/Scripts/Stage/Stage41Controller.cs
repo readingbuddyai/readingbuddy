@@ -17,7 +17,7 @@ using UnityEngine.SceneManagement;
 /// - POST /api/train/stage/complete?stageSessionId=
 /// 게임 흐름은 사용자 제공 4.1 시나리오에 따름.
 /// </summary>
-public class Stage41Controller : MonoBehaviour
+public partial class Stage41Controller : MonoBehaviour
 {
     [Header("API 설정")]
     public string baseUrl = "https://readingbuddyai.co.kr";
@@ -38,6 +38,7 @@ public class Stage41Controller : MonoBehaviour
     public Font uiFont;
     public Image guideImage;
     public RectTransform guideRect;
+    public GameObject guide3DCharacter;
     public TMP_Text wordText;
     public TMP_Text choseongText;
     public TMP_Text jungseongText;
@@ -52,6 +53,20 @@ public class Stage41Controller : MonoBehaviour
     public GameObject consonantChoicesContainer;
     [Tooltip("모음 후보 상자(중성 오답 시 표시)")]
     public GameObject vowelChoicesContainer;
+
+    [Header("추가 학습 시나리오")]
+    public AudioClip clipRemedialNeedPractice;
+    public AudioClip clipRemedialPracticeIntro;
+    public AudioClip clipRemedialFirstEncourage;
+    public AudioClip clipRemedialSecondEncourage;
+    public AudioClip clipRemedialPerfect;
+    public AudioClip clipRemedialNextLesson;
+    [Tooltip("격려 멘트 후 대기 시간(초)")]
+    public float remedialEncouragePauseSeconds = 3f;
+
+    [Header("추가 학습 리소스")]
+    public Image remedialImage;
+    public List<RemedialPracticeResource> remedialResources = new List<RemedialPracticeResource>();
 
     [Header("End Modal (Stage Complete)")]
     public AudioClip clipStageCompleteVoice;   // 종료 시 추가 재생할 음성
@@ -99,7 +114,7 @@ public class Stage41Controller : MonoBehaviour
     public float blinkPeriod = 0.6f; // sec per cycle
 
     [Header("개발/우회")]
-    public bool bypassStartRequest = true;
+    public bool bypassStartRequest = false;
     public bool bypassVoiceUpload = false;
     public bool logVerbose = true;
 
@@ -166,6 +181,9 @@ public class Stage41Controller : MonoBehaviour
         if (guideRect && guideStartSize.sqrMagnitude > 0)
             guideRect.sizeDelta = guideStartSize;
 
+        ConfigureStageModules();
+        _tutorialController?.PrepareForStageStart();
+
         ResetUI();
         StartCoroutine(RunStage());
     }
@@ -177,10 +195,18 @@ public class Stage41Controller : MonoBehaviour
         if (choseongText) choseongText.text = string.Empty;
         if (jungseongText) jungseongText.text = string.Empty;
         if (jongseongText) jongseongText.text = string.Empty;
+        if (choseongBox) choseongBox.SetActive(true);
+        if (jungseongBox) jungseongBox.SetActive(true);
+        if (jongseongBox) jongseongBox.SetActive(true);
         if (micIndicator) micIndicator.SetActive(false);
         if (choicesContainer) choicesContainer.SetActive(false);
         if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
         if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
+        if (remedialImage)
+        {
+            remedialImage.enabled = false;
+            remedialImage.sprite = null;
+        }
         FocusBox(null);
         SetAllBoxAlpha(dimAlpha);
     }
@@ -188,12 +214,24 @@ public class Stage41Controller : MonoBehaviour
     // 메인 스테이지 진행 코루틴
     private IEnumerator RunStage()
     {
+        _tutorialController?.ResetAfterStageRestart();
+
         yield return PlayClip(sfxStart);
+
+        if (_tutorialController != null)
+        {
+            yield return _tutorialController.RunIntroSequence();
+            yield return _tutorialController.RunIntroTutorial();
+        }
+        EnsureGameplayUiVisible();
+
         yield return PlayClip(clipIntroAdvancedMagic);   // [4.1.1]
         yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
 
         if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
             yield return StartStageSession();
+
+        _supplementController?.Clear();
 
         List<QuestionDto> questions = null;
         yield return StartCoroutine(FetchQuestions(result => questions = result));
@@ -201,9 +239,12 @@ public class Stage41Controller : MonoBehaviour
             Debug.Log($"[Stage41] set 완료 → count={(questions != null ? questions.Count : 0)}");
         if (questions == null || questions.Count == 0)
         {
-            Debug.LogWarning("[Stage41] 문제 세트를 불러오지 못했습니다.");
+            _supplementQuestionController.SetQuestions(null);
             yield break;
         }
+
+        UpdateSupplementQuestions(questions);
+        _questionController.SetQuestions(questions);
 
         if ((enableGuideMoveBetweenQuestions || !_guideMoved) && guideRect)
             yield return MoveGuideToCorner();
@@ -314,7 +355,12 @@ public class Stage41Controller : MonoBehaviour
                 yield return PlayClip(sfxNext);
         }
         if (!string.IsNullOrWhiteSpace(stageSessionId))
+        {
+            _supplementController?.Clear();
             yield return CompleteStageSession();
+            if (_supplementController != null && _supplementController.RemedialPhonemes.Count > 0)
+                yield return RunRemedialSequence();
+        }
 
         // 완전 종료용 오디오 재생
         if (clipStageCompleteVoice)
@@ -358,6 +404,7 @@ public class Stage41Controller : MonoBehaviour
         // 세션 초기화 후 스테이지 재시작
         StopAllCoroutines();
         stageSessionId = string.Empty;
+        _supplementController?.Clear();
         StartCoroutine(RunStage());
     }
 
@@ -613,6 +660,9 @@ public class Stage41Controller : MonoBehaviour
 
     private IEnumerator FetchQuestions(Action<List<QuestionDto>> onDone)
     {
+        yield return FetchQuestionsWithSession(onDone);
+        yield break;
+#if LEGACY_STAGE41_FALLBACK
         string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stageSet)}&count={count}&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}");
         using (var req = UnityWebRequest.Get(url))
         {
@@ -637,10 +687,14 @@ public class Stage41Controller : MonoBehaviour
             catch { }
             onDone?.Invoke(list);
         }
+#endif
     }
 
     private IEnumerator StartStageSession()
     {
+        yield return StartStageSessionWithSession();
+        yield break;
+#if LEGACY_STAGE41_FALLBACK
         string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageTwoPart)}&totalProblems={count}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url}");
         using (var req = UnityWebRequest.PostWwwForm(url, ""))
@@ -663,10 +717,14 @@ public class Stage41Controller : MonoBehaviour
             }
             catch { }
         }
+#endif
     }
 
     private IEnumerator CompleteStageSession()
     {
+        yield return CompleteStageSessionWithSession();
+        yield break;
+#if LEGACY_STAGE41_FALLBACK
         if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
         string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
         if (logVerbose) Debug.Log($"[Stage41] POST {url}");
@@ -676,6 +734,7 @@ public class Stage41Controller : MonoBehaviour
             yield return req.SendWebRequest();
             if (logVerbose) Debug.Log($"[Stage41] stage/complete 응답: code={req.responseCode} body={req.downloadHandler.text}");
         }
+#endif
     }
 
     private IEnumerator RecordAndUploadPhonemeSegment(int segmentIndex)
@@ -708,6 +767,19 @@ public class Stage41Controller : MonoBehaviour
 
         var wav = WavUtility.FromAudioClip(clip);
         string targetAns0 = GetTargetPhonemeAnswer(segmentIndex);
+        StartCoroutine(SendAttemptLogNew(
+            problemNumber: _currentProblemNumber,
+            attemptNumber: 1,
+            problem: wordText ? wordText.text : string.Empty,
+            answer: string.Empty,
+            isCorrect: false,
+            isReplyCorrect: false,
+            audioUrl: string.Empty
+        ));
+
+        yield return UploadVoiceSegmentWithSession(segmentIndex, wav, targetAns0, (ok, reply) => { });
+        yield break;
+#if LEGACY_STAGE41_FALLBACK
         // Debug.Log($"[Stage41] check/voice answer(raw) segment={segmentIndex}: '{targetAns0}'");
         string qs = $"stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(Mathf.Max(1, _currentProblemNumber).ToString())}&answer={UnityWebRequest.EscapeURL(targetAns0)}";
         string url = ComposeUrl($"/api/train/check/voice?{qs}");
@@ -766,6 +838,7 @@ public class Stage41Controller : MonoBehaviour
             }
             catch { }
         }
+#endif
     }
 
     // 콜백을 통해 인식 결과와 정오를 반환하는 오버로드
@@ -1214,6 +1287,14 @@ public class Stage41Controller : MonoBehaviour
         if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
     }
 
+    private void EnsureGameplayUiVisible()
+    {
+        if (choseongBox) choseongBox.SetActive(true);
+        if (jungseongBox) jungseongBox.SetActive(true);
+        if (jongseongBox) jongseongBox.SetActive(true);
+        // choices stay in their current state; they will be shown per-slot when needed
+    }
+
 
     // 드래그 타일이 슬롯에 떨어졌을 때 호출 (PhonemeSlotUI에서 연결)
         public void OnUserDrop(int slotIndex, string symbol)
@@ -1282,6 +1363,13 @@ public class Stage41Controller : MonoBehaviour
         SetSlotAlpha(slotIndex, 1f);
         _finalizedSlots[slotIndex] = true;
         _awaitingUserArrangement = false;
+    }
+
+    private IEnumerator RunRemedialSequence()
+    {
+        if (_supplementController == null)
+            yield break;
+        yield return _supplementController.RunRemedialSequence();
     }
     #endregion
 }

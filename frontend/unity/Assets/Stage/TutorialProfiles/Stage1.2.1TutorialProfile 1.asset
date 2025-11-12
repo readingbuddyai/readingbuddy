@@ -63,6 +63,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -104,6 +107,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -127,6 +133,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -150,6 +159,53 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD328\uB110 ON(sound)"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -173,6 +229,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -196,6 +255,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -219,6 +281,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -242,6 +307,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -265,6 +333,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -288,6 +359,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -311,6 +385,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -334,6 +411,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -357,6 +437,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -398,6 +481,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -439,6 +525,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -480,6 +569,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -521,6 +613,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -562,6 +657,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -603,6 +701,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -644,6 +745,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -685,6 +789,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -726,6 +833,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -767,6 +877,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -808,6 +921,9 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1
@@ -849,6 +965,53 @@ MonoBehaviour:
     pulseScale: 0
     pulseDuration: 0
     pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD328\uB110 ON(sound)"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
     awaitRelease: 1

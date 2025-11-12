@@ -334,8 +334,8 @@ MonoBehaviour:
   homeSceneName: Home
   apiBaseUrl: https://readingbuddyai.co.kr
   lastStageEndpoint: /api/train/last/stage
-  tokenPlayerPrefsKey: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IjEyMyIsImlhdCI6MTc2MjgzMzY0OSwiZXhwIjoxNzYyOTIwMDQ5fQ.uL9HmphryAKCcytF4aSlf0QU6oyydJWs4lpVGp-skBqGL4J3jJ_pRAsmpcZqpn7U
-  debugToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IjEyMyIsImlhdCI6MTc2MjgzMzY0OSwiZXhwIjoxNzYyOTIwMDQ5fQ.uL9HmphryAKCcytF4aSlf0QU6oyydJWs4lpVGp-skBqGL4J3jJ_pRAsmpcZqpn7U
+  tokenPlayerPrefsKey: 
+  debugToken: 
   stageCacheKey: lastStage
   mageRef: {fileID: 0}
   stage2Ref: {fileID: 0}
@@ -5549,12 +5549,28 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_LineWidth
-      value: 0.005
+      value: 0.01
+      objectReference: {fileID: 0}
+    - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_LineLength
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_SmoothMovement
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_FollowTightness
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_LineOriginTransform
       value: 
       objectReference: {fileID: 1514611355}
+    - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_SnapThresholdDistance
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_BlockedColorGradient.key0.b
       value: 1
@@ -21928,7 +21944,7 @@ Transform:
   m_GameObject: {fileID: 1514611354}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 1}
+  m_LocalPosition: {x: 0.01, y: 0, z: 0.45}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -27081,7 +27097,7 @@ Transform:
   m_GameObject: {fileID: 2091785691}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -1}
+  m_LocalPosition: {x: 0, y: 0, z: 0.05}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

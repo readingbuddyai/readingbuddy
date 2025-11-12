@@ -2,41 +2,64 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
+using Stage.UI;
 
+/// <summary>
+/// Stage 2.1 진행 컨트롤러 (마법 돌 퍼즐)
+/// Stage11/Stage12와 동일한 책임 분리를 적용하여
+/// 세션/오디오/문항 관리 로직을 공통 컨트롤러에 위임한다.
+/// </summary>
 public class Stage20Controller : MonoBehaviour
 {
     [Header("API 설정")]
     public string baseUrl = "";
-    public string stage = "2";
+    [Tooltip("문제 세트 조회에 사용할 stage 값 (예: 1.2.1)")]
+    public string stage = "1.2.1";
+    [Tooltip("stage/start · check/voice 등 2단계 스테이지 값 (예: 2.1)")]
+    public string stageTwoPart = "2.1";
     public int count = 5;
     [Tooltip("Authorization: Bearer {token}")]
     public string authToken = "";
-    [Tooltip("stage/start 호출을 건너뛰려면 켜 두세요")]
-    public bool bypassStageStart = false;
-    [Tooltip("디버그 로그를 상세히 출력합니다")]
-    public bool verboseLogging = false;
 
-    private string stageSessionId;
+    [Header("세션")]
+    [Tooltip("stage/start 응답의 stageSessionId. 미설정 시 자동 발급을 시도합니다.")]
+    public string stageSessionId = "";
+    [Tooltip("/api/train/stage/start 요청을 건너뛰고 문제 GET만 진행합니다.")]
+    public bool bypassStartRequest = false;
+    [Tooltip("음성 녹음 및 /api/train/check/voice 업로드를 건너뜁니다.")]
+    public bool bypassVoiceUpload = false;
+    [Tooltip("자세한 로그를 출력합니다.")]
+    public bool verboseLogging = false;
 
     [Header("UI 참조")]
     public Text progressText;
     public TMP_Text progressTextTMP;
     public TMP_Text wordLabel;
 
+    [Header("Intro Tutorial")]
+    public StageTutorialProfile tutorialProfile;
+    public Sprite introTutorialImage;
+    public List<StageTutorialController.IntroOption> introOptions = new List<StageTutorialController.IntroOption>();
+    public StageTutorialController.IntroOptionCursor introOptionCursor;
+    public PanelAnimator introTutorialPanelAnimator;
+    public GameObject introTutorialPanel;
+    public GameObject guide3DCharacter;
+    [Header("Intro Tutorial Controls")]
+    public bool requireTriggerAfterTutorial = false;
+    [Range(0.05f, 1f)] public float tutorialTriggerThreshold = 0.6f;
+    public KeyCode tutorialFallbackKey = KeyCode.Space;
+    [Min(0f)] public float tutorialClipGapSeconds = 0.9f;
+
     [Header("오디오 재생")]
     public AudioSource audioSource;
     public AudioClip sfxStart;
     public AudioClip sfxNext;
-
-    [Header("마이크 설정")]
-    public int recordSeconds = 3;
-    public int recordSampleRate = 44100;
 
     [Header("도입 대사")]
     public AudioClip clipHello;
@@ -63,7 +86,7 @@ public class Stage20Controller : MonoBehaviour
     public float countdownSeconds = 10f;
     public int maxStoneAttempts = 2;
 
-    [System.Serializable]
+    [Serializable]
     public class IntUnityEvent : UnityEvent<int> { }
 
     public IntUnityEvent onStoneRoundBegin;
@@ -82,57 +105,154 @@ public class Stage20Controller : MonoBehaviour
     public AudioClip clipGreatJob2;           // [2.9.5.2]
     public AudioClip clipReadyNextLesson;     // [2.9.6]
 
-    private bool waitingForStoneCount;
-    private int? pendingStoneCount;
+    [Header("튜토리얼 UI")]
+    public RectTransform tutorialOptionsContainer;
+    public TMP_Text tutorialOptionWordText;
+    [Min(0f)] public float tutorialStoneMoveSeconds = 0.6f;
+    public AnimationCurve tutorialStoneMoveCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [Header("마이크 설정")]
+    public int recordSeconds = 3;
+    public int recordSampleRate = 44100;
+
+    private StageSessionController _sessionController;
+    private StageAudioController _audioController;
+    private StageAudioDependencies _audioDependencies;
+    private readonly StageQuestionController<Problem> _questionController = new StageQuestionController<Problem>();
+    private StageTutorialController _tutorialController;
+    private StageTutorialDependencies _tutorialDependencies;
+    private Coroutine _stoneCountdownCoroutine;
+
+    private bool _waitingForStoneCount;
+    private int? _pendingStoneCount;
     private int _currentProblemNumber;
 
     private readonly List<PronunciationFeedback> _accumulatedFeedback = new List<PronunciationFeedback>();
     private readonly HashSet<string> _feedbackKeys = new HashSet<string>();
+    private string _tutorialOptionWordCache = string.Empty;
+    private bool _tutorialOptionUseWordLabel;
 
     private void Start()
     {
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
         authToken = EnvConfig.ResolveAuthToken(authToken);
+        ConfigureSessionController();
+        ConfigureAudioController();
+        ConfigureTutorialController();
+        _tutorialController?.PrepareForStageStart();
         ResetStoneUI();
         StartCoroutine(RunStage());
     }
 
+    private void ConfigureSessionController()
+    {
+        if (_sessionController == null)
+            _sessionController = new StageSessionController();
+
+        _sessionController.Configure(baseUrl, authToken);
+        _sessionController.Log = verboseLogging ? (Action<string>)Debug.Log : null;
+        _sessionController.LogWarning = Debug.LogWarning;
+        _sessionController.LogError = Debug.LogError;
+    }
+
+    private StageSessionController GetSessionController()
+    {
+        if (_sessionController == null)
+            ConfigureSessionController();
+        return _sessionController;
+    }
+
+    private void ConfigureAudioController()
+    {
+        if (_audioController == null)
+            _audioController = new StageAudioController();
+
+        if (_audioDependencies == null)
+            _audioDependencies = new StageAudioDependencies();
+
+        _audioDependencies.AudioSource = audioSource;
+        _audioDependencies.Log = verboseLogging ? (Action<string>)Debug.Log : null;
+        _audioDependencies.LogWarning = Debug.LogWarning;
+
+        _audioController.Initialize(_audioDependencies);
+    }
+
     private IEnumerator RunStage()
     {
-        if (!bypassStageStart)
+        ConfigureTutorialController();
+        _tutorialController?.ResetAfterStageRestart();
+
+        var sessionController = GetSessionController();
+
+        if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
         {
-            yield return StageStart();
-            if (string.IsNullOrWhiteSpace(stageSessionId))
+            StageSessionController.StageStartResult startResult = null;
+            yield return sessionController.StartStageSession(
+                string.IsNullOrWhiteSpace(stageTwoPart) ? stage : stageTwoPart,
+                Mathf.Max(1, count),
+                r => startResult = r);
+
+            if (startResult == null || !startResult.Success || string.IsNullOrWhiteSpace(startResult.StageSessionId))
             {
-                Debug.LogError("[Stage20] stageSessionId를 가져오지 못했습니다. 진행을 중단합니다.");
+                Debug.LogError("[Stage20] stage/start 호출에 실패했습니다. 진행을 중단합니다.");
                 yield break;
             }
+
+            stageSessionId = startResult.StageSessionId;
+            if (verboseLogging)
+                Debug.Log($"[Stage20] stageSessionId 발급: {stageSessionId}");
         }
 
         if (sfxStart) yield return PlayClip(sfxStart);
-        yield return RunIntroSequence();
-
-        List<QuestionDto> questions = null;
-        yield return StartCoroutine(FetchQuestions(result => questions = result));
-
-        if (questions != null && questions.Count > 0)
+        if (_tutorialController != null)
         {
-            for (int i = 0; i < questions.Count; i++)
+            yield return _tutorialController.RunIntroSequence();
+            yield return _tutorialController.RunIntroTutorial();
+        }
+        else
+        {
+            yield return RunIntroSequence();
+        }
+
+        List<Problem> problems = null;
+        yield return FetchProblems(sessionController, result => problems = result);
+
+        if (problems == null || problems.Count == 0)
+        {
+            Debug.LogError("[Stage20] 문제 데이터를 가져오지 못했습니다.");
+            yield break;
+        }
+
+        _questionController.SetQuestions(problems);
+
+        int totalQuestions = _questionController.Count;
+        for (int i = 0; i < totalQuestions; i++)
+        {
+            _questionController.SetCurrentQuestionNumber(i + 1);
+            var problem = _questionController.GetQuestionByNumber(i + 1);
+            yield return RunOneProblem(i + 1, totalQuestions, problem);
+
+            if (i < totalQuestions - 1 && sfxNext)
+                yield return PlayClip(sfxNext);
+        }
+
+        yield return ProcessAccumulatedFeedback();
+
+        if (!bypassStartRequest && !string.IsNullOrWhiteSpace(stageSessionId))
+        {
+            StageSessionController.StageCompleteResult completeResult = null;
+            yield return sessionController.CompleteStageSession(stageSessionId, r => completeResult = r);
+
+            if (completeResult != null && completeResult.VoiceResultTokens.Count > 0)
             {
-                yield return RunOneProblem(i + 1, questions.Count, questions[i]);
-
-                if (sfxNext && i < questions.Count - 1)
-                    yield return PlayClip(sfxNext);
+                foreach (var token in completeResult.VoiceResultTokens)
+                    CollectFeedback(token);
+                yield return ProcessAccumulatedFeedback();
             }
-
-            yield return ProcessAccumulatedFeedback();
         }
 
         if (clipReadyNextLesson)
             yield return PlayClip(clipReadyNextLesson);
-
-        if (!bypassStageStart && !string.IsNullOrWhiteSpace(stageSessionId))
-            yield return StageComplete();
     }
 
     private IEnumerator RunIntroSequence()
@@ -143,7 +263,7 @@ public class Stage20Controller : MonoBehaviour
         if (clipStoneIntro) yield return PlayClip(clipStoneIntro);
     }
 
-    private IEnumerator RunOneProblem(int index, int total, QuestionDto problem)
+    private IEnumerator RunOneProblem(int index, int total, Problem problem)
     {
         ResetStoneUI();
         _currentProblemNumber = index;
@@ -152,34 +272,41 @@ public class Stage20Controller : MonoBehaviour
         if (wordLabel)
         {
             wordLabel.enableWordWrapping = false;
-            wordLabel.text = problem.problemWord;
+            wordLabel.text = problem?.problemWord ?? string.Empty;
             wordLabel.gameObject.SetActive(true);
         }
 
         if (clipTeacherLead) yield return PlayClip(clipTeacherLead);
         if (clipListenCue) yield return PlayClip(clipListenCue);
-        if (!string.IsNullOrEmpty(problem.wordVoiceUrl))
+        if (!string.IsNullOrEmpty(problem?.wordVoiceUrl))
             yield return PlayVoiceUrl(problem.wordVoiceUrl);
 
         if (clipYourTurn) yield return PlayClip(clipYourTurn);
         if (clipRepeatPrompt) yield return PlayClip(clipRepeatPrompt);
 
-        yield return RecordAndUpload(problem, index);
+        if (!bypassVoiceUpload)
+        {
+            yield return RecordAndUpload(problem, index);
+        }
+        else
+        {
+            yield return new WaitForSeconds(recordSeconds);
+        }
 
         if (clipPerfect) yield return PlayClip(clipPerfect);
         if (clipMagicFeel) yield return PlayClip(clipMagicFeel);
 
         if (clipCountInstruction) yield return PlayClip(clipCountInstruction);
-        if (!string.IsNullOrEmpty(problem.wordVoiceUrl))
+        if (!string.IsNullOrEmpty(problem?.wordVoiceUrl))
             yield return PlayVoiceUrl(problem.wordVoiceUrl);
 
         yield return RunStoneRound(problem, index);
     }
 
-    private void UpdateProgress(int index, int total, QuestionDto problem)
+    private void UpdateProgress(int index, int total, Problem problem)
     {
         string label = $"{index}/{total}";
-        if (!string.IsNullOrWhiteSpace(problem.problemWord))
+        if (!string.IsNullOrWhiteSpace(problem?.problemWord))
             label += $"\n{problem.problemWord}";
 
         if (progressText)
@@ -193,17 +320,18 @@ public class Stage20Controller : MonoBehaviour
         }
     }
 
-    private IEnumerator RunStoneRound(QuestionDto problem, int problemNumber)
+    private IEnumerator RunStoneRound(Problem problem, int problemNumber)
     {
-        int expectedCount = problem != null ? problem.wordLength : 0;
+        int expectedCount = problem?.wordLength ?? 0;
         int attempts = 0;
         bool solved = false;
+        var sessionController = GetSessionController();
 
-        while (attempts < maxStoneAttempts && !solved)
+        while (attempts < Mathf.Max(1, maxStoneAttempts) && !solved)
         {
             ResetStonePositions();
-            pendingStoneCount = null;
-            waitingForStoneCount = true;
+            _pendingStoneCount = null;
+            _waitingForStoneCount = true;
 
             if (stoneBoard)
                 stoneBoard.SetActive(true);
@@ -215,22 +343,30 @@ public class Stage20Controller : MonoBehaviour
 
             onStoneRoundBegin?.Invoke(expectedCount);
 
-            while (waitingForStoneCount)
-            {
+            while (_waitingForStoneCount)
                 yield return null;
-            }
 
-            int submitted = pendingStoneCount ?? 0;
-            pendingStoneCount = null;
+            int submitted = _pendingStoneCount ?? 0;
+            _pendingStoneCount = null;
 
             if (stoneBoard)
                 stoneBoard.SetActive(false);
             onStoneRoundEnd?.Invoke();
 
             int attemptNumber = attempts + 1;
-            bool isCorrect = (submitted == expectedCount);
-            yield return SendAttemptLog(problemNumber, attemptNumber, expectedCount, submitted, isCorrect,
-                problem != null ? problem.problemWord : null);
+            bool isCorrect = submitted == expectedCount;
+
+            yield return sessionController.LogAttempt(
+                stageSessionId,
+                string.IsNullOrWhiteSpace(stageTwoPart) ? stage : stageTwoPart,
+                Mathf.Max(1, problemNumber),
+                attemptNumber,
+                submitted.ToString(),
+                isCorrect,
+                problem?.problemWord ?? string.Empty,
+                expectedCount.ToString(),
+                attemptNumber > 1,
+                null);
 
             if (isCorrect)
             {
@@ -249,101 +385,91 @@ public class Stage20Controller : MonoBehaviour
 
     public void ReportStoneCount(int count)
     {
-        if (!waitingForStoneCount) return;
-        pendingStoneCount = count;
+        if (!_waitingForStoneCount) return;
+        _pendingStoneCount = count;
         if (verboseLogging)
-            Debug.Log($"[Stage20] ReportStoneCount → pending={pendingStoneCount} (waiting={waitingForStoneCount})");
+            Debug.Log($"[Stage20] ReportStoneCount → pending={_pendingStoneCount}");
     }
 
     public void ConfirmStoneCount()
     {
-        Debug.Log("[Stage20] ConfirmStoneCount() 호출 시도");
-        if (!waitingForStoneCount)
+        if (!_waitingForStoneCount)
         {
             if (verboseLogging)
-                Debug.Log("[Stage20] ConfirmStoneCount → waitingForStoneCount=false, 호출 무시");
+                Debug.Log("[Stage20] ConfirmStoneCount 호출 무시 (waiting=false)");
             return;
         }
 
-        if (!pendingStoneCount.HasValue)
+        if (!_pendingStoneCount.HasValue)
         {
-            Debug.LogWarning("[Stage20] 아직 보고된 Stone 개수가 없습니다. 드롭 후 버튼을 눌러 주세요.");
+            Debug.LogWarning("[Stage20] 아직 보고된 돌 개수가 없습니다. 드롭 후 버튼을 눌러 주세요.");
             return;
         }
 
-        if (verboseLogging)
-            Debug.Log($"[Stage20] ConfirmStoneCount → 제출 예정 개수 = {pendingStoneCount.Value}");
-
-        waitingForStoneCount = false;
+        _waitingForStoneCount = false;
     }
 
-    private IEnumerator FetchQuestions(Action<List<QuestionDto>> onCompleted)
+    private IEnumerator FetchProblems(StageSessionController sessionController, Action<List<Problem>> onCompleted)
     {
-        string sessionQuery = string.IsNullOrWhiteSpace(stageSessionId)
-            ? string.Empty
-            : $"&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}";
+        StageSessionController.QuestionSetResult result = null;
+        yield return sessionController.FetchQuestionSet(stage, count, stageSessionId, r => result = r);
 
-        string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stage)}&count={count}{sessionQuery}");
-
-        using (var req = UnityWebRequest.Get(url))
+        if (result == null || !result.Success)
         {
-            ApplyCommonHeaders(req);
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
-                Debug.LogError($"[Stage20] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={body}");
-                yield break;
-            }
-
-            var json = req.downloadHandler.text;
-            ProblemListResponse parsed = null;
-
-            try
-            {
-                parsed = JsonUtility.FromJson<ProblemListResponse>(json);
-                Debug.Log($"[Stage20] 질문 응답 JSON: {json}");
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"[Stage20] 문제 파싱 실패: {ex.Message}\nJSON={json}");
-            }
-
-            if (parsed == null || parsed.data == null)
-            {
-                Debug.LogError("[Stage20] 문제 데이터가 비어 있습니다 (data=null)." );
-                yield break;
-            }
-
-            string sessionFromResponse = !string.IsNullOrEmpty(parsed.data.stageSessionId)
-                ? parsed.data.stageSessionId
-                : parsed.data.sessionId;
-
-            if (!string.IsNullOrEmpty(sessionFromResponse))
-            {
-                stageSessionId = sessionFromResponse;
-                if (verboseLogging)
-                    Debug.Log($"[Stage20] stageSessionId 수신: {stageSessionId}");
-            }
-
-            if (parsed.data.problems == null || parsed.data.problems.Count == 0)
-            {
-                Debug.LogError("[Stage20] 문제 데이터가 비어 있습니다.");
-                yield break;
-            }
-
-            if (!string.IsNullOrWhiteSpace(stageSessionId))
-            {
-                foreach (var problem in parsed.data.problems)
-                    problem.sessionId = stageSessionId;
-            }
-
-            onCompleted?.Invoke(parsed.data.problems);
+            Debug.LogError($"[Stage20] 문제 요청 실패: code={result?.ResponseCode}");
+            onCompleted?.Invoke(null);
+            yield break;
         }
+
+        var problems = ParseProblemResponse(result.RawBody);
+        onCompleted?.Invoke(problems);
     }
 
-    private IEnumerator RecordAndUpload(QuestionDto problem, int problemNumber)
+    private List<Problem> ParseProblemResponse(string rawJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawJson))
+            return null;
+
+        ProblemListResponse parsed = null;
+        try
+        {
+            parsed = JsonUtility.FromJson<ProblemListResponse>(rawJson);
+            if (verboseLogging)
+                Debug.Log($"[Stage20] 문제 응답 JSON: {rawJson}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[Stage20] 문제 파싱 실패: {ex.Message}\nJSON={rawJson}");
+            return null;
+        }
+
+        if (parsed?.data == null || parsed.data.problems == null || parsed.data.problems.Count == 0)
+        {
+            Debug.LogError("[Stage20] 문제 데이터가 비어 있습니다.");
+            return null;
+        }
+
+        var sessionIdFromResponse = !string.IsNullOrEmpty(parsed.data.stageSessionId)
+            ? parsed.data.stageSessionId
+            : parsed.data.sessionId;
+
+        if (!string.IsNullOrEmpty(sessionIdFromResponse))
+        {
+            stageSessionId = sessionIdFromResponse;
+            if (verboseLogging)
+                Debug.Log($"[Stage20] stageSessionId 갱신: {stageSessionId}");
+        }
+
+        if (!string.IsNullOrEmpty(stageSessionId))
+        {
+            foreach (var problem in parsed.data.problems)
+                problem.sessionId = stageSessionId;
+        }
+
+        return parsed.data.problems;
+    }
+
+    private IEnumerator RecordAndUpload(Problem problem, int problemNumber)
     {
         var clip = StartMic(recordSeconds, recordSampleRate);
         yield return new WaitForSeconds(recordSeconds);
@@ -357,34 +483,19 @@ public class Stage20Controller : MonoBehaviour
         Microphone.End(null);
         var wav = WavUtility.FromAudioClip(clip);
 
-        if (string.IsNullOrWhiteSpace(stageSessionId))
-        {
-            Debug.LogWarning("[Stage20] stageSessionId가 비어 있습니다. /api/train/stage/start 응답을 확인하세요.");
-        }
-
-        int safeProblemNumber = Mathf.Max(1, problemNumber);
-        string stageForUpload = stage ?? string.Empty;
-        string sessionForUpload = !string.IsNullOrEmpty(stageSessionId) ? stageSessionId : (problem != null ? problem.sessionId ?? string.Empty : string.Empty);
-        string qs = $"stageSessionId={UnityWebRequest.EscapeURL(sessionForUpload ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageForUpload ?? string.Empty)}&problemNumber={UnityWebRequest.EscapeURL(safeProblemNumber.ToString())}";
-        string url = ComposeUrl($"/api/train/check/voice?{qs}");
-        var form = new WWWForm();
-        form.AddBinaryData("audio", wav, "voice.wav", "audio/wav");
-
-        using (var req = UnityWebRequest.Post(url, form))
-        {
-            ApplyCommonHeaders(req);
-            req.chunkedTransfer = false;
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
+        string stageForUpload = GetStageForVoiceUpload();
+        var sessionController = GetSessionController();
+        yield return sessionController.CheckVoice(
+            stageSessionId,
+            stageForUpload,
+            Mathf.Max(1, problemNumber),
+            string.Empty,
+            wav,
+            result =>
             {
-                Debug.LogWarning($"[Stage20] 음성 업로드 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={req.downloadHandler?.text}");
-            }
-            else
-            {
-                CollectFeedback(req.downloadHandler.text);
-            }
-        }
+                if (result != null && !string.IsNullOrWhiteSpace(result.RawBody))
+                    CollectFeedback(result.RawBody);
+            });
     }
 
     private IEnumerator ProcessAccumulatedFeedback()
@@ -401,7 +512,7 @@ public class Stage20Controller : MonoBehaviour
 
         var ordered = _accumulatedFeedback
             .Where(p => p != null)
-            .GroupBy(p => p.phoneme ?? p.label ?? "")
+            .GroupBy(p => p.phoneme ?? p.label ?? string.Empty)
             .Select(g => g.First())
             .ToList();
 
@@ -430,7 +541,8 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator LoadAndShowImage(string imageUrl)
     {
-        if (string.IsNullOrEmpty(imageUrl)) yield break;
+        if (string.IsNullOrEmpty(imageUrl))
+            yield break;
 
         using (var req = UnityWebRequestTexture.GetTexture(imageUrl))
         {
@@ -442,77 +554,29 @@ public class Stage20Controller : MonoBehaviour
                 yield break;
             }
 
-            var tex = DownloadHandlerTexture.GetContent(req);
-            var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
-            // 이미지 표시용 UI가 있다면 여기에서 적용합니다.
+            // 현재는 표시용 UI가 없으므로 텍스처만 로드하고 종료합니다.
         }
     }
 
     private IEnumerator PlayClip(AudioClip clip)
     {
-        if (!clip || !audioSource)
+        if (_audioController == null)
             yield break;
 
-        audioSource.Stop();
-        audioSource.clip = clip;
-        audioSource.Play();
-        yield return new WaitWhile(() => audioSource.isPlaying);
+        yield return _audioController.PlayClip(clip);
     }
 
     private IEnumerator PlayVoiceUrl(string voiceUrl)
     {
-        if (string.IsNullOrEmpty(voiceUrl) || !audioSource)
-        {
-            Debug.LogWarning(string.IsNullOrEmpty(voiceUrl)
-                ? "[Stage20] voiceUrl가 비어 있어 음성을 재생하지 못했습니다."
-                : "[Stage20] audioSource가 설정되지 않아 음성을 재생하지 못했습니다.");
+        if (_audioController == null)
             yield break;
-        }
 
-        string sanitizedUrl = SanitizeUrl(voiceUrl);
-        Debug.Log($"[Stage20] 음성 요청 시작 → {sanitizedUrl}");
-
-        using (var req = UnityWebRequestMultimedia.GetAudioClip(sanitizedUrl, GuessAudioType(sanitizedUrl)))
-        {
-            yield return req.SendWebRequest();
-
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage20] 음성 로드 실패: {req.error}\nURL={sanitizedUrl}");
-                yield break;
-            }
-
-            var clip = DownloadHandlerAudioClip.GetContent(req);
-            audioSource.Stop();
-            audioSource.clip = clip;
-            audioSource.Play();
-            yield return new WaitWhile(() => audioSource.isPlaying);
-        }
+        yield return _audioController.PlayVoiceUrl(voiceUrl);
     }
 
-    private AudioType GuessAudioType(string url)
+    private string GetStageForVoiceUpload()
     {
-        url = url.ToLowerInvariant();
-        if (url.EndsWith(".mp3")) return AudioType.MPEG;
-        if (url.EndsWith(".wav") || url.EndsWith(".wave")) return AudioType.WAV;
-        if (url.EndsWith(".ogg")) return AudioType.OGGVORBIS;
-        return AudioType.UNKNOWN;
-    }
-
-    private string SanitizeUrl(string url)
-    {
-        return string.IsNullOrEmpty(url) ? url : url.Replace("+", "%2B");
-    }
-
-    private AudioClip StartMic(int seconds, int sampleRate)
-    {
-        if (Microphone.devices == null || Microphone.devices.Length == 0)
-        {
-            Debug.LogWarning("[Stage20] 마이크 장치가 없습니다.");
-            return null;
-        }
-
-        return Microphone.Start(null, false, seconds, sampleRate);
+        return !string.IsNullOrWhiteSpace(stageTwoPart) ? stageTwoPart : stage;
     }
 
     private void CollectFeedback(string json)
@@ -555,8 +619,13 @@ public class Stage20Controller : MonoBehaviour
 
     private void ResetStoneUI()
     {
-        waitingForStoneCount = false;
-        pendingStoneCount = null;
+        _waitingForStoneCount = false;
+        _pendingStoneCount = null;
+        if (_stoneCountdownCoroutine != null)
+        {
+            StopCoroutine(_stoneCountdownCoroutine);
+            _stoneCountdownCoroutine = null;
+        }
         ResetStonePositions();
         if (stoneBoard) stoneBoard.SetActive(false);
         if (countdownText)
@@ -587,127 +656,529 @@ public class Stage20Controller : MonoBehaviour
         }
     }
 
-    private void ApplyCommonHeaders(UnityWebRequest req)
+    private AudioClip StartMic(int seconds, int sampleRate)
     {
-        if (!string.IsNullOrWhiteSpace(authToken))
-            req.SetRequestHeader("Authorization", $"Bearer {authToken}");
-        req.SetRequestHeader("Accept", "application/json");
-    }
-
-    private string ComposeUrl(string path)
-    {
-        if (string.IsNullOrWhiteSpace(baseUrl)) return path;
-        if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return path;
-
-        string trimmedBase = baseUrl.EndsWith("/") ? baseUrl : baseUrl + "/";
-        if (path.StartsWith("/")) path = path.Substring(1);
-        return trimmedBase + path;
-    }
-
-    private IEnumerator StageStart()
-    {
-        string stageForStart = stage ?? string.Empty;
-        string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageForStart)}&totalProblems={count}");
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        if (Microphone.devices == null || Microphone.devices.Length == 0)
         {
-            ApplyCommonHeaders(req);
-            req.uploadHandler = null;
-            req.downloadHandler = new DownloadHandlerBuffer();
+            Debug.LogWarning("[Stage20] 마이크 장치가 없습니다.");
+            return null;
+        }
+        return Microphone.Start(null, false, seconds, sampleRate);
+    }
 
-            yield return req.SendWebRequest();
+    private void ConfigureTutorialController()
+    {
+        bool enableTutorial = tutorialProfile != null;
+        if (!enableTutorial)
+        {
+            enableTutorial =
+                (introOptions != null && introOptions.Count > 0) ||
+                introTutorialImage != null ||
+                introOptionCursor != null ||
+                introTutorialPanelAnimator != null ||
+                introTutorialPanel != null ||
+                guide3DCharacter != null;
+        }
 
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogError($"[Stage20] stage/start 호출 실패: {req.error}\nURL={url}\nResponse={req.downloadHandler.text}");
-                yield break;
-            }
+        if (!enableTutorial)
+        {
+            _tutorialController = null;
+            _tutorialDependencies = null;
+            return;
+        }
 
-            var response = JsonUtility.FromJson<StageStartResponse>(req.downloadHandler.text);
-            if (response == null || response.data == null || string.IsNullOrWhiteSpace(response.data.stageSessionId))
-            {
-                Debug.LogError($"[Stage20] stage/start 응답 파싱 실패\nResponse={req.downloadHandler.text}");
-                yield break;
-            }
+        if (_tutorialController == null)
+            _tutorialController = new StageTutorialController();
 
-            stageSessionId = response.data.stageSessionId;
-            if (verboseLogging)
-                Debug.Log($"[Stage20] stage/start 완료 → sessionId={stageSessionId}");
+        if (_tutorialDependencies == null)
+            _tutorialDependencies = new StageTutorialDependencies();
+
+        _tutorialDependencies.PlayClip = PlayClip;
+        _tutorialDependencies.StartCoroutine = routine => StartCoroutine(routine);
+        _tutorialDependencies.StopCoroutine = routine =>
+        {
+            if (routine != null)
+                StopCoroutine(routine);
+        };
+        _tutorialDependencies.ProgressText = progressText;
+        _tutorialDependencies.EnsureProgressText = EnsureProgressText;
+        _tutorialDependencies.MainImage = null;
+        _tutorialDependencies.OptionsContainer = tutorialOptionsContainer;
+        _tutorialDependencies.OptionButtonPrefab = null;
+        _tutorialDependencies.CorrectSfx = null;
+        _tutorialDependencies.MoveCursorSmooth = null;
+        _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseTutorialTarget(rect, scale, duration, loops);
+        _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
+        _tutorialDependencies.Log = message => Debug.Log(message);
+        _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
+        _tutorialDependencies.VerboseLogging = verboseLogging;
+        _tutorialDependencies.ManageOptionsContainerContents = tutorialOptionsContainer == null;
+
+        if (tutorialProfile != null)
+        {
+            _tutorialController.ApplyProfile(tutorialProfile);
+            _tutorialController.introOptions = tutorialProfile.introOptions != null
+                ? tutorialProfile.introOptions
+                    .Where(opt => opt != null)
+                    .Select(opt => new StageTutorialController.IntroOption { label = opt.label, isCorrect = opt.isCorrect })
+                    .ToList()
+                : new List<StageTutorialController.IntroOption>();
+            if (tutorialProfile.introTutorialImage)
+                _tutorialController.introTutorialImage = tutorialProfile.introTutorialImage;
+        }
+        else
+        {
+            _tutorialController.introTutorialImage = introTutorialImage;
+            _tutorialController.introOptions = introOptions != null
+                ? introOptions
+                    .Where(opt => opt != null)
+                    .Select(opt => new StageTutorialController.IntroOption { label = opt.label, isCorrect = opt.isCorrect })
+                    .ToList()
+                : new List<StageTutorialController.IntroOption>();
+            _tutorialController.requireTriggerAfterTutorial = requireTriggerAfterTutorial;
+            _tutorialController.tutorialTriggerThreshold = tutorialTriggerThreshold;
+            _tutorialController.tutorialFallbackKey = tutorialFallbackKey;
+            _tutorialController.tutorialClipGapSeconds = tutorialClipGapSeconds;
+        }
+
+        _tutorialController.introOptionCursor = introOptionCursor;
+        _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
+        _tutorialController.introTutorialPanel = introTutorialPanel;
+        _tutorialController.guide3DCharacter = guide3DCharacter;
+        _tutorialController.Initialize(_tutorialDependencies);
+    }
+
+    private Text EnsureProgressText()
+    {
+        return progressText;
+    }
+
+    private IEnumerator ExecuteTutorialCustomStep(string actionId)
+    {
+        if (string.IsNullOrWhiteSpace(actionId))
+            yield break;
+
+        string command = actionId;
+        string parameter = string.Empty;
+        int separator = actionId.IndexOf(':');
+        if (separator >= 0)
+        {
+            command = actionId.Substring(0, separator);
+            parameter = actionId.Substring(separator + 1);
+        }
+
+        command = command.Trim().ToLowerInvariant();
+        parameter = parameter?.Trim() ?? string.Empty;
+
+        switch (command)
+        {
+            case "showstoneboard":
+                if (stoneBoard) stoneBoard.SetActive(true);
+                break;
+            case "hidestoneboard":
+                if (stoneBoard) stoneBoard.SetActive(false);
+                break;
+            case "resetstoneboard":
+                ResetStonePositions();
+                break;
+            case "startstonecountdown":
+                {
+                    float seconds = countdownSeconds;
+                    if (!string.IsNullOrWhiteSpace(parameter) && float.TryParse(parameter, out var parsed))
+                        seconds = parsed;
+                    yield return StartStoneCountdown(seconds);
+                    break;
+                }
+            case "setcountdownvisible":
+                {
+                    bool visible = true;
+                    if (!string.IsNullOrWhiteSpace(parameter))
+                        bool.TryParse(parameter, out visible);
+                    if (countdownText)
+                    {
+                        countdownText.gameObject.SetActive(visible);
+                        if (!visible)
+                            countdownText.text = string.Empty;
+                    }
+                    break;
+                }
+            case "setoptionword":
+            case "setword":
+                SetTutorialOptionWord(parameter, true, false);
+                break;
+            case "setwordlabel":
+                SetTutorialOptionWord(parameter, true, true);
+                break;
+            case "showoptionword":
+            case "showwordlabel":
+                ApplyTutorialOptionWord(_tutorialOptionWordCache, true);
+                break;
+            case "hideoptionword":
+            case "hidewordlabel":
+                ApplyTutorialOptionWord(string.Empty, false);
+                break;
+            case "movestone":
+                yield return MoveStoneForTutorial(parameter);
+                break;
+            default:
+                Debug.LogWarning($"[Stage20] Unknown tutorial custom action: {actionId}");
+                break;
         }
     }
 
-    private IEnumerator SendAttemptLog(int problemNumber, int attemptNumber, int expectedCount, int submittedCount, bool isCorrect, string word)
+    private IEnumerator StartStoneCountdown(float seconds)
     {
-        string url = ComposeUrl("/api/train/attempt");
-        string ssid = stageSessionId ?? string.Empty;
-        string stg = stage ?? string.Empty;
-        string answer = submittedCount >= 0 ? submittedCount.ToString() : string.Empty;
-        string problemWord = word ?? string.Empty;
-        string audioUrl = string.Empty;
-        bool includeReplyResult = attemptNumber > 1;
+        if (countdownText == null || seconds <= 0f)
+            yield break;
 
-        string json = "{" +
-                      "\"stageSessionId\":\"" + JsonEscape(ssid) + "\"," +
-                      "\"problemNumber\":" + problemNumber + "," +
-                      "\"stage\":\"" + JsonEscape(stg) + "\"," +
-                      "\"problem\":\"" + JsonEscape(problemWord) + "\"," +
-                      "\"answer\":\"" + JsonEscape(answer) + "\"," +
-                      "\"isCorrect\":" + (isCorrect ? "true" : "false") + "," +
-                      "\"isReplyCorrect\":" + (includeReplyResult ? (isCorrect ? "true" : "false") : "null") + "," +
-                      "\"attemptNumber\":" + attemptNumber + "," +
-                      "\"audioUrl\":\"" + JsonEscape(audioUrl) + "\"" + "}";
-
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        if (_stoneCountdownCoroutine != null)
         {
-            byte[] body = Encoding.UTF8.GetBytes(json);
-            req.uploadHandler = new UploadHandlerRaw(body);
-            req.downloadHandler = new DownloadHandlerBuffer();
-            req.SetRequestHeader("Content-Type", "application/json");
-            ApplyCommonHeaders(req);
+            StopCoroutine(_stoneCountdownCoroutine);
+            _stoneCountdownCoroutine = null;
+        }
 
-            yield return req.SendWebRequest();
+        _stoneCountdownCoroutine = StartCoroutine(StoneCountdownRoutine(seconds));
+        yield return _stoneCountdownCoroutine;
+        _stoneCountdownCoroutine = null;
+    }
 
-            if (req.result != UnityWebRequest.Result.Success)
-            {
-                Debug.LogWarning($"[Stage20] attempt 로깅 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={json}\nResp={req.downloadHandler.text}");
-            }
-            else if (verboseLogging)
-            {
-                Debug.Log($"[Stage20] attempt 로깅 OK: problem={problemNumber}, attempt={attemptNumber}, correct={isCorrect}");
-            }
+    private void SetTutorialOptionWord(string text, bool showImmediately, bool forceWordLabel)
+    {
+        _tutorialOptionWordCache = text ?? string.Empty;
+        _tutorialOptionUseWordLabel = forceWordLabel;
+        ApplyTutorialOptionWord(_tutorialOptionWordCache, showImmediately);
+    }
+
+    private void ApplyTutorialOptionWord(string text, bool show)
+    {
+        var target = !_tutorialOptionUseWordLabel && tutorialOptionWordText != null
+            ? tutorialOptionWordText
+            : wordLabel;
+        if (target == null)
+            return;
+
+        target.text = text ?? string.Empty;
+        target.gameObject.SetActive(show);
+
+        if (show && target.gameObject.activeInHierarchy)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(target.rectTransform);
         }
     }
 
-    private static string JsonEscape(string s)
+    private IEnumerator MoveStoneForTutorial(string parameter)
     {
-        if (string.IsNullOrEmpty(s)) return s ?? string.Empty;
-        return s.Replace("\\", "\\\\").Replace("\"", "\\\"");
+        if (stoneBoard == null)
+        {
+            Debug.LogWarning("[Stage20] MoveStone tutorial action ignored because stoneBoard is not assigned.");
+            yield break;
+        }
+
+        string stoneKey = parameter;
+        string slotKey = string.Empty;
+
+        if (!string.IsNullOrWhiteSpace(parameter))
+        {
+            var parts = parameter.Split(new[] { '>' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 0)
+                stoneKey = parts[0].Trim();
+            if (parts.Length > 1)
+                slotKey = parts[1].Trim();
+        }
+
+        var stone = FindStoneForTutorial(stoneKey);
+        if (stone == null)
+        {
+            Debug.LogWarning($"[Stage20] MoveStone tutorial action could not find stone '{stoneKey}'.");
+            yield break;
+        }
+
+        var targetSlot = FindSlotForTutorial(slotKey, stone);
+        if (targetSlot == null)
+        {
+            Debug.LogWarning($"[Stage20] MoveStone tutorial action could not find target slot '{slotKey}'.");
+            yield break;
+        }
+
+        yield return AnimateStoneToSlot(stone, targetSlot);
+        AttachStoneToSlot(stone, targetSlot);
+        ReportStoneCount(CalculateCurrentStoneCount());
     }
 
-    private IEnumerator StageComplete()
+    private IEnumerator AnimateStoneToSlot(StoneDraggable stone, StoneDropZone slot)
     {
-        if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
+        if (stone == null || slot == null)
+            yield break;
 
-        string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
-        using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
+        var stoneRT = stone.GetComponent<RectTransform>();
+        var slotRT = slot.GetComponent<RectTransform>();
+
+        if (stoneRT == null || slotRT == null)
         {
-            ApplyCommonHeaders(req);
-            req.uploadHandler = null;
-            req.downloadHandler = new DownloadHandlerBuffer();
-            yield return req.SendWebRequest();
+            yield break;
+        }
 
-            if (req.result != UnityWebRequest.Result.Success)
+        float duration = Mathf.Max(0f, tutorialStoneMoveSeconds);
+        if (duration <= 0f)
+            yield break;
+
+        Vector3 startPosition = stoneRT.position;
+        Quaternion startRotation = stoneRT.rotation;
+        Vector3 targetPosition = slotRT.position;
+        Quaternion targetRotation = slotRT.rotation;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(duration > 0f ? elapsed / duration : 1f);
+            float eased = tutorialStoneMoveCurve != null ? tutorialStoneMoveCurve.Evaluate(t) : t;
+            stoneRT.position = Vector3.Lerp(startPosition, targetPosition, eased);
+            stoneRT.rotation = Quaternion.Slerp(startRotation, targetRotation, eased);
+            yield return null;
+        }
+
+        stoneRT.position = targetPosition;
+        stoneRT.rotation = targetRotation;
+    }
+
+    private void AttachStoneToSlot(StoneDraggable stone, StoneDropZone slot)
+    {
+        if (stone == null || slot == null)
+            return;
+
+        Transform container = slot.slotParent != null ? slot.slotParent : slot.transform;
+        stone.transform.SetParent(container, false);
+        stone.transform.SetAsLastSibling();
+
+        if (stone.TryGetComponent(out LayoutElement existingLayout))
+        {
+            existingLayout.ignoreLayout = true;
+        }
+        else if (container.TryGetComponent(out LayoutGroup _))
+        {
+            var addedLayout = stone.gameObject.AddComponent<LayoutElement>();
+            addedLayout.ignoreLayout = true;
+        }
+
+        if (stone.TryGetComponent(out RectTransform stoneRT))
+        {
+            stoneRT.anchorMin = new Vector2(0.5f, 0.5f);
+            stoneRT.anchorMax = new Vector2(0.5f, 0.5f);
+            stoneRT.anchoredPosition = Vector2.zero;
+            stoneRT.localScale = Vector3.one;
+
+            if (slot.TryGetComponent(out RectTransform slotRT))
             {
-                Debug.LogWarning($"[Stage20] stage/complete 호출 실패: {req.error}\nURL={url}\nResponse={req.downloadHandler.text}");
+                stoneRT.position = slotRT.position;
+                stoneRT.rotation = slotRT.rotation;
             }
-            else if (verboseLogging)
+            else
             {
-                Debug.Log($"[Stage20] stage/complete 응답 → {req.downloadHandler.text}");
+                stoneRT.localRotation = Quaternion.identity;
             }
         }
+
+        if (stone.TryGetComponent(out CanvasGroup cg))
+        {
+            cg.blocksRaycasts = true;
+            cg.alpha = 1f;
+        }
+    }
+
+    private int CalculateCurrentStoneCount()
+    {
+        if (stoneBoard == null)
+            return 0;
+
+        var dropZones = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        if (dropZones == null || dropZones.Length == 0)
+            return 0;
+
+        Transform targetParent = null;
+        foreach (var zone in dropZones)
+        {
+            if (zone == null)
+                continue;
+
+            targetParent = zone.slotParent != null ? zone.slotParent : zone.transform;
+            if (targetParent != null)
+                break;
+        }
+
+        if (targetParent == null)
+            return 0;
+
+        return CountPlacedStonesRecursive(targetParent);
+    }
+
+    private int CountPlacedStonesRecursive(Transform root)
+    {
+        if (root == null)
+            return 0;
+
+        int count = 0;
+        for (int i = 0; i < root.childCount; i++)
+        {
+            var child = root.GetChild(i);
+
+            if (child.GetComponent<StoneDraggable>() != null && child.GetComponent<StoneDropZone>() == null)
+                count++;
+
+            if (child.childCount > 0)
+                count += CountPlacedStonesRecursive(child);
+        }
+
+        return count;
+    }
+
+    private IEnumerator PulseTutorialTarget(RectTransform target, float scaleMultiplier, float duration, int loops)
+    {
+        if (target == null)
+            yield break;
+
+        loops = Mathf.Max(1, loops);
+        scaleMultiplier = scaleMultiplier <= 0f ? 1f : scaleMultiplier;
+        duration = Mathf.Max(0f, duration);
+
+        Vector3 originalScale = target.localScale;
+        Vector3 peakScale = originalScale * scaleMultiplier;
+        float halfDuration = duration > 0f ? duration * 0.5f : 0f;
+
+        for (int i = 0; i < loops; i++)
+        {
+            yield return LerpScale(target, target.localScale, peakScale, halfDuration);
+            yield return LerpScale(target, target.localScale, originalScale, halfDuration);
+        }
+
+        target.localScale = originalScale;
+    }
+
+    private IEnumerator LerpScale(RectTransform target, Vector3 from, Vector3 to, float duration)
+    {
+        if (target == null)
+            yield break;
+
+        if (duration <= 0f)
+        {
+            target.localScale = to;
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            target.localScale = Vector3.Lerp(from, to, t);
+            yield return null;
+        }
+
+        target.localScale = to;
+    }
+
+    private StoneDraggable FindStoneForTutorial(string identifier)
+    {
+        if (stoneBoard == null)
+            return null;
+
+        var stones = stoneBoard.GetComponentsInChildren<StoneDraggable>(true);
+        if (stones == null || stones.Length == 0)
+            return null;
+
+        identifier = string.IsNullOrWhiteSpace(identifier) ? string.Empty : identifier.Trim();
+        int targetNumber = ExtractNumberFromName(identifier);
+
+        foreach (var stone in stones)
+        {
+            if (stone == null)
+                continue;
+
+            if (!string.IsNullOrEmpty(identifier) &&
+                string.Equals(stone.gameObject.name, identifier, StringComparison.OrdinalIgnoreCase))
+            {
+                return stone;
+            }
+
+            if (targetNumber > 0 && ExtractNumberFromName(stone.gameObject.name) == targetNumber)
+                return stone;
+        }
+
+        return stones.FirstOrDefault(s => s != null);
+    }
+
+    private StoneDropZone FindSlotForTutorial(string identifier, StoneDraggable stoneFallback)
+    {
+        if (stoneBoard == null)
+            return null;
+
+        var slots = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        if (slots == null || slots.Length == 0)
+            return null;
+
+        identifier = string.IsNullOrWhiteSpace(identifier) ? string.Empty : identifier.Trim();
+        int targetNumber = ExtractNumberFromName(identifier);
+
+        if (targetNumber == 0 && stoneFallback != null)
+            targetNumber = ExtractNumberFromName(stoneFallback.gameObject.name);
+
+        foreach (var slot in slots)
+        {
+            if (slot == null)
+                continue;
+
+            if (!string.IsNullOrEmpty(identifier) &&
+                string.Equals(slot.gameObject.name, identifier, StringComparison.OrdinalIgnoreCase))
+            {
+                return slot;
+            }
+
+            if (targetNumber > 0)
+            {
+                int slotNumber = slot.slotNumber != 0 ? slot.slotNumber : ExtractNumberFromName(slot.gameObject.name);
+                if (slotNumber == targetNumber)
+                    return slot;
+            }
+        }
+
+        return slots.FirstOrDefault(s => s != null);
+    }
+
+    private int ExtractNumberFromName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return 0;
+
+        var match = Regex.Match(name, @"_(\d+)");
+        if (match.Success && match.Groups.Count > 1 && int.TryParse(match.Groups[1].Value, out var number))
+            return number;
+
+        return 0;
+    }
+
+    private IEnumerator StoneCountdownRoutine(float seconds)
+    {
+        if (countdownText == null)
+            yield break;
+
+        countdownText.gameObject.SetActive(true);
+        float remaining = Mathf.Max(0f, seconds);
+
+        while (remaining > 0f)
+        {
+            countdownText.text = Mathf.CeilToInt(remaining).ToString();
+            yield return new WaitForSeconds(1f);
+            remaining -= 1f;
+        }
+
+        countdownText.text = "0";
+        yield return new WaitForSeconds(0.5f);
+        countdownText.text = string.Empty;
+        countdownText.gameObject.SetActive(false);
     }
 
     [Serializable]
-    private class QuestionDto
+    private class Problem
     {
         public int questionId;
         public string sessionId;
@@ -721,7 +1192,7 @@ public class Stage20Controller : MonoBehaviour
     {
         public string stageSessionId;
         public string sessionId;
-        public List<QuestionDto> problems;
+        public List<Problem> problems;
     }
 
     [Serializable]
@@ -730,23 +1201,6 @@ public class Stage20Controller : MonoBehaviour
         public bool success;
         public string message;
         public ProblemData data;
-    }
-
-    [Serializable]
-    private class StageStartResponse
-    {
-        public bool success;
-        public string message;
-        public StageStartData data;
-    }
-
-    [Serializable]
-    private class StageStartData
-    {
-        public string stageSessionId;
-        public string stage;
-        public int totalProblems;
-        public string startAt;
     }
 
     [Serializable]
@@ -774,3 +1228,4 @@ public class Stage20Controller : MonoBehaviour
         public string imageUrl;
     }
 }
+
