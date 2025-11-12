@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1105 &110500000
+HumanTemplate:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: SEMA Cute Humanoid Rig Template
+  m_BoneTemplate:
+    Chest: Body.chest.001
+    Head: Head.head.001
+    Hips: Body.abdomen.001
+    Left Index Intermediate: Arm.finger.in.L.002
+    Left Index Proximal: Arm.finger.in.L.001
+    Left Little Intermediate: Arm.finger.li.L.002
+    Left Little Proximal: Arm.finger.li.L.001
+    Left Middle Intermediate: Arm.finger.mi.L.002
+    Left Middle Proximal: Arm.finger.mi.L.001
+    Left Ring Intermediate: Arm.finger.ri.L.002
+    Left Ring Proximal: Arm.finger.ri.L.001
+    Left Thumb Intermediate: Arm.thumb.L.002
+    Left Thumb Proximal: Arm.thumb.L.001
+    LeftEye: Head.face.L.001
+    LeftFoot: Leg.foot.L.001
+    LeftHand: Arm.hand.L.001
+    LeftLowerArm: Arm.arm.L.004
+    LeftLowerLeg: Leg.leg.L.004
+    LeftShoulder: Arm.arm.L.001
+    LeftToes: Leg.toes.L.001
+    LeftUpperArm: Arm.arm.L.002
+    LeftUpperLeg: Leg.leg.L.002
+    Neck: Head.neck.001
+    Right Index Intermediate: Arm.finger.in.R.002
+    Right Index Proximal: Arm.finger.in.R.001
+    Right Little Intermediate: Arm.finger.li.R.002
+    Right Little Proximal: Arm.finger.li.R.001
+    Right Middle Intermediate: Arm.finger.mi.R.002
+    Right Middle Proximal: Arm.finger.mi.R.001
+    Right Ring Intermediate: Arm.finger.ri.R.002
+    Right Ring Proximal: Arm.finger.ri.R.001
+    Right Thumb Intermediate: Arm.thumb.R.002
+    Right Thumb Proximal: Arm.thumb.R.001
+    RightFoot: Leg.foot.R.001
+    RightHand: Arm.hand.R.001
+    RightLowerArm: Arm.arm.R.004
+    RightLowerLeg: Leg.leg.R.004
+    RightShoulder: Arm.arm.R.001
+    RightToes: Leg.toes.R.001
+    RightUpperArm: Arm.arm.R.002
+    RightUpperLeg: Leg.leg.R.002
+    Spine: Body.waist.001

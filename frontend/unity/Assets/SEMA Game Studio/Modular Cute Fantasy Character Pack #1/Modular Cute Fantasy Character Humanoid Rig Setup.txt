@@ -1,0 +1,3 @@
+Please refer to this document for Humanoid Rig setup. https://docs.google.com/document/d/1G8pXTdIBzZYaJ_4mjtCehvH0tu8rOxJbtBPC19ua_vw/edit?usp=sharing
+
+Thanks for using our asset. This is an experimental feature and we will continue to improve it in the future. If you have any feedback or suggestions. Please send a message to sema.studio.game@gmail.com. 

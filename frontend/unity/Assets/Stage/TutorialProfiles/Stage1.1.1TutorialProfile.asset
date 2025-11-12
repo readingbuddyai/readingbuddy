@@ -1,0 +1,1017 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d60b2327687708e4b9358231732ccf74, type: 3}
+  m_Name: Stage1.1.1TutorialProfile
+  m_EditorClassIdentifier: 
+  introTutorialImage: {fileID: 0}
+  introOptions:
+  - label: l
+    isCorrect: 0
+  - label: "\u314F"
+    isCorrect: 1
+  guideHideLeadSeconds: 0.5
+  showGuideWhenPanelOff: 1
+  guideShowDelayAfterPanelOff: 0
+  tutorialTriggerThreshold: 0.6
+  tutorialFallbackKey: 32
+  defaultClipGapSeconds: 0.9
+  steps:
+  - name: "\uC2DC\uC791 \uC74C\uC131 \uC548\uB0B4"
+    phase: 0
+    action: 0
+    audioClip: {fileID: 8300000, guid: c95f9dff05d6c9f4f942e5e9b41cbf50, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC2DC\uC791 \uC74C\uC131 \uC548\uB0B4"
+    phase: 0
+    action: 0
+    audioClip: {fileID: 8300000, guid: 8ed62c84e3e862843bade81e59a6d22a, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC2DC\uC791 \uC74C\uC131 \uC548\uB0B4"
+    phase: 0
+    action: 0
+    audioClip: {fileID: 8300000, guid: 9865c4931fdeb3d4b978cf048412db96, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD328\uB110 ON"
+    phase: 1
+    action: 2
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD328\uB110 ON(sound)"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uBE44\uB514\uC624 Play"
+    phase: 1
+    action: 4
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 4fb872f04acc3674f8dc7e702d179e13, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: c84b8d503a69338439c03f6e03ef7825, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uBB38\uC81C \uC74C\uC131"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 8e115db44b631494680217e5a95732ff, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 441ee391bcaa02440b639a8393042d31, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uB2F5\uBCC0 \uC74C\uC131"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: c90439b5bd450b44e8ef4edcfcc8b4f1, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 6697f629d970db941b3d91594f5f0e6b, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC635\uC158 ON"
+    phase: 1
+    action: 6
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uCEE4\uC11C ON"
+    phase: 1
+    action: 8
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 0
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uCEE4\uC11C \uC774\uB3D9"
+    phase: 1
+    action: 9
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 2
+    cursorMoveSeconds: 2
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC815\uB2F5 ON"
+    phase: 1
+    action: 10
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 2
+    cursorMoveSeconds: 2
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC815\uB2F5 \uD6A8\uACFC\uC74C"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC635\uC158 OFF"
+    phase: 1
+    action: 7
+    audioClip: {fileID: 8300000, guid: bacdf2621263c694eb33ba49a2ade75e, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uCEE4\uC11C OFF"
+    phase: 1
+    action: 8
+    audioClip: {fileID: 8300000, guid: bacdf2621263c694eb33ba49a2ade75e, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD328\uB110 OFF"
+    phase: 1
+    action: 3
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 7c9d577f4237d5c4c9d413755bf7d3f9, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 4f1e2059131c75549b293a0a489b8083, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 7ce4411e467a76e4b8b17d1d78f805c7, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uC74C\uC131 \uC548\uB0B4"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: bacdf2621263c694eb33ba49a2ade75e, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD2B8\uB9AC\uAC70 wait"
+    phase: 1
+    action: 11
+    audioClip: {fileID: 8300000, guid: bacdf2621263c694eb33ba49a2ade75e, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD328\uB110 ON"
+    phase: 1
+    action: 2
+    audioClip: {fileID: 8300000, guid: bacdf2621263c694eb33ba49a2ade75e, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uD328\uB110 ON(sound)"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 2
+        outSlope: 2
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
