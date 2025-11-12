@@ -222,6 +222,7 @@ public partial class Stage41Controller : MonoBehaviour
         {
             yield return _tutorialController.RunIntroSequence();
             yield return _tutorialController.RunIntroTutorial();
+            RestoreTutorialChoiceTiles();
         }
         EnsureGameplayUiVisible();
 
@@ -1294,7 +1295,6 @@ public partial class Stage41Controller : MonoBehaviour
         if (jongseongBox) jongseongBox.SetActive(true);
         // choices stay in their current state; they will be shown per-slot when needed
     }
-
 
     // 드래그 타일이 슬롯에 떨어졌을 때 호출 (PhonemeSlotUI에서 연결)
         public void OnUserDrop(int slotIndex, string symbol)
