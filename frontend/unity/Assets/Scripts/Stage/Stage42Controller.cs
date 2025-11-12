@@ -8,7 +8,7 @@ using UnityEngine.SceneManagement;
 using TMPro;
 
 // Stage 4.2 Controller (합성 마법)
-public class Stage42Controller : MonoBehaviour
+public partial class Stage42Controller : MonoBehaviour
 {
     [Header("API 설정")]
     public string baseUrl = "https://readingbuddyai.co.kr";
@@ -24,6 +24,7 @@ public class Stage42Controller : MonoBehaviour
     public TMP_Text progressText;
     public Image guideImage;
     public RectTransform guideRect;
+    public GameObject guide3DCharacter;
     public TMP_Text wordText;
     public TMP_Text choseongText;
     public TMP_Text jungseongText;
@@ -35,6 +36,20 @@ public class Stage42Controller : MonoBehaviour
     public GameObject choicesContainer;
     public GameObject consonantChoicesContainer;
     public GameObject vowelChoicesContainer;
+
+    [Header("추가 학습 시나리오")]
+    public AudioClip clipRemedialNeedPractice;
+    public AudioClip clipRemedialPracticeIntro;
+    public AudioClip clipRemedialFirstEncourage;
+    public AudioClip clipRemedialSecondEncourage;
+    public AudioClip clipRemedialPerfect;
+    public AudioClip clipRemedialNextLesson;
+    [Tooltip("격려 멘트 후 대기 시간(초)")]
+    public float remedialEncouragePauseSeconds = 3f;
+
+    [Header("추가 학습 리소스")]
+    public Image remedialImage;
+    public List<RemedialPracticeResource> remedialResources = new List<RemedialPracticeResource>();
 
     [Header("가이드 이동")]
     public Vector2 guideStartSize = new Vector2(1500, 1500);
@@ -84,7 +99,7 @@ public class Stage42Controller : MonoBehaviour
     public float blinkPeriod = 0.6f;
 
     [Header("통신/로깅")]
-    public bool bypassStartRequest = true;
+    public bool bypassStartRequest = false;
     public bool logVerbose = true;
     [Tooltip("[4.2.11] 구간에서 check/voice POST 전송 여부 (테스트용)")]
     public bool enableVoicePost = true;
@@ -147,8 +162,19 @@ public class Stage42Controller : MonoBehaviour
         {
             Debug.Log($"[Stage42] Start baseUrl='{baseUrl}', stageSet='{stageSet}', stageTwoPart='{stageTwoPart}', count={count}, bypassStartRequest={bypassStartRequest}");
         }
+        ConfigureStageModules();
+        _tutorialController?.PrepareForStageStart();
+
         ResetUI();
         StartCoroutine(RunStage());
+    }
+
+    private void EnsureGameplayUiVisible()
+    {
+        if (choseongBox) choseongBox.SetActive(true);
+        if (jungseongBox) jungseongBox.SetActive(true);
+        if (jongseongBox) jongseongBox.SetActive(true);
+        // choices remain hidden until the stage logic explicitly shows them
     }
 
     private void ResetUI()
@@ -158,10 +184,18 @@ public class Stage42Controller : MonoBehaviour
         if (choseongText) choseongText.text = string.Empty;
         if (jungseongText) jungseongText.text = string.Empty;
         if (jongseongText) jongseongText.text = string.Empty;
+        if (choseongBox) choseongBox.SetActive(true);
+        if (jungseongBox) jungseongBox.SetActive(true);
+        if (jongseongBox) jongseongBox.SetActive(true);
         if (micIndicator) micIndicator.SetActive(false);
         if (choicesContainer) choicesContainer.SetActive(false);
         if (consonantChoicesContainer) consonantChoicesContainer.SetActive(false);
         if (vowelChoicesContainer) vowelChoicesContainer.SetActive(false);
+        if (remedialImage)
+        {
+            remedialImage.enabled = false;
+            remedialImage.sprite = null;
+        }
         FocusBox(null);
         SetAllBoxAlpha(dimAlpha);
     }
@@ -169,20 +203,36 @@ public class Stage42Controller : MonoBehaviour
     private IEnumerator RunStage()
     {
         // 도입
+        _tutorialController?.ResetAfterStageRestart();
         yield return PlayClip(sfxStart);
+        if (_tutorialController != null)
+        {
+            yield return _tutorialController.RunIntroSequence();
+            yield return _tutorialController.RunIntroTutorial();
+        }
+        EnsureGameplayUiVisible();
         yield return PlayClip(clipIntroCompositeMagic);   // [4.2.1]
         yield return PlayClip(clipIntroListenAndChoose);  // [4.2.2]
         yield return PlayClip(clipIntroMakeStrongSpell);  // [4.2.3]
 
         // Ensure session for set API (stageSessionId is required by server)
-        if (string.IsNullOrWhiteSpace(stageSessionId))
+        if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
             yield return StartStageSession();
+
+        _supplementController?.Clear();
 
         // 문제 세트 요청
         List<QuestionDto> questions = null;
         if (logVerbose) Debug.Log("[Stage42] Fetching questions via set API...");
         yield return StartCoroutine(FetchQuestions(result => questions = result));
-        if (questions == null || questions.Count == 0) yield break;
+        if (questions == null || questions.Count == 0)
+        {
+            _supplementQuestionController.SetQuestions(null);
+            yield break;
+        }
+
+        UpdateSupplementQuestions(questions);
+        _questionController.SetQuestions(questions);
 
         if ((!_guideMoved || enableGuideMoveBetweenQuestions) && guideRect)
             yield return MoveGuideToCorner();
@@ -245,7 +295,12 @@ public class Stage42Controller : MonoBehaviour
         if (clipNextTraining) yield return PlayClip(clipNextTraining);     // [4.2.10]
         // After all training lines, complete the stage session
         if (!string.IsNullOrWhiteSpace(stageSessionId))
+        {
+            _supplementController?.Clear();
             yield return CompleteStageSession();
+            if (_supplementController != null && _supplementController.RemedialPhonemes.Count > 0)
+                yield return RunRemedialSequence();
+        }
 
         // Show end panel for user choice (restart/lobby)
         ShowEndPanel();
@@ -824,8 +879,11 @@ public class Stage42Controller : MonoBehaviour
         // Ensure stage session exists before upload to avoid 403
         if (string.IsNullOrWhiteSpace(stageSessionId))
         {
-            if (logVerbose) Debug.Log("[Stage42] stageSessionId is empty; attempting stage/start...");
-            yield return StartStageSession();
+            if (!bypassStartRequest)
+            {
+                if (logVerbose) Debug.Log("[Stage42] stageSessionId is empty; attempting stage/start...");
+                yield return StartStageSession();
+            }
             if (string.IsNullOrWhiteSpace(stageSessionId))
             {
                 if (logVerbose) Debug.LogWarning("[Stage42] stage/start failed or no sessionId; skipping check/voice upload.");
@@ -851,6 +909,12 @@ public class Stage42Controller : MonoBehaviour
         Microphone.End(null);
 
         var wav = WavUtility.FromAudioClip(clip);
+        yield return UploadVoiceWithSession(_currentProblemWord ?? string.Empty, wav, ok =>
+        {
+            if (logVerbose) Debug.Log($"[Stage42] check/voice result={ok}");
+        });
+        yield break;
+#if LEGACY_STAGE42_FALLBACK
         string url = ComposeUrl($"/api/train/check/voice?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}&stage={UnityWebRequest.EscapeURL(stageTwoPart ?? string.Empty)}&problemNumber={Mathf.Max(1, _currentProblemNumber)}&answer={UnityWebRequest.EscapeURL(_currentProblemWord ?? string.Empty)}");
         if (logVerbose) Debug.Log($"[Stage42] POST {url} (multipart audio/wav)");
         var form = new WWWForm();
@@ -861,6 +925,7 @@ public class Stage42Controller : MonoBehaviour
             yield return req.SendWebRequest();
             if (logVerbose) Debug.Log($"[Stage42] check/voice resp: code={req.responseCode} body={req.downloadHandler?.text}");
         }
+#endif
     }
 
     private AudioClip StartMic(int seconds, int sampleRate)
@@ -948,8 +1013,11 @@ public class Stage42Controller : MonoBehaviour
 
     private IEnumerator FetchQuestions(Action<List<QuestionDto>> onDone)
     {
+        yield return FetchQuestionsWithSession(onDone);
+        yield break;
+#if LEGACY_STAGE42_FALLBACK
         string url = ComposeUrl($"/api/train/set?stage={UnityWebRequest.EscapeURL(stageSet)}&count={count}&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId ?? string.Empty)}");
-        if (logVerbose) Debug.Log($"[Stage42] GET {url}");
+        if (logVerbose) Debug.Log($"[Stage42] set 요청: {url}");
         using (var req = UnityWebRequest.Get(url))
         {
             ApplyCommonHeaders(req);
@@ -962,12 +1030,19 @@ public class Stage42Controller : MonoBehaviour
                 var parsed = JsonUtility.FromJson<QuestionListResponse>(req.downloadHandler.text);
                 onDone?.Invoke(parsed?.data?.problems);
             }
-            catch { onDone?.Invoke(null); }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[Stage42] set 응답 파싱 실패: {e.Message}\nRaw={req.downloadHandler.text}");
+            }
         }
+#endif
     }
 
     private IEnumerator StartStageSession()
     {
+        yield return StartStageSessionWithSession();
+        yield break;
+#if LEGACY_STAGE42_FALLBACK
         string url = ComposeUrl($"/api/train/stage/start?stage={UnityWebRequest.EscapeURL(stageTwoPart)}&totalProblems={count}");
         if (logVerbose) Debug.Log($"[Stage42] POST {url}");
         using (var req = UnityWebRequest.PostWwwForm(url, ""))
@@ -982,12 +1057,19 @@ public class Stage42Controller : MonoBehaviour
                     stageSessionId = resp.data.stageSessionId;
                 if (logVerbose) Debug.Log($"[Stage42] stage/start resp: code={req.responseCode} body={req.downloadHandler?.text}");
             }
-            catch { }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[Stage42] stage/start 파싱 실패: {e.Message}\nRaw={req.downloadHandler.text}");
+            }
         }
+#endif
     }
 
     private IEnumerator CompleteStageSession()
     {
+        yield return CompleteStageSessionWithSession();
+        yield break;
+#if LEGACY_STAGE42_FALLBACK
         if (string.IsNullOrWhiteSpace(stageSessionId)) yield break;
         string url = ComposeUrl($"/api/train/stage/complete?stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}");
         if (logVerbose) Debug.Log($"[Stage42] POST {url}");
@@ -997,6 +1079,7 @@ public class Stage42Controller : MonoBehaviour
             yield return req.SendWebRequest();
             if (logVerbose) Debug.Log($"[Stage42] stage/complete resp: code={req.responseCode} body={req.downloadHandler?.text}");
         }
+#endif
     }
 
     // ===== Phoneme normalization (초/중/종 비교를 안정적으로) =====
@@ -1063,6 +1146,13 @@ public class Stage42Controller : MonoBehaviour
         s = s.Replace("ㄹㅎ", "ㅀ");
         s = s.Replace("ㅂㅅ", "ㅄ");
         return s;
+    }
+
+    private IEnumerator RunRemedialSequence()
+    {
+        if (_supplementController == null)
+            yield break;
+        yield return _supplementController.RunRemedialSequence();
     }
 }
 
