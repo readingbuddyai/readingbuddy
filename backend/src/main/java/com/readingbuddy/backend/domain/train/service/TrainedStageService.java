@@ -1,5 +1,6 @@
 package com.readingbuddy.backend.domain.train.service;
 
+import com.readingbuddy.backend.common.util.function.HangulChecker;
 import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.entity.TrainProblemHistoriesKcMap;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
@@ -116,7 +117,12 @@ public class TrainedStageService {
                 .solvedAt(LocalDateTime.now())
                 .build();
 
-        attempt = trainedProblemHistoriesRepository.save(attempt);
+        long attemptId = 0L;
+        boolean isStage4JamoOnly = (request.getStage().equals("4.1")
+                && HangulChecker.classify(request.getProblem()).equals("JAMO_ONLY"));
+        if (!isStage4JamoOnly) {
+            attempt = trainedProblemHistoriesRepository.save(attempt);
+        }
 
         // BKT 업데이트 및 KC 매핑 저장 (isCorrect가 있을 때만)
         if (request.getIsCorrect() != null && kcId != null) {
@@ -138,7 +144,7 @@ public class TrainedStageService {
         else if (Boolean.FALSE.equals(request.getIsCorrect())) stage.updateWrongCount();
 
         return AttemptResponse.builder()
-                .attemptId(attempt.getId())
+                .attemptId(attemptId)
                 .stageSessionId(stageSessionId)
                 .problemNumber(attempt.getProblemNumber())
                 .stage(stage.getStage())

@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class StageInfoResponse {
 
     private String stage;
-    private Integer totalTryCount;
-    private Integer totalCorrectCount;
-    private Integer totalWrongCount;
+    private Integer totalProblemCount;
+    private Integer correctProblemCount;
+    private Double correctRate;
 }
