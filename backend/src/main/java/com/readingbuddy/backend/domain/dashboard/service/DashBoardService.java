@@ -1,6 +1,8 @@
 package com.readingbuddy.backend.domain.dashboard.service;
 
 import com.readingbuddy.backend.domain.dashboard.dto.response.*;
+import com.readingbuddy.backend.domain.dashboard.dto.response.StageKcMasteryTrendResponse.KcTrend;
+import com.readingbuddy.backend.domain.dashboard.dto.response.StageKcMasteryTrendResponse.MasteryPoint;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
 import com.readingbuddy.backend.domain.user.entity.TrainedStageHistories;
@@ -397,6 +399,60 @@ public class DashBoardService {
         return StageProblemListResponse.builder()
                 .date(date)
                 .session(sessionInfos)
+                .build();
+    }
+
+    /**
+     * 특정 stage에 속한 모든 KC의 숙련도 변화 추이 조회
+     * @param userId 사용자 ID
+     * @param stage 스테이지 정보
+     * @param startDate 조회 시작 날짜
+     * @param endDate 조회 종료 날짜
+     * @return stage별 모든 KC의 숙련도 변화 추이
+     */
+    public StageKcMasteryTrendResponse getStageKcMasteryTrend(Long userId, String stage, LocalDate startDate, LocalDate endDate) {
+        // 해당 stage에 속한 모든 KC 조회
+        List<KnowledgeComponent> kcs = knowledgeComponentRepository.findByStage(stage);
+
+        if (kcs.isEmpty()) {
+            throw new IllegalArgumentException("해당 stage에 대한 Knowledge Component가 존재하지 않습니다: " + stage);
+        }
+
+        // LocalDate를 LocalDateTime으로 변환
+        LocalDateTime startDateTime = startDate.atStartOfDay();
+        LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
+
+        // 각 KC의 숙련도 변화 추이 조회
+        List<KcTrend> kcTrends = kcs.stream()
+                .map(kc -> {
+                    // 해당 KC의 기간 내 모든 숙련도 이력 조회
+                    List<UserKcMastery> masteryHistory = userKcMasteryRepository
+                            .findByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtAsc(
+                                    userId, kc.getId(), startDateTime, endDateTime);
+
+                    // MasteryPoint 리스트로 변환
+                    List<MasteryPoint> masteryTrend = masteryHistory.stream()
+                            .map(mastery -> MasteryPoint.builder()
+                                    .pLearn(mastery.getPLearn())
+                                    .pTrain(mastery.getPTrain())
+                                    .pGuess(mastery.getPGuess())
+                                    .pSlip(mastery.getPSlip())
+                                    .updatedAt(mastery.getUpdatedAt())
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    return KcTrend.builder()
+                            .kcId(kc.getId())
+                            .kcCategory(kc.getCategory().name())
+                            .kcDescription(kc.getCategory().getDescription())
+                            .masteryTrend(masteryTrend)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return StageKcMasteryTrendResponse.builder()
+                .stage(stage)
+                .kcTrends(kcTrends)
                 .build();
     }
 
