@@ -456,4 +456,73 @@ public class DashBoardService {
                 .build();
     }
 
+    /**
+     * 모든 KC의 평균 숙련도 조회
+     * @param userId 사용자 ID
+     * @return 모든 KC의 현재 숙련도 및 전체 평균
+     */
+    public AllKcAverageMasteryResponse getAllKcAverageMastery(Long userId) {
+        // 모든 KC 조회
+        List<KnowledgeComponent> allKcs = knowledgeComponentRepository.findAll();
+
+        if (allKcs.isEmpty()) {
+            return AllKcAverageMasteryResponse.builder()
+                    .totalKcCount(0)
+                    .overallAverageMastery(0.0)
+                    .kcMasteries(List.of())
+                    .build();
+        }
+
+        // 각 KC의 최신 숙련도 조회
+        List<AllKcAverageMasteryResponse.KcMasteryInfo> kcMasteries = allKcs.stream()
+                .map(kc -> {
+                    Optional<UserKcMastery> latestMastery = userKcMasteryRepository
+                            .findFirstByUser_IdAndKnowledgeComponent_IdOrderByCreatedAtDesc(userId, kc.getId());
+
+                    // 숙련도 데이터가 없는 경우 기본값 (초기 상태)
+                    if (latestMastery.isEmpty()) {
+                        return AllKcAverageMasteryResponse.KcMasteryInfo.builder()
+                                .kcId(kc.getId())
+                                .kcCategory(kc.getCategory().name())
+                                .kcDescription(kc.getCategory().getDescription())
+                                .stage(kc.getStage())
+                                .pLearn(0.0f)
+                                .pTrain(0.0f)
+                                .pGuess(0.0f)
+                                .pSlip(0.0f)
+                                .updatedAt(null)
+                                .build();
+                    }
+
+                    UserKcMastery mastery = latestMastery.get();
+                    return AllKcAverageMasteryResponse.KcMasteryInfo.builder()
+                            .kcId(kc.getId())
+                            .kcCategory(kc.getCategory().name())
+                            .kcDescription(kc.getCategory().getDescription())
+                            .stage(kc.getStage())
+                            .pLearn(mastery.getPLearn())
+                            .pTrain(mastery.getPTrain())
+                            .pGuess(mastery.getPGuess())
+                            .pSlip(mastery.getPSlip())
+                            .updatedAt(mastery.getUpdatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        // 전체 평균 숙련도 계산
+        double overallAverage = kcMasteries.stream()
+                .mapToDouble(AllKcAverageMasteryResponse.KcMasteryInfo::getPLearn)
+                .average()
+                .orElse(0.0);
+
+        // 소수점 4자리까지 반올림
+        overallAverage = Math.round(overallAverage * 10000.0) / 10000.0;
+
+        return AllKcAverageMasteryResponse.builder()
+                .totalKcCount(allKcs.size())
+                .overallAverageMastery(overallAverage)
+                .kcMasteries(kcMasteries)
+                .build();
+    }
+
 }
