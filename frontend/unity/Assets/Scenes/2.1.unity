@@ -765,6 +765,7 @@ MonoBehaviour:
     handCursor: {fileID: 0}
     wrongOptionTransform: {fileID: 0}
     correctOptionTransform: {fileID: 0}
+    doneButtonTransform: {fileID: 0}
     wrongHoverSeconds: 1
     correctHoverSeconds: 1
     cursorMoveSeconds: 0.35
@@ -991,6 +992,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 292623781034508931, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
       propertyPath: m_ChildForceExpandHeight
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2847660726585074980, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3036217699121029600, guid: 68dd5a39b82ea7947bfb1a4e2d72737d, type: 3}

@@ -31,6 +31,14 @@ public partial class Stage41Controller
     private StageSessionController.StageCompleteResult _lastCompleteResult;
     private readonly StageQuestionController<QuestionDto> _questionController = new StageQuestionController<QuestionDto>();
     private readonly StageQuestionController<StageQuestionModels.QuestionDto> _supplementQuestionController = new StageQuestionController<StageQuestionModels.QuestionDto>();
+    private readonly Dictionary<RectTransform, TutorialChoicePlacement> _tutorialChoicePlacements = new Dictionary<RectTransform, TutorialChoicePlacement>();
+
+    private class TutorialChoicePlacement
+    {
+        public Transform Parent;
+        public int SiblingIndex;
+        public Vector3 LocalScale;
+    }
 
     private void ConfigureStageModules()
     {
@@ -126,7 +134,55 @@ public partial class Stage41Controller
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
         _tutorialController.guide3DCharacter = guide3DCharacter;
+
         _tutorialController.Initialize(_tutorialDependencies);
+    }
+
+    private void StoreTutorialChoicePlacement(RectTransform tile, Transform parent, int siblingIndex, Vector3 localScale)
+    {
+        if (tile == null || parent == null)
+            return;
+        if (_tutorialChoicePlacements.ContainsKey(tile))
+            return;
+
+        _tutorialChoicePlacements[tile] = new TutorialChoicePlacement
+        {
+            Parent = parent,
+            SiblingIndex = siblingIndex,
+            LocalScale = localScale
+        };
+    }
+
+    private void RestoreTutorialChoiceTiles()
+    {
+        foreach (var kv in _tutorialChoicePlacements)
+        {
+            var rect = kv.Key;
+            var placement = kv.Value;
+            if (rect == null || placement == null || placement.Parent == null)
+                continue;
+
+            rect.SetParent(placement.Parent, false);
+            int maxIndex = Mathf.Max(0, rect.parent.childCount - 1);
+            rect.SetSiblingIndex(Mathf.Clamp(placement.SiblingIndex, 0, maxIndex));
+            rect.localScale = placement.LocalScale;
+            rect.anchoredPosition = Vector2.zero;
+        }
+
+        ForceRefreshContainerLayout(choicesContainer);
+        ForceRefreshContainerLayout(consonantChoicesContainer);
+        ForceRefreshContainerLayout(vowelChoicesContainer);
+    }
+
+    private void ForceRefreshContainerLayout(GameObject container)
+    {
+        if (container == null)
+            return;
+        var rt = container.GetComponent<RectTransform>();
+        if (rt == null)
+            return;
+        Canvas.ForceUpdateCanvases();
+        LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
     }
 
     private void ConfigureSupplementController()
@@ -276,11 +332,11 @@ public partial class Stage41Controller
         switch (target)
         {
             case StageTutorialSlotTarget.Choseong:
-                return choseongBox != null ? choseongBox.GetComponent<RectTransform>() : null;
+                return choseongText != null ? choseongText.rectTransform : (choseongBox != null ? choseongBox.GetComponent<RectTransform>() : null);
             case StageTutorialSlotTarget.Jungseong:
-                return jungseongBox != null ? jungseongBox.GetComponent<RectTransform>() : null;
+                return jungseongText != null ? jungseongText.rectTransform : (jungseongBox != null ? jungseongBox.GetComponent<RectTransform>() : null);
             case StageTutorialSlotTarget.Jongsung:
-                return jongseongBox != null ? jongseongBox.GetComponent<RectTransform>() : null;
+                return jongseongText != null ? jongseongText.rectTransform : (jongseongBox != null ? jongseongBox.GetComponent<RectTransform>() : null);
             default:
                 return null;
         }
@@ -428,9 +484,15 @@ public partial class Stage41Controller
 
         Transform originalParent = tile.parent;
         int originalIndex = tile.GetSiblingIndex();
+        Vector3 originalScale = tile.localScale;
+        StoreTutorialChoicePlacement(tile, originalParent, originalIndex, originalScale);
         Vector3 startPos = tile.position;
         Vector3 endPos = slot.position;
         float duration = Mathf.Max(0.01f, seconds);
+
+        var dragRoot = choicesContainer != null ? choicesContainer.transform : tile.parent;
+        if (dragRoot != null)
+            tile.SetParent(dragRoot, true);
 
         float elapsed = 0f;
         while (elapsed < duration)
@@ -458,10 +520,12 @@ public partial class Stage41Controller
             tile.position = startPos;
             tile.SetParent(originalParent, false);
             tile.SetSiblingIndex(originalIndex);
+            tile.localScale = originalScale;
         }
         else
         {
             tile.SetParent(slot, false);
+            tile.localScale = Vector3.one;
             tile.anchoredPosition = Vector2.zero;
         }
     }

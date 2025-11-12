@@ -544,7 +544,7 @@ MonoBehaviour:
   - name: "\uC624\uB2F5 \uD6A8\uACFC\uC74C"
     phase: 1
     action: 0
-    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    audioClip: {fileID: 8300000, guid: 14d3c89fab6d2464bbaa8a2ba02cd15b, type: 3}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
