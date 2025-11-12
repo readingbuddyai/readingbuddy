@@ -71,4 +71,5 @@ public class TrainedStageHistories {
     public void updateWrongCount() {
         this.wrongCount = this.wrongCount + 1;
     }
+
 }

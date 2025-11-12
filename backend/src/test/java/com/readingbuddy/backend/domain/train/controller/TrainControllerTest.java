@@ -217,7 +217,7 @@ class TrainControllerTest {
         assertEquals(HttpStatus.OK, result.getStatusCode());
 
         verify(trainedStageService, times(1)).getLastPlayedStage(testUserId);
-        verify(trainedStageService, never()).startStage(anyLong(), anyString(), anyInt());
+        verify(trainedStageService, never()).startStage(anyLong(), anyString());
         verify(trainedStageService, never()).completeStage(anyString());
     }
 }
