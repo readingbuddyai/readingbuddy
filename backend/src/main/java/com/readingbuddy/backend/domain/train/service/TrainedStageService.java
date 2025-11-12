@@ -48,7 +48,7 @@ public class TrainedStageService {
      * Stage 시작 - 새로운 훈련 세션 생성
      * TrainManager의 generateQuestionSession()을 사용하여 sessionKey 생성
      */
-    public StageStartResponse startStage(Long userId, String stage, Integer totalProblems) {
+    public StageStartResponse startStage(Long userId, String stage) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("회원을 찾을 수 없습니다: " + userId));
@@ -57,7 +57,7 @@ public class TrainedStageService {
         TrainedStageHistories createStage = TrainedStageHistories.builder()
                 .user(user)
                 .stage(stage)
-                .totalCount(totalProblems)
+                .totalCount(0)
                 .correctCount(0)
                 .wrongCount(0)
                 .tryCount(0)
