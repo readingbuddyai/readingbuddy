@@ -209,6 +209,7 @@ public partial class Stage42Controller : MonoBehaviour
         {
             yield return _tutorialController.RunIntroSequence();
             yield return _tutorialController.RunIntroTutorial();
+            RestoreTutorialChoiceTiles();
         }
         EnsureGameplayUiVisible();
         yield return PlayClip(clipIntroCompositeMagic);   // [4.2.1]
