@@ -334,8 +334,8 @@ MonoBehaviour:
   homeSceneName: Home
   apiBaseUrl: https://readingbuddyai.co.kr
   lastStageEndpoint: /api/train/last/stage
-  tokenPlayerPrefsKey: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IjEyMyIsImlhdCI6MTc2MjgzMzY0OSwiZXhwIjoxNzYyOTIwMDQ5fQ.uL9HmphryAKCcytF4aSlf0QU6oyydJWs4lpVGp-skBqGL4J3jJ_pRAsmpcZqpn7U
-  debugToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiNSIsInVzZXJfZW1haWwiOiIxQDEuY29tIiwidXNlcl9uaWNrbmFtZSI6IjEyMyIsImlhdCI6MTc2MjgzMzY0OSwiZXhwIjoxNzYyOTIwMDQ5fQ.uL9HmphryAKCcytF4aSlf0QU6oyydJWs4lpVGp-skBqGL4J3jJ_pRAsmpcZqpn7U
+  tokenPlayerPrefsKey: 
+  debugToken: 
   stageCacheKey: lastStage
   mageRef: {fileID: 0}
   stage2Ref: {fileID: 0}

@@ -2066,7 +2066,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 844bfcf336c456c4886e6fcc4e70eabc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  baseUrl: 
+  baseUrl: https://readingbuddyai.co.kr
   deviceCodeText: {fileID: 0}
   statusText: {fileID: 0}
   retryButton: {fileID: 0}
