@@ -2,18 +2,11 @@ package com.readingbuddy.backend.domain.dashboard.controller;
 
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageCorrectRateResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageInfoResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageTryAvgResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.KcMasteryTrendResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageMasteryResponse;
+import com.readingbuddy.backend.domain.dashboard.dto.response.*;
 import com.amazonaws.Response;
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesTryRankResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
 import com.readingbuddy.backend.domain.dashboard.service.DashBoardService;
-import com.readingbuddy.backend.domain.dashboard.dto.response.AttendanceResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -328,6 +321,33 @@ public class DashBoardController {
 
         List<PhonemesTryRankResponse> ranking = dashBoardService.getTryPhonemesRanking(userId, limit);
         return ResponseEntity.ok(ApiResponse.success("시도 횟수가 많은 음소 랭킹이 조회되었습니다.", ranking));
+    }
+
+    /**
+     * 특정 날짜의 훈련 기록 조회 API
+     */
+    @GetMapping("/practice/list")
+    public ResponseEntity<ApiResponse<StageProblemListResponse>> getStageProblemListByDate(
+            @AuthenticationPrincipal CustomUserDetails customUserDetails,
+            @RequestParam("date") String date) {
+
+        try {
+            Long userId = customUserDetails.getId();
+            LocalDate parsedDate = parseDate(date);
+
+            StageProblemListResponse response = dashBoardService.getStageProblemListByDate(userId, parsedDate);
+
+            return ResponseEntity.ok(ApiResponse.success("일별 훈련 기록이 조회되었습니다.", response));
+
+        } catch (DateTimeParseException e) {
+            log.error("날짜 형식 오류", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("날짜 형식이 올바르지 않습니다. yyMMdd 형식으로 입력해주세요. (예: 250111)"));
+        }  catch (Exception e) {
+            log.error("일별 훈련 기록 조회 중 오류 발생", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("일별 훈련 기록 조회 중 오류가 발생했습니다." + e.getMessage()));
+        }
     }
 
 
