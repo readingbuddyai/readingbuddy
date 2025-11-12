@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -54,5 +55,21 @@ public interface TrainedStageHistoriesRepository extends JpaRepository<TrainedSt
         """,
         nativeQuery = true)
     Double getAverageTryCountPerProblem(@Param("userId") Long userId, @Param("stage") String stage);
+
+    /**
+     * 특정 날짜에 시작된 훈련 세션 조회
+     */
+    @Query("""
+            SELECT tsh
+            FROM TrainedStageHistories tsh
+            WHERE tsh.user.id = :userId
+            AND tsh.startedAt >= :startDate
+            AND tsh.startedAt <= :endDate
+            ORDER BY tsh.startedAt ASC
+            """)
+    List<TrainedStageHistories> getStageProblemListByDate(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 
 }
