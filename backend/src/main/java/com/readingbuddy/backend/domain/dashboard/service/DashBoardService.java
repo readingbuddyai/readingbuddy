@@ -1,19 +1,16 @@
 package com.readingbuddy.backend.domain.dashboard.service;
 
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageCorrectRateResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageInfoResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageTryAvgResponse;
+import com.readingbuddy.backend.domain.dashboard.dto.response.*;
 import com.readingbuddy.backend.domain.train.repository.TrainedStageHistoriesRepository;
+import com.readingbuddy.backend.domain.user.entity.TrainedProblemHistories;
 import com.readingbuddy.backend.domain.user.entity.TrainedStageHistories;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
-import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesTryRankResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.PhonemesWrongRankResponse;
+
 import com.readingbuddy.backend.domain.dashboard.repository.AttendanceHistoriesRepository;
-import com.readingbuddy.backend.domain.dashboard.dto.response.AttendanceResponse;
 import com.readingbuddy.backend.domain.train.repository.TrainedProblemHistoriesRepository;
 import com.readingbuddy.backend.domain.user.entity.AttendHistories;
 
@@ -21,8 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.stream.Collectors;
-import com.readingbuddy.backend.domain.dashboard.dto.response.KcMasteryTrendResponse;
-import com.readingbuddy.backend.domain.dashboard.dto.response.StageMasteryResponse;
+
 import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
 import com.readingbuddy.backend.domain.bkt.entity.KnowledgeComponent;
 import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
@@ -101,37 +97,30 @@ public class DashBoardService {
     }
 
     /**
-     * 사용자별 해당 스테이지의 평균 시도 횟수 조회
+     * 사용자별 해당 스테이지의 problem_number별 평균 시도 횟수 조회
      * @param userId 사용자 ID
      * @param stage 스테이지 정보
-     * @return 스테이지 평균 시도 횟수
+     * @return 스테이지의 problem_number별 평균 시도 횟수
      */
     public StageTryAvgResponse getStageTryAverage(Long userId, String stage) {
-        // 해당 사용자의 특정 스테이지에 대한 모든 기록 조회
+        // 해당 사용자의 특정 스테이지에 대한 모든 기록 조회 (세션 수 계산용)
         List<TrainedStageHistories> histories = trainedStageHistoriesRepository.findByUserIdAndStage(userId, stage);
 
-        // 세션이 없는 경우
-        if (histories.isEmpty()) {
+        // problem_number별 평균 시도 횟수 조회
+        Double averageTryCount = trainedStageHistoriesRepository.getAverageTryCountPerProblem(userId, stage);
+
+        // 데이터가 없는 경우
+        if (averageTryCount == null) {
             return StageTryAvgResponse.builder()
                     .stage(stage)
                     .averageTryCount(0.0)
-                    .totalSessions(0)
+                    .totalSessions(histories.size())
                     .build();
         }
 
-        // 평균 계산
-        int totalTryCount = 0;
-        for (TrainedStageHistories history : histories) {
-            if (history.getTryCount() != null) {
-                totalTryCount += history.getTryCount();
-            }
-        }
-
-        double average = (double) totalTryCount / histories.size();
-
         return StageTryAvgResponse.builder()
                 .stage(stage)
-                .averageTryCount(Math.round(average * 100.0) / 100.0) // 소수점 2자리까지
+                .averageTryCount(Math.round(averageTryCount * 100.0) / 100.0) // 소수점 2자리까지
                 .totalSessions(histories.size())
                 .build();
     }
@@ -350,6 +339,59 @@ public class DashBoardService {
                 .stage(stage)
                 .kcMasteries(kcMasteries)
                 .averageMastery(averageMastery)
+                .build();
+    }
+
+    /**
+     * 특정 날짜의 훈련 기록 조회
+     */
+    public StageProblemListResponse getStageProblemListByDate(Long userId, LocalDate date) {
+        // 날짜 범위 설정 (해당 날짜의 00:00:00 ~ 23:59:59)
+        LocalDateTime startDateTime = date.atStartOfDay();
+        LocalDateTime endDateTime = date.atTime(LocalTime.MAX);
+
+        // 해당 날짜의 모든 훈련 세션 조회
+        List<TrainedStageHistories> sessions = trainedStageHistoriesRepository
+                .getStageProblemListByDate(userId, startDateTime, endDateTime);
+
+        // 세션별로 문제 정보 조회 및 변환
+        List<StageProblemListResponse.SessionInfo> sessionInfos = sessions.stream()
+                .map(stage -> {
+                    // 해당 세션의 모든 문제 이력 조회
+                    List<TrainedProblemHistories> problems = trainedProblemHistoriesRepository
+                            .findByTrainedStageHistories(stage);
+
+                    // 문제 정보를 DTO로 변환
+                    List<StageProblemListResponse.ProblemInfo> problemInfos = problems.stream()
+                            .map(problem -> StageProblemListResponse.ProblemInfo.builder()
+                                    .problemId(problem.getId())
+                                    .problemNumber(problem.getProblemNumber())
+                                    .problem(problem.getProblem())
+                                    .answer(problem.getAnswer())
+                                    .isCorrect(problem.getIsCorrect())
+                                    .isReplyCorrect(problem.getIsReplyCorrect())
+                                    .attemptNumber(problem.getAttemptNumber())
+                                    .audioUrl(problem.getAudioUrl())
+                                    .solvedAt(problem.getSolvedAt())
+                                    .build())
+                            .sorted((p1, p2) -> p1.getProblemNumber().compareTo(p2.getProblemNumber()))
+                            .collect(Collectors.toList());
+
+                    // 세션 정보 생성
+                    return StageProblemListResponse.SessionInfo.builder()
+                            .trainedStageHistoryId(stage.getId())
+                            .stage(stage.getStage())
+                            .startedAt(stage.getStartedAt())
+                            .totalCount(stage.getTotalCount())
+                            .correctCount(stage.getCorrectCount())
+                            .wrongCount(stage.getWrongCount())
+                            .problems(problemInfos)
+                            .build();
+                }).collect(Collectors.toList());
+
+        return StageProblemListResponse.builder()
+                .date(date)
+                .session(sessionInfos)
                 .build();
     }
 

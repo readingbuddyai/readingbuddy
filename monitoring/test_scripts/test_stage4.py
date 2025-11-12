@@ -61,6 +61,19 @@ attempt_total = Counter(
 attempt_accuracy = Gauge(
     'stage4_attempt_accuracy',
     'Problem attempt accuracy for Stage 4',
+)
+
+# Counter: Attempt API 요청 총 횟수를 카운트
+attempt_request_total = Counter(
+    'stage4_attempt_request_total',
+    'Total attempt requests for Stage 4',
+    ['stage', 'status']
+)
+
+# Histogram: Attempt API 응답 시간 분포를 측정
+attempt_request_duration = Histogram(
+    'stage4_attempt_request_duration_seconds',
+    'Attempt API request duration for Stage 4',
     ['stage']
 )
 
@@ -152,14 +165,19 @@ class TrainTester:
         start_time = time.time()
 
         try:
+            url = f"{self.base_url}/api/train/stage/start"
+            params = {
+                'stage': stage,
+                'totalProblems': total_problems
+            }
+
+            # 디버깅: 요청 정보 출력
+            print(f"  요청 URL: {url}")
+            print(f"  파라미터: {params}")
+            print(f"  헤더: Authorization = Bearer {self.token[:20] if self.token else 'None'}...")
+
             # POST /api/train/stage/start 호출
-            response = self.session.post(
-                f"{self.base_url}/api/train/stage/start",
-                params={
-                    'stage': stage,
-                    'totalProblems': total_problems
-                }
-            )
+            response = self.session.post(url, params=params)
 
             # 응답 시간 계산
             duration = time.time() - start_time
@@ -189,7 +207,13 @@ class TrainTester:
                 ).inc()
 
                 self.print_error(f"Stage 시작 실패: {response.status_code}")
-                print(f"응답: {response.text}")
+                print(f"응답 본문: {response.text}")
+                try:
+                    error_data = response.json()
+                    print(f"에러 메시지: {error_data.get('message', 'N/A')}")
+                    print(f"에러 상세: {error_data}")
+                except:
+                    pass
                 return None
 
         except Exception as e:
@@ -214,16 +238,20 @@ class TrainTester:
         start_time = time.time()
 
         try:
+            url = f"{self.base_url}/api/train/set"
+            params = {
+                'stage': stage,
+                'count': count,
+                'stageSessionId': stage_session_id
+            }
+
+            # 디버깅: 요청 정보 출력
+            print(f"  요청 URL: {url}")
+            print(f"  파라미터: {params}")
+
             # GET /api/train/set 호출
             # 이 API가 ProblemGenerateService.generateStage4()를 실행함
-            response = self.session.get(
-                f"{self.base_url}/api/train/set",
-                params={
-                    'stage': stage,
-                    'count': count,
-                    'stageSessionId': stage_session_id
-                }
-            )
+            response = self.session.get(url, params=params)
 
             # 응답 시간 계산 (이 값이 Grafana에 표시됨)
             duration = time.time() - start_time
@@ -284,6 +312,76 @@ class TrainTester:
             self.stats[stage]['fail'] += 1
             self.print_error(f"문제 생성 중 오류: {str(e)}")
             logger.exception("Get problem set error")
+            return None
+        
+    def submit_attempt(self, stage, stage_session_id, problem_number, problem_data, is_correct=True):
+        """
+        문제 시도 기록을 제출
+        """
+        self.print_info(f"문제 {problem_number} 시도 기록 중...")
+
+        # 응답 시간 측정 시작
+        start_time = time.time()
+
+        try:
+            # AttemptRequest 구성
+            attempt_data = {
+                "stageSessionId": stage_session_id,
+                "problemNumber": problem_number,
+                "stage": stage,
+                "problem": problem_data.get('problemWord', ''),
+                "answer": problem_data.get('phonemes', []),
+                "audioUrl": f"https://s3.example.com/test-audio-{problem_number}.mp3",
+                "isCorrect": is_correct,
+                "isReplyCorrect": is_correct,
+                "attemptNumber": 1
+            }
+
+            # POST /api/train/attempt 호출
+            response = self.session.post(
+                f"{self.base_url}/api/train/attempt",
+                json=attempt_data
+            )
+
+            # 응답 시간 계산
+            duration = time.time() - start_time
+
+            # Prometheus 메트릭 기록: API 응답 시간
+            attempt_request_duration.labels(stage=stage).observe(duration)
+
+            if response.status_code in [200, 201]:
+                data = response.json()
+                attempt_response = data.get('data', {})
+
+                # 성공 메트릭 기록
+                attempt_request_total.labels(
+                    stage=stage,
+                    status='success'
+                ).inc()
+
+                self.print_success(f"시도 기록 성공! (응답 시간: {duration:.2f}초)")
+                print(f" Attempt ID: {attempt_response.get('attemptId')}")
+                return attempt_response
+            else:
+                # 실패 메트릭 기록
+                attempt_request_total.labels(
+                    stage=stage,
+                    status='fail'
+                ).inc()
+
+                self.print_error(f"시도 기록 실패: {response.status_code}")
+                print(f"응답: {response.text}")
+                return None
+
+        except Exception as e:
+            # 에러 메트릭 기록
+            attempt_request_total.labels(
+                stage=stage,
+                status='error'
+            ).inc()
+
+            self.print_error(f"시도 기록 중 오류: {str(e)}")
+            logger.exception("Submit attempt error")
             return None
 
     def get_correct_answer(self, problem, stage):
@@ -420,6 +518,19 @@ class TrainTester:
             # 문제 사이 짧은 대기
             time.sleep(0.2)
 
+        # 3단계: 각 문제에 대한 시도 기록
+        self.print_info(f"생성된 {len(problems)}개 문제에 대한 시도 기록 중...")
+        for i, problem in enumerate(problems, 1):
+            # 테스트용으로 랜덤하게 정답/오답 처리 (80% 정답률)
+            import random
+            is_correct = random.random() < 0.8
+
+            self.submit_attempt(stage, stage_session_id, i, problem, is_correct)
+
+            # 각 시도 사이에 짧은 대기
+            if i < len(problems):
+                time.sleep(0.5)
+
         # 4단계: 성공률 계산 및 메트릭 업데이트
         total = self.stats[stage]['success'] + self.stats[stage]['fail']
         if total > 0:
@@ -512,6 +623,8 @@ class TrainTester:
         print(f"    - stage4_problem_generated_total (생성된 문제 수)")
         print(f"    - stage4_attempt_total (문제 시도 횟수 - 정답/오답별)")
         print(f"    - stage4_attempt_accuracy (문제 시도 정답률)")
+        print(f"    - stage4_attempt_request_total (Attempt 요청 총 횟수)")
+        print(f"    - stage4_attempt_request_duration_seconds (Attempt 응답 시간)")
 
         # Grafana 접속 정보
         print(f"\n{Fore.CYAN}Grafana 대시보드:{Style.RESET_ALL}")
