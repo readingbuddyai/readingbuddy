@@ -225,10 +225,30 @@ public partial class Stage41Controller : MonoBehaviour
             yield return _tutorialController.RunIntroTutorial();
             RestoreTutorialChoiceTiles();
         }
-        EnsureGameplayUiVisible();
+        SetGameplaySlotsActive(false);
+
+        if (logVerbose)
+        {
+            bool panelActive = _tutorialController != null && _tutorialController.introTutorialPanel != null && _tutorialController.introTutorialPanel.activeSelf;
+            bool guideActive = guide3DCharacter != null && guide3DCharacter.activeSelf;
+            bool choicesActive = choicesContainer != null && choicesContainer.activeSelf;
+            bool consonantChoicesActive = consonantChoicesContainer != null && consonantChoicesContainer.activeSelf;
+            bool vowelChoicesActive = vowelChoicesContainer != null && vowelChoicesContainer.activeSelf;
+            bool choseongBoxActive = choseongBox != null && choseongBox.activeSelf;
+            bool jungseongBoxActive = jungseongBox != null && jungseongBox.activeSelf;
+            bool jongseongBoxActive = jongseongBox != null && jongseongBox.activeSelf;
+
+            Debug.Log(
+                $"[Stage41] Before IntroAdvancedMagic: panelActive={panelActive}, guideActive={guideActive}, " +
+                $"choicesActive={choicesActive}, consonantChoicesActive={consonantChoicesActive}, " +
+                $"vowelChoicesActive={vowelChoicesActive}, choseongBoxActive={choseongBoxActive}, " +
+                $"jungseongBoxActive={jungseongBoxActive}, jongseongBoxActive={jongseongBoxActive}");
+        }
 
         yield return PlayClip(clipIntroAdvancedMagic);   // [4.1.1]
         yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
+
+        EnsureGameplayUiVisible();
 
         if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
             yield return StartStageSession();
@@ -266,6 +286,10 @@ public partial class Stage41Controller : MonoBehaviour
             SetProgressLabel(_currentProblemNumber, questions.Count);
             if (wordText) wordText.text = q.problemWord ?? string.Empty;
             ClearPhonemeBoxes();
+            if (logVerbose)
+            {
+                Debug.Log($"[Stage41] After ClearPhonemeBoxes: 초='{choseongText?.text}', 중='{jungseongText?.text}', 종='{jongseongText?.text}'");
+            }
 
             // [4.1.3] 집중 안내 + 듣기
             yield return PlayClip(clipFocusListen);
@@ -500,6 +524,10 @@ public partial class Stage41Controller : MonoBehaviour
         }
 
         _segmentReplies[segmentIndex] = best;
+        if (logVerbose)
+            Debug.Log($"[Stage41] OnSegmentRecognitionHypotheses slot={segmentIndex} best='{best}'");
+        if (logVerbose)
+            Debug.Log($"[Stage41] SetSlotText idx={segmentIndex} text='{best}' (from OnSegmentRecognitionHypotheses)");
         SetSlotText(segmentIndex, best);
 
         if (!_finalizedSlots[segmentIndex])
@@ -643,6 +671,8 @@ public partial class Stage41Controller : MonoBehaviour
             return;
         }
 
+        if (logVerbose)
+            Debug.Log($"[Stage41][Tutorial] Prefill slot {slotIndex} with '{string.Join(",", normalizedCandidates)}'");
         OnSegmentRecognitionHypotheses(slotIndex, normalizedCandidates);
     }
 
@@ -828,6 +858,8 @@ public partial class Stage41Controller : MonoBehaviour
         {
             bool ok = (i < _segmentCorrects.Count) && _segmentCorrects[i];
             string reply = (i < _segmentReplies.Count) ? _segmentReplies[i] : string.Empty;
+            if (logVerbose)
+                Debug.Log($"[Stage41] SetSlotText idx={i} text='{(ok ? reply : string.Empty)}' (from ApplyPartialFill)");
             SetSlotText(i, ok ? reply : string.Empty);
             _finalizedSlots[i] = ok;
             SetSlotAlpha(i, ok ? 1f : dimAlpha);
@@ -835,6 +867,8 @@ public partial class Stage41Controller : MonoBehaviour
         // 필요 없는 세그먼트(예: answerCnt=2)의 종성은 비워둠
         for (int i = _expectedSegmentCount; i < 3; i++)
         {
+            if (logVerbose)
+                Debug.Log($"[Stage41] SetSlotText idx={i} text='' (from ApplyPartialFill extra)");
             SetSlotText(i, string.Empty);
             _finalizedSlots[i] = true; // 없는 슬롯은 완료로 처리
             SetSlotAlpha(i, dimAlpha);
@@ -849,12 +883,16 @@ public partial class Stage41Controller : MonoBehaviour
         {
             string reply = (i < _segmentReplies.Count) ? _segmentReplies[i] : string.Empty;
             bool ok = (i < _segmentCorrects.Count) && _segmentCorrects[i];
+            if (logVerbose)
+                Debug.Log($"[Stage41] SetSlotText idx={i} text='{reply}' (from FillSlotsFromRepliesWithDim)");
             SetSlotText(i, reply);
             SetSlotAlpha(i, ok ? 1f : dimAlpha);
             _finalizedSlots[i] = ok;
         }
         for (int i = _expectedSegmentCount; i < 3; i++)
         {
+            if (logVerbose)
+                Debug.Log($"[Stage41] SetSlotText idx={i} text='' (from FillSlotsFromRepliesWithDim extra)");
             SetSlotText(i, string.Empty);
             _finalizedSlots[i] = true;
             SetSlotAlpha(i, dimAlpha);
@@ -866,6 +904,16 @@ public partial class Stage41Controller : MonoBehaviour
         if (idx == 0 && choseongText) choseongText.text = text ?? string.Empty;
         else if (idx == 1 && jungseongText) jungseongText.text = text ?? string.Empty;
         else if (idx == 2 && jongseongText) jongseongText.text = text ?? string.Empty;
+        if (logVerbose)
+            Debug.Log($"[Stage41] SetSlotText idx={idx} now='{GetSlotText(idx)}'");
+    }
+
+    private string GetSlotText(int idx)
+    {
+        if (idx == 0 && choseongText) return choseongText.text;
+        if (idx == 1 && jungseongText) return jungseongText.text;
+        if (idx == 2 && jongseongText) return jongseongText.text;
+        return string.Empty;
     }
 
     private void SetSlotAlpha(int idx, float a)
@@ -1632,7 +1680,14 @@ public partial class Stage41Controller : MonoBehaviour
         if (choseongBox) choseongBox.SetActive(true);
         if (jungseongBox) jungseongBox.SetActive(true);
         if (jongseongBox) jongseongBox.SetActive(true);
-        // choices stay in their current state; they will be shown per-slot when needed
+        // choices remain hidden until the stage logic explicitly shows them
+    }
+
+    private void SetGameplaySlotsActive(bool active)
+    {
+        if (choseongBox) choseongBox.SetActive(active);
+        if (jungseongBox) jungseongBox.SetActive(active);
+        if (jongseongBox) jongseongBox.SetActive(active);
     }
 
     // 드래그 타일이 슬롯에 떨어졌을 때 호출 (PhonemeSlotUI에서 연결)
@@ -1711,4 +1766,38 @@ public partial class Stage41Controller : MonoBehaviour
         yield return _supplementController.RunRemedialSequence();
     }
     #endregion
+
+    private void UpdateSupplementQuestionsStub(IEnumerable<QuestionDto> source)
+    {
+        // placeholder stub retained intentionally
+    }
+
+    private void HandleTutorialClearAllSlots()
+    {
+        SetSlotText(0, string.Empty);
+        SetSlotText(1, string.Empty);
+        SetSlotText(2, string.Empty);
+        SetSlotAlpha(0, dimAlpha);
+        SetSlotAlpha(1, dimAlpha);
+        SetSlotAlpha(2, dimAlpha);
+
+        _segmentReplies.Clear();
+        _segmentCorrects.Clear();
+        _segmentReplyCandidates.Clear();
+        _expectedPhonemes.Clear();
+        Array.Clear(_finalizedSlots, 0, _finalizedSlots.Length);
+
+        HandleTutorialClearAllSlotObjects();
+
+        if (logVerbose)
+        {
+            Debug.Log($"[Stage41][Tutorial] ClearAllSlots → repliesCount={_segmentReplies.Count}, expectedCount={_expectedPhonemes.Count}, choseongChildren={GetChildCount(choseongBox)}, jungseongChildren={GetChildCount(jungseongBox)}, jongseongChildren={GetChildCount(jongseongBox)}");
+        }
+    }
+
+    private int GetChildCount(GameObject slot)
+    {
+        if (slot == null) return 0;
+        return slot.transform.childCount;
+    }
 }

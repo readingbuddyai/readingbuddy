@@ -1300,6 +1300,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: stageTwoPart
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: tutorialProfile
       value: 
       objectReference: {fileID: 11400000, guid: 063bbf172965dfb418ce6a764da67ee2, type: 2}

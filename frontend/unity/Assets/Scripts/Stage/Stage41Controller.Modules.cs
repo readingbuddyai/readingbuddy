@@ -116,6 +116,7 @@ public partial class Stage41Controller
         _tutorialDependencies.Log = message => { if (logVerbose) Debug.Log(message); };
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = logVerbose;
+        _tutorialDependencies.ClearSlotContents = ClearTutorialSlotContents;
 
         if (tutorialProfile != null)
         {
@@ -173,6 +174,48 @@ public partial class Stage41Controller
         ForceRefreshContainerLayout(choicesContainer);
         ForceRefreshContainerLayout(consonantChoicesContainer);
         ForceRefreshContainerLayout(vowelChoicesContainer);
+    }
+
+    private void ClearTutorialSlotContents()
+    {
+        RestoreTutorialChoiceTiles();
+
+        for (int slot = 0; slot < 3; slot++)
+        {
+            ClearTutorialSlot(slot);
+        }
+    }
+
+    private void ClearTutorialSlot(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex > 2)
+            return;
+
+        EnsureSegmentListCapacity(slotIndex);
+        _segmentReplyCandidates[slotIndex].Clear();
+        _segmentReplies[slotIndex] = string.Empty;
+        if (slotIndex < _segmentCorrects.Count)
+            _segmentCorrects[slotIndex] = false;
+        if (slotIndex < _expectedPhonemes.Count)
+            _expectedPhonemes[slotIndex] = string.Empty;
+        if (slotIndex < _finalizedSlots.Length)
+            _finalizedSlots[slotIndex] = false;
+
+        var slotHolder = ResolveTutorialSlotObject(IndexToSlotTarget(slotIndex));
+        if (slotHolder != null)
+        {
+            var draggables = slotHolder.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null)
+                    continue;
+                draggable.ReturnToOrigin();
+            }
+            ForceRefreshContainerLayout(slotHolder);
+        }
+
+        SetSlotText(slotIndex, string.Empty);
+        SetSlotAlpha(slotIndex, dimAlpha);
     }
 
     private void ForceRefreshContainerLayout(GameObject container)
@@ -761,6 +804,12 @@ public partial class Stage41Controller
             case "clear":
                 HandleTutorialClearSlot(args);
                 break;
+            case "clearallslots":
+            case "clearallslottexts":
+            case "clearallslottext":
+                HandleTutorialClearAllSlots();
+                HandleTutorialClearAllSlotObjects();
+                break;
             case "hidetile":
             case "hidechoice":
                 HandleTutorialToggleTileVisibility(args, false);
@@ -801,5 +850,29 @@ public partial class Stage41Controller
             }
         }
         _supplementQuestionController.SetQuestions(list);
+    }
+
+    private void HandleTutorialClearAllSlotObjects()
+    {
+        ClearDraggablesInSlot(choseongBox);
+        ClearDraggablesInSlot(jungseongBox);
+        ClearDraggablesInSlot(jongseongBox);
+
+        RestoreTutorialChoiceTiles();
+    }
+
+    private void ClearDraggablesInSlot(GameObject slot)
+    {
+        if (slot == null)
+            return;
+
+        var draggables = slot.GetComponentsInChildren<PhonemeDraggableUI>(true);
+        foreach (var draggable in draggables)
+        {
+            if (draggable == null)
+                continue;
+            draggable.ReturnToOrigin();
+        }
+        ForceRefreshContainerLayout(slot);
     }
 }
