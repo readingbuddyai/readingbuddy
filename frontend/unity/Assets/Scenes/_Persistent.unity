@@ -11090,9 +11090,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   overlayColor: {r: 0, g: 0, b: 0, a: 0.6}
-  hintText: "\uC67C\uC190 \uD2B8\uB9AC\uAC70\uB97C \uB2E4\uC2DC \uB204\uB974\uBA74
-    \uB2EB\uD600\uC694"
-  uiFont: {fileID: 0}
+  hintText: 
+  uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
   useWorldSpaceForXR: 1
   worldSpaceDistance: 2
   worldSpaceSizeMeters: {x: 2, y: 1.2}
@@ -11109,6 +11108,15 @@ MonoBehaviour:
   homeButtonRef: {fileID: 0}
   audioButtonRef: {fileID: 0}
   autoBuildUI: 1
+  exitConfirmClip: {fileID: 8300000, guid: 25e6d517c4c6ad948886a71232198308, type: 3}
+  exitConfirmTitle: "\uC571 \uC885\uB8CC"
+  exitConfirmMessage: "\uC885\uB8CC\uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?"
+  exitConfirmMessageSprite: {fileID: 0}
+  exitButtonSprite: {fileID: 21300000, guid: 78cb2e4fe8a294540b2f2b47ed5d7309, type: 3}
+  exitConfirmYesSprite: {fileID: 21300000, guid: 5011fa279f6ed464b8e898236bded616, type: 3}
+  exitConfirmNoSprite: {fileID: 21300000, guid: 66b60ccaf3bb74243879ff3a4380c7da, type: 3}
+  exitConfirmMessageYOffset: 50
+  exitPanelColor: {r: 0.04905659, g: 0.04905659, b: 0.04905659, a: 0.98039216}
 --- !u!1 &806254725
 GameObject:
   m_ObjectHideFlags: 0
