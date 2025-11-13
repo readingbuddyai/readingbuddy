@@ -13,4 +13,7 @@ public interface LettersKcMapRepository extends JpaRepository<LettersKcMap, Lett
 
     @Query("SELECT lkm FROM LettersKcMap lkm WHERE lkm.knowledgeComponent.id = :kcId")
     List<LettersKcMap> findByKnowledgeComponentId(@Param("kcId") Long kcId);
+
+    @Query("SELECT lkm FROM LettersKcMap lkm WHERE lkm.letters.id = :letterId")
+    List<LettersKcMap> findByLettersId(@Param("letterId") String letterId);
 }

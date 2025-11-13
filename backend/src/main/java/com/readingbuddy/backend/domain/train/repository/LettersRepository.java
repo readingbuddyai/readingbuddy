@@ -16,6 +16,8 @@ public interface LettersRepository extends JpaRepository<Letters,Long> {
 
     Optional<Letters> findByUnicodePoint(Integer unicodePoint);
 
+    List<Letters> findByUnicodePointIn(List<Integer> unicodePoints);
+
     @Query(value = "SELECT unicode_point FROM letters ORDER BY RANDOM() LIMIT :cnt", nativeQuery = true)
     List<Integer> findRandomLetters(Integer cnt);
 }
