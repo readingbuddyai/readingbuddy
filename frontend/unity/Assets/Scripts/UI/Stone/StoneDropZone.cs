@@ -1,71 +1,40 @@
+using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using System.Text.RegularExpressions;
 
-public class StoneDropZone : MonoBehaviour, IDropHandler
+public abstract class StoneDropZoneBase<TStageController> : MonoBehaviour, IDropHandler
+    where TStageController : MonoBehaviour
 {
-    [Tooltip("드롭 후 붙일 부모 (CountDisplay로 지정)")]
-    public Transform slotParent; // Inspector에서 CountDisplay Transform을 드래그해서 지정
-    
-    [Tooltip("Stage Controller 참조 (비우면 Stage30 → Stage20 순으로 자동 탐색)")]
-    public MonoBehaviour stageController; // Inspector에서 할당하거나 자동으로 찾음
-    
+    [Tooltip("드롭 후 붙일 부모 (CountDisplay)")]
+    [SerializeField] protected Transform slotParent;
+
+    [Tooltip("Stage Controller 참조 (비워 두면 자동 탐색)")]
+    [SerializeField] protected TStageController stageController;
+
     [Tooltip("이 Slot의 번호 (예: Slot_1이면 1, CountDisplay면 0으로 두기)")]
-    public int slotNumber = 0; // Inspector에서 설정하거나 자동으로 파싱
-    
+    [SerializeField] protected int slotNumber = 0;
+
     [Tooltip("StoneSlots 부모 (숫자 매칭을 위해 Slot들을 찾을 때 사용)")]
-    public Transform stoneSlotsParent; // StoneSlots 오브젝트의 Transform
+    [SerializeField] protected Transform stoneSlotsParent;
 
-    private void Awake()
+    protected virtual string LogPrefix => typeof(TStageController).Name;
+
+    public Transform SlotParent => slotParent;
+    public int SlotNumber => slotNumber;
+    public Transform StoneSlotsParent => stoneSlotsParent;
+
+    protected virtual void Awake()
     {
-        // Stage20Controller가 할당되지 않았으면 자동으로 찾기
-        if (stageController == null)
-        {
-            // 우선 현재 계층에서 Stage20 → Stage30 순으로 탐색해
-            // Stage20 환경에서는 Stage20Controller가 먼저 선택되도록 한다.
-            var stage20InParents = GetComponentInParent<Stage20Controller>();
-            var stage30InParents = GetComponentInParent<Stage30Controller>();
+        ResolveStageControllerIfNeeded();
+        AutoAssignSlotNumber();
+        AutoAssignStoneSlotsParent();
+    }
 
-            if (stage20InParents != null)
-            {
-                stageController = stage20InParents;
-            }
-            else if (stage30InParents != null)
-            {
-                stageController = stage30InParents;
-            }
-            else
-            {
-                // 씬 전체에서 탐색할 때도 Stage20 → Stage30 순서로 우선 순위를 유지한다.
-                var stage20 = FindObjectOfType<Stage20Controller>();
-                if (stage20 != null)
-                {
-                    stageController = stage20;
-                }
-                else
-                {
-                    stageController = FindObjectOfType<Stage30Controller>();
-                }
-            }
-        }
-        
-        // slotNumber가 0이면 이름에서 자동으로 파싱 (예: "Slot_1" -> 1)
-        if (slotNumber == 0)
-        {
-            slotNumber = ExtractNumberFromName(gameObject.name);
-        }
-        
-        // stoneSlotsParent가 없으면 부모에서 찾기
-        if (stoneSlotsParent == null)
-        {
-            // 현재 오브젝트의 부모가 StoneSlots일 수 있음
-            Transform parent = transform.parent;
-            if (parent != null && parent.name.Contains("StoneSlots"))
-            {
-                stoneSlotsParent = parent;
-            }
-        }
+    protected virtual void Start()
+    {
+        ResolveStageControllerIfNeeded();
     }
 
     public void OnDrop(PointerEventData eventData)
@@ -81,13 +50,19 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
 
         if (slotNumber == 0)
         {
-            PlaceStoneAtMatchingSlot(stone, stoneNumber);
+            var matchingSlot = FindSlotByNumber(stoneNumber);
+            SnapStoneToSlot(stone, matchingSlot);
+
+            if (matchingSlot != null)
+                Debug.Log($"[{LogPrefix}] Stone_{stoneNumber}을 Slot_{stoneNumber} 위치에 배치");
+            else
+                Debug.LogWarning($"[{LogPrefix}] Slot_{stoneNumber}을 찾을 수 없습니다.");
         }
         else
         {
             if (stoneNumber != slotNumber)
             {
-                Debug.LogWarning($"[StoneDropZone] 번호 불일치: Stone_{stoneNumber}을 Slot_{slotNumber}에 드롭할 수 없습니다.");
+                Debug.LogWarning($"[{LogPrefix}] 번호 불일치: Stone_{stoneNumber}을 Slot_{slotNumber}에 드롭할 수 없습니다.");
                 return;
             }
 
@@ -97,31 +72,118 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
         CountStonesAndReport();
     }
 
-    private void PlaceStoneAtMatchingSlot(GameObject stone, int stoneNumber)
+    private void AutoAssignSlotNumber()
     {
-        StoneDropZone matchingSlot = FindSlotByNumber(stoneNumber);
-        SnapStoneToSlot(stone, matchingSlot);
+        if (slotNumber != 0)
+            return;
 
-        if (matchingSlot != null)
-        {
-            Debug.Log($"[StoneDropZone] Stone_{stoneNumber}을 Slot_{stoneNumber} 위치에 배치");
-        }
-        else
-        {
-            Debug.LogWarning($"[StoneDropZone] Slot_{stoneNumber}을 찾을 수 없습니다.");
-        }
+        slotNumber = ExtractNumberFromName(gameObject.name);
     }
 
-    private void SnapStoneToSlot(GameObject stone, StoneDropZone targetSlot)
+    private void AutoAssignStoneSlotsParent()
+    {
+        if (stoneSlotsParent != null)
+            return;
+
+        Transform parent = transform.parent;
+        if (parent != null && parent.name.Contains("StoneSlots"))
+            stoneSlotsParent = parent;
+    }
+
+    private void ResolveStageControllerIfNeeded()
+    {
+        if (stageController == null)
+            stageController = ResolveStageController();
+    }
+
+    protected virtual TStageController ResolveStageController()
+    {
+        var parentController = GetComponentInParent<TStageController>();
+        if (parentController != null)
+            return parentController;
+
+        var controllers = FindObjectsOfType<TStageController>(true);
+        if (controllers == null || controllers.Length == 0)
+            return null;
+
+        if (controllers.Length == 1)
+            return controllers[0];
+
+        var candidates = GetCandidateTransforms();
+
+        var boardMatch = FindControllerWhoseBoardContains(controllers, candidates);
+        if (boardMatch != null)
+            return boardMatch;
+
+        var closest = FindClosestControllerByBoard(controllers, candidates);
+        if (closest != null)
+            return closest;
+
+        return controllers[0];
+    }
+
+    private IReadOnlyList<Transform> GetCandidateTransforms()
+    {
+        var result = new List<Transform>(3);
+        if (transform != null)
+            result.Add(transform);
+        if (slotParent != null && !result.Contains(slotParent))
+            result.Add(slotParent);
+        if (stoneSlotsParent != null && !result.Contains(stoneSlotsParent))
+            result.Add(stoneSlotsParent);
+        return result;
+    }
+
+    private StoneDropZoneBase<TStageController> FindSlotByNumber(int number)
+    {
+        if (number <= 0)
+            return null;
+
+        var candidates = GetSearchableSlots();
+        if (candidates == null || candidates.Length == 0)
+            return null;
+
+        foreach (var slot in candidates)
+        {
+            if (slot == null || slot == this)
+                continue;
+
+            int slotNum = slot.slotNumber != 0
+                ? slot.slotNumber
+                : ExtractNumberFromName(slot.gameObject.name);
+
+            if (slotNum == number)
+                return slot;
+        }
+
+        return null;
+    }
+
+    private StoneDropZoneBase<TStageController>[] GetSearchableSlots()
+    {
+        Transform searchRoot = stoneSlotsParent;
+
+        if (searchRoot == null && slotParent != null)
+            searchRoot = slotParent;
+
+        if (searchRoot == null)
+            searchRoot = GetBoardTransform(stageController);
+
+        if (searchRoot != null)
+            return searchRoot.GetComponentsInChildren<StoneDropZoneBase<TStageController>>(true);
+
+        return FindObjectsOfType<StoneDropZoneBase<TStageController>>(true);
+    }
+
+    private void SnapStoneToSlot(GameObject stone, StoneDropZoneBase<TStageController> targetSlot)
     {
         if (stone == null)
             return;
 
         Transform container = slotParent != null ? slotParent : transform;
-
         if (container == null)
         {
-            Debug.LogWarning("[StoneDropZone] 유효한 부모 컨테이너를 찾지 못했습니다.");
+            Debug.LogWarning($"[{LogPrefix}] 유효한 부모 컨테이너를 찾지 못했습니다.");
             return;
         }
 
@@ -168,60 +230,13 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
         }
     }
 
-    private StoneDropZone FindSlotByNumber(int number)
-    {
-        if (number <= 0)
-            return null;
-
-        StoneDropZone[] candidates = GetSearchableSlots();
-        if (candidates == null || candidates.Length == 0)
-            return null;
-
-        foreach (var slot in candidates)
-        {
-            if (slot == null || slot == this)
-                continue;
-
-            int slotNum = slot.slotNumber;
-            if (slotNum == 0)
-            {
-                slotNum = ExtractNumberFromName(slot.gameObject.name);
-            }
-
-            if (slotNum == number)
-                return slot;
-        }
-
-        return null;
-    }
-
-    private StoneDropZone[] GetSearchableSlots()
-    {
-        Transform searchRoot = stoneSlotsParent;
-
-        if (searchRoot == null && slotParent != null)
-            searchRoot = slotParent;
-
-        if (searchRoot == null)
-        {
-            Transform stageBoard = GetStoneBoardTransform();
-            if (stageBoard != null)
-                searchRoot = stageBoard;
-        }
-
-        if (searchRoot != null)
-            return searchRoot.GetComponentsInChildren<StoneDropZone>(true);
-
-        return FindObjectsOfType<StoneDropZone>(true);
-    }
-
     private void CountStonesAndReport()
     {
         Transform targetParent = slotParent != null ? slotParent : transform;
 
         if (targetParent == null)
         {
-            Debug.LogWarning("[StoneDropZone] slotParent(CountDisplay)가 설정되지 않았습니다.");
+            Debug.LogWarning($"[{LogPrefix}] slotParent(CountDisplay)가 설정되지 않았습니다.");
             return;
         }
 
@@ -229,11 +244,11 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
 
         if (TryReportStoneCount(stoneCount))
         {
-            Debug.Log($"[StoneDropZone] 드롭된 Stone 개수: {stoneCount} (CountDisplay: {targetParent.name})");
+            Debug.Log($"[{LogPrefix}] 드롭된 Stone 개수: {stoneCount} (CountDisplay: {targetParent.name})");
         }
         else
         {
-            Debug.LogWarning("[StoneDropZone] Stage Controller를 찾을 수 없습니다.");
+            Debug.LogWarning($"[{LogPrefix}] Stage Controller를 찾을 수 없습니다.");
         }
     }
 
@@ -246,7 +261,7 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
             var child = root.GetChild(i);
 
             if (child.GetComponent<StoneDraggable>() != null &&
-                child.GetComponent<StoneDropZone>() == null)
+                child.GetComponent<StoneDropZoneBase<TStageController>>() == null)
             {
                 count++;
             }
@@ -260,44 +275,110 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
 
     private bool TryReportStoneCount(int stoneCount)
     {
-        if (stageController is Stage20Controller stage20)
-        {
-            stage20.ReportStoneCount(stoneCount);
-            return true;
-        }
+        var controller = stageController ?? ResolveStageController();
+        if (controller == null)
+            return false;
 
-        if (stageController is Stage30Controller stage30)
-        {
-            stage30.ReportStoneCount(stoneCount);
-            return true;
-        }
-
-        return false;
+        stageController = controller;
+        ReportStoneCountToStage(controller, stoneCount);
+        return true;
     }
 
-    private Transform GetStoneBoardTransform()
+    private TStageController FindControllerWhoseBoardContains(TStageController[] controllers, IReadOnlyList<Transform> targets)
     {
-        if (stageController is Stage20Controller stage20 && stage20.stoneBoard != null)
-            return stage20.stoneBoard.transform;
+        foreach (var controller in controllers)
+        {
+            var board = GetBoardTransform(controller);
+            if (board == null)
+                continue;
 
-        if (stageController is Stage30Controller stage30 && stage30.stoneBoard != null)
-            return stage30.stoneBoard.transform;
+            foreach (var target in targets)
+            {
+                if (target != null && target.IsChildOf(board))
+                    return controller;
+            }
+        }
 
         return null;
     }
 
-    /// <summary>
-    /// 오브젝트 이름에서 숫자 추출 (예: "Stone_1" -> 1, "Slot_2" -> 2)
-    /// </summary>
+    private TStageController FindClosestControllerByBoard(TStageController[] controllers, IReadOnlyList<Transform> targets)
+    {
+        TStageController closest = null;
+        float bestDistance = float.MaxValue;
+
+        foreach (var controller in controllers)
+        {
+            var board = GetBoardTransform(controller);
+            if (board == null)
+                continue;
+
+            foreach (var target in targets)
+            {
+                if (target == null)
+                    continue;
+
+                float distance = (board.position - target.position).sqrMagnitude;
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    closest = controller;
+                }
+            }
+        }
+
+        return closest;
+    }
+
+    private Transform GetBoardTransform(TStageController controller)
+    {
+        return controller == null ? null : GetStoneBoardTransform(controller);
+    }
+
+    protected abstract void ReportStoneCountToStage(TStageController controller, int count);
+    protected abstract Transform GetStoneBoardTransform(TStageController controller);
+
     private int ExtractNumberFromName(string name)
     {
-        // 정규식으로 "_숫자" 패턴 찾기
         Match match = Regex.Match(name, @"_(\d+)");
-        if (match.Success && match.Groups.Count > 1)
-        {
-            if (int.TryParse(match.Groups[1].Value, out int number))
-                return number;
-        }
-        return 0; // 숫자를 찾지 못하면 0 반환
+        if (match.Success && match.Groups.Count > 1 && int.TryParse(match.Groups[1].Value, out var number))
+            return number;
+        return 0;
+    }
+
+    public void GetSharedConfiguration(out Transform slotParentRef, out int slotNumberRef, out Transform stoneSlotsParentRef)
+    {
+        slotParentRef = slotParent;
+        slotNumberRef = slotNumber;
+        stoneSlotsParentRef = stoneSlotsParent;
+    }
+
+    public void SetSharedConfiguration(Transform slotParentRef, int slotNumberRef, Transform stoneSlotsParentRef)
+    {
+        slotParent = slotParentRef;
+        slotNumber = slotNumberRef;
+        stoneSlotsParent = stoneSlotsParentRef;
+    }
+
+    public void SetStageControllerReference(TStageController controller)
+    {
+        stageController = controller;
+    }
+}
+
+public class StoneDropZone : StoneDropZoneBase<Stage20Controller>
+{
+    protected override string LogPrefix => "Stage20DropZone";
+
+    protected override void ReportStoneCountToStage(Stage20Controller controller, int count)
+    {
+        controller?.ReportStoneCount(count);
+    }
+
+    protected override Transform GetStoneBoardTransform(Stage20Controller controller)
+    {
+        return controller != null && controller.stoneBoard != null
+            ? controller.stoneBoard.transform
+            : null;
     }
 }

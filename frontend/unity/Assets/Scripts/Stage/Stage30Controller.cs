@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -136,6 +137,7 @@ public class Stage30Controller : MonoBehaviour
         ConfigureAudioController();
         ConfigureTutorialController();
         _tutorialController?.PrepareForStageStart();
+        EnsureStage30DropZones();
         ResetStoneUI();
         StartCoroutine(RunStage());
     }
@@ -171,6 +173,37 @@ public class Stage30Controller : MonoBehaviour
         _audioDependencies.LogWarning = Debug.LogWarning;
 
         _audioController.Initialize(_audioDependencies);
+    }
+
+    private void EnsureStage30DropZones()
+    {
+        if (stoneBoard == null)
+            return;
+
+        var legacyZones = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        foreach (var legacy in legacyZones)
+        {
+            if (legacy == null)
+                continue;
+
+            legacy.GetSharedConfiguration(out var slotParentRef, out var slotNumberRef, out var stoneSlotsParentRef);
+
+            var stage30Zone = legacy.gameObject.GetComponent<Stage30StoneDropZone>();
+            if (stage30Zone == null)
+                stage30Zone = legacy.gameObject.AddComponent<Stage30StoneDropZone>();
+
+            stage30Zone.SetSharedConfiguration(slotParentRef, slotNumberRef, stoneSlotsParentRef);
+            stage30Zone.SetStageControllerReference(this);
+
+            Destroy(legacy);
+        }
+
+        var stage30Zones = stoneBoard.GetComponentsInChildren<Stage30StoneDropZone>(true);
+        foreach (var zone in stage30Zones)
+        {
+            if (zone != null)
+                zone.SetStageControllerReference(this);
+        }
     }
 
     private IEnumerator RunStage()
@@ -271,7 +304,7 @@ public class Stage30Controller : MonoBehaviour
         if (wordLabel)
         {
             wordLabel.enableWordWrapping = false;
-            wordLabel.text = problem?.problemWord ?? string.Empty;
+            wordLabel.text = NormalizeWordLabel(problem?.problemWord);
             wordLabel.gameObject.SetActive(true);
         }
 
@@ -836,7 +869,7 @@ public class Stage30Controller : MonoBehaviour
 
     private void SetTutorialOptionWord(string text, bool showImmediately, bool forceWordLabel)
     {
-        _tutorialOptionWordCache = text ?? string.Empty;
+        _tutorialOptionWordCache = NormalizeWordLabel(text);
         _tutorialOptionUseWordLabel = forceWordLabel;
         ApplyTutorialOptionWord(_tutorialOptionWordCache, showImmediately);
     }
@@ -849,13 +882,38 @@ public class Stage30Controller : MonoBehaviour
         if (target == null)
             return;
 
-        target.text = text ?? string.Empty;
+        target.text = NormalizeWordLabel(text);
         target.gameObject.SetActive(show);
 
         if (show && target.gameObject.activeInHierarchy)
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(target.rectTransform);
         }
+    }
+
+    private string NormalizeWordLabel(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        return Regex.Replace(
+            text,
+            @"U\+([0-9A-Fa-f]{4,6})",
+            match =>
+            {
+                if (int.TryParse(match.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var codePoint))
+                {
+                    try
+                    {
+                        return char.ConvertFromUtf32(codePoint);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // ignore fall-through
+                    }
+                }
+                return match.Value;
+            });
     }
 
     private IEnumerator MoveStoneForTutorial(string parameter)
@@ -897,7 +955,7 @@ public class Stage30Controller : MonoBehaviour
         ReportStoneCount(CalculateCurrentStoneCount());
     }
 
-    private IEnumerator AnimateStoneToSlot(StoneDraggable stone, StoneDropZone slot)
+    private IEnumerator AnimateStoneToSlot(StoneDraggable stone, Stage30StoneDropZone slot)
     {
         if (stone == null || slot == null)
             yield break;
@@ -932,12 +990,12 @@ public class Stage30Controller : MonoBehaviour
         stoneRT.rotation = targetRotation;
     }
 
-    private void AttachStoneToSlot(StoneDraggable stone, StoneDropZone slot)
+    private void AttachStoneToSlot(StoneDraggable stone, Stage30StoneDropZone slot)
     {
         if (stone == null || slot == null)
             return;
 
-        Transform container = slot.slotParent != null ? slot.slotParent : slot.transform;
+        Transform container = slot.SlotParent != null ? slot.SlotParent : slot.transform;
         stone.transform.SetParent(container, false);
         stone.transform.SetAsLastSibling();
 
@@ -981,7 +1039,7 @@ public class Stage30Controller : MonoBehaviour
         if (stoneBoard == null)
             return 0;
 
-        var dropZones = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        var dropZones = stoneBoard.GetComponentsInChildren<Stage30StoneDropZone>(true);
         if (dropZones == null || dropZones.Length == 0)
             return 0;
 
@@ -991,7 +1049,7 @@ public class Stage30Controller : MonoBehaviour
             if (zone == null)
                 continue;
 
-            targetParent = zone.slotParent != null ? zone.slotParent : zone.transform;
+            targetParent = zone.SlotParent != null ? zone.SlotParent : zone.transform;
             if (targetParent != null)
                 break;
         }
@@ -1012,7 +1070,7 @@ public class Stage30Controller : MonoBehaviour
         {
             var child = root.GetChild(i);
 
-            if (child.GetComponent<StoneDraggable>() != null && child.GetComponent<StoneDropZone>() == null)
+            if (child.GetComponent<StoneDraggable>() != null && child.GetComponent<Stage30StoneDropZone>() == null)
                 count++;
 
             if (child.childCount > 0)
@@ -1097,12 +1155,12 @@ public class Stage30Controller : MonoBehaviour
         return stones.FirstOrDefault(s => s != null);
     }
 
-    private StoneDropZone FindSlotForTutorial(string identifier, StoneDraggable stoneFallback)
+    private Stage30StoneDropZone FindSlotForTutorial(string identifier, StoneDraggable stoneFallback)
     {
         if (stoneBoard == null)
             return null;
 
-        var slots = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        var slots = stoneBoard.GetComponentsInChildren<Stage30StoneDropZone>(true);
         if (slots == null || slots.Length == 0)
             return null;
 
@@ -1125,8 +1183,8 @@ public class Stage30Controller : MonoBehaviour
 
             if (targetNumber > 0)
             {
-                int slotNumber = slot.slotNumber != 0 ? slot.slotNumber : ExtractNumberFromName(slot.gameObject.name);
-                if (slotNumber == targetNumber)
+                int slotNumberVal = slot.SlotNumber != 0 ? slot.SlotNumber : ExtractNumberFromName(slot.gameObject.name);
+                if (slotNumberVal == targetNumber)
                     return slot;
             }
         }

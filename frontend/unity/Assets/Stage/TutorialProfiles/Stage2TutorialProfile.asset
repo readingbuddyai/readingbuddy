@@ -255,6 +255,32 @@ MonoBehaviour:
     progressText: 
     customActionId: "ShowWordLabel:\uBC14\uB098\uB098"
     awaitRelease: 0
+  - name: "\uB2E8\uC5B4 \uD6A8\uACFC\uC74C"
+    phase: 1
+    action: 0
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: SetWord
+    awaitRelease: 0
   - name: "\uC74C\uC131 \uC548\uB0B4(\uC790 \uC774\uB807\uAC8C)"
     phase: 1
     action: 0
@@ -699,7 +725,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uBC84\uD2BC Pulse"
     phase: 1
-    action: 10
+    action: 14
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -716,7 +742,7 @@ MonoBehaviour:
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
-    pulseLoops: 0
+    pulseLoops: 2
     slotTarget: 0
     choiceTileKey: 
     choiceReturnToOrigin: 1

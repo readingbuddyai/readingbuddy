@@ -777,7 +777,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uBC84\uD2BC Pulse"
     phase: 1
-    action: 10
+    action: 14
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -794,7 +794,7 @@ MonoBehaviour:
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
-    pulseLoops: 0
+    pulseLoops: 2
     slotTarget: 0
     choiceTileKey: 
     choiceReturnToOrigin: 1
