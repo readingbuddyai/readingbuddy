@@ -247,6 +247,11 @@ public class ProblemGenerateService {
     }
 
     public List<ProblemResult> generateStage4(Long userId, String stage, Integer cnt) {
+        // 4.1 stage의 경우 특정 단어로만 제한
+        if (stage.equals("4.1")) {
+            return generateStage4_1(userId, cnt);
+        }
+
         List<ProblemResult> results = new ArrayList<>();
 
         // 정답률이 낮은 순으로 정렬된 KC 목록 가져오기
@@ -281,6 +286,68 @@ public class ProblemGenerateService {
 
             // 4. Stage4Problem 생성 및 추가
             results.addAll(createStage4Problems(selectedLetters, kcId, updatedCandidateList));
+        }
+
+        return results;
+    }
+
+    /**
+     * Stage 4.1 전용 문제 생성 (특정 단어로만 제한)
+     * @param userId 사용자 ID
+     * @param cnt 문제 개수
+     * @return Stage4Problem 리스트
+     */
+    private List<ProblemResult> generateStage4_1(Long userId, Integer cnt) {
+        // 4.1에서 사용할 특정 단어 목록 (갈, 간, 남, 널, 달, 곰, 밤, 번, 살, 선, 잘, 전)
+        String[] allowedWords = {"갈", "간", "남", "널", "달", "곰", "밤", "번", "살", "선", "잘", "전"};
+        List<Integer> unicodePoints = new ArrayList<>();
+
+        for (String word : allowedWords) {
+            unicodePoints.add((int) word.charAt(0));
+        }
+
+        // 허용된 단어에 해당하는 Letters 조회
+        List<Letters> allowedLetters = lettersRepository.findByUnicodePointIn(unicodePoints);
+
+        if (allowedLetters.isEmpty()) {
+            throw new IllegalStateException("4.1 stage에 사용할 Letters를 찾을 수 없습니다.");
+        }
+
+        // 중복 없이 랜덤 선택 (cnt개)
+        List<Letters> shuffledLetters = new ArrayList<>(allowedLetters);
+        java.util.Collections.shuffle(shuffledLetters, random);
+
+        // cnt가 allowedLetters 크기보다 크면 모든 단어 사용
+        int selectCount = Math.min(cnt, shuffledLetters.size());
+        List<Letters> selectedLetters = shuffledLetters.subList(0, selectCount);
+
+        List<ProblemResult> results = new ArrayList<>();
+        for (Letters selectedLetter : selectedLetters) {
+            // 해당 Letter에 매핑된 KC 중 하나를 랜덤으로 선택
+            List<LettersKcMap> kcMaps = lettersKcMapRepository.findByLettersId(selectedLetter.getId());
+            Long selectedKcId = null;
+            String candidateList = "0";
+
+            if (!kcMaps.isEmpty()) {
+                LettersKcMap selectedKcMap = kcMaps.get(random.nextInt(kcMaps.size()));
+                selectedKcId = selectedKcMap.getKnowledgeComponent().getId();
+            }
+
+            // unicodePoint를 실제 한글 문자로 변환
+            String koreanChar = String.valueOf((char) selectedLetter.getUnicodePoint().intValue());
+
+            // PhonemeCounter를 사용하여 음소 분해
+            List<Character> phonemes = PhonemeCounter.getPhonemesForCodePoint(selectedLetter.getUnicodePoint());
+
+            results.add(new Stage4Problem(
+                    koreanChar,
+                    selectedLetter.getSlowVoiceUrl(),
+                    selectedLetter.getVoiceUrl(),
+                    selectedLetter.getCount(),
+                    phonemes,
+                    selectedKcId, // 해당 음절에 매핑된 KC 중 하나를 랜덤으로 선택
+                    candidateList
+            ));
         }
 
         return results;
