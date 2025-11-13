@@ -2,6 +2,8 @@ package com.readingbuddy.backend.domain.bkt.repository;
 
 import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
 import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
+import com.readingbuddy.backend.domain.dashboard.dto.response.DailyKcMasteryAvg;
+import com.readingbuddy.backend.domain.dashboard.dto.response.DailyKcMasteryByDateResponse;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -31,14 +33,24 @@ public interface UserKcMasteryRepository extends JpaRepository<UserKcMastery, Lo
             Long userId, Long knowledgeComponentId, LocalDateTime startDateTime, LocalDateTime endDateTime);
 
     /**
-     * 특정 카테고리 리스트에 해당하는 모든 mastery의 평균 계산 (DB에서 직접 평균 반환)
+     * 특정 카테고리 리스트에 해당하는 mastery의 날짜별 평균 계산
      */
     @Query("""
-          SELECT ROUND(AVG(ukm.pLearn), 2)
+          SELECT DailyKcMasteryAvg(
+            CAST(ukm.createdAt AS LocalDate),
+            ROUND(AVG(ukm.pLearn), 2)
+          )
           FROM UserKcMastery ukm
           JOIN ukm.knowledgeComponent kc
           WHERE ukm.user.id = :userId
           AND kc.category IN :categories
+          AND ukm.createdAt BETWEEN :startDate AND :endDate
+          GROUP BY CAST(ukm.createdAt AS LocalDate)
+          ORDER BY CAST(ukm.createdAt AS LocalDate)
           """)
-    Double getAverageMasteryByCategories(@Param("userId") Long userId, @Param("categories") List<KcCategory> categories);
+    List<DailyKcMasteryAvg> getDailyAverageMasteryByCategories(
+            @Param("userId") Long userId,
+            @Param("categories") List<KcCategory> categories,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate);
 }
