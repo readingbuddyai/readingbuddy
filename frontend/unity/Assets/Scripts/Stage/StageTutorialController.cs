@@ -347,6 +347,9 @@ public class StageTutorialController
             case StageTutorialActionType.SetProgressText:
                 SetProgressText(step.progressText ?? string.Empty);
                 break;
+            case StageTutorialActionType.PlayTutorialVideo:
+                yield return ExecutePlayTutorialVideo();
+                break;
             case StageTutorialActionType.CustomAction:
                 yield return ExecuteCustomAction(step.customActionId);
                 break;
@@ -690,6 +693,7 @@ public class StageTutorialController
     {
         if (introOptionCursor?.handCursor != null)
             introOptionCursor.handCursor.SetActive(active);
+        _deps.OnCursorActiveChanged?.Invoke(active);
     }
 
     private IEnumerator MoveCursorTo(StageTutorialStep step)
@@ -762,6 +766,17 @@ public class StageTutorialController
             yield break;
 
         yield return ExecuteCoroutine(_deps.ExecuteCustomStep(actionId));
+    }
+
+    private IEnumerator ExecutePlayTutorialVideo()
+    {
+        if (_deps.PlayTutorialVideo == null)
+        {
+            LogWarning("[StageTutorial] PlayTutorialVideo requested but no handler provided");
+            yield break;
+        }
+
+        yield return ExecuteCoroutine(_deps.PlayTutorialVideo());
     }
 
     public IEnumerator ShowPanel(bool immediate)
@@ -1134,8 +1149,10 @@ public class StageTutorialController
 public class StageTutorialDependencies
 {
     public Func<AudioClip, IEnumerator> PlayClip;
+    public Func<IEnumerator> PlayTutorialVideo;
     public Func<IEnumerator, Coroutine> StartCoroutine;
     public Action<Coroutine> StopCoroutine;
+    public Action<bool> OnCursorActiveChanged;
     public Text ProgressText;
     public Func<Text> EnsureProgressText;
     public Image MainImage;

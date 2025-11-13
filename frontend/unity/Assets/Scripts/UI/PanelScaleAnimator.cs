@@ -10,31 +10,63 @@ public class PanelScaleAnimator : MonoBehaviour
 
     private RectTransform[] panels;
     private Vector2 viewportCenter;
+    private HorizontalLayoutGroup horizontalLayoutGroup;
+    private int lastPadding = -1;
 
     void Start()
     {
         panels = new RectTransform[content.childCount];
         for (int i = 0; i < content.childCount; i++)
             panels[i] = content.GetChild(i).GetComponent<RectTransform>();
+        horizontalLayoutGroup = content.GetComponent<HorizontalLayoutGroup>();
+        AdjustContentPadding(force: true);
     }
 
-    void Update()
-    {
-        // Viewport 중심 (월드좌표 기준)
-        viewportCenter = scrollRect.viewport.TransformPoint(scrollRect.viewport.rect.center);
-
+    void Update()
+    {
+        // Viewport �߽� (������ǥ ����)
+        viewportCenter = scrollRect.viewport.TransformPoint(scrollRect.viewport.rect.center);
+
         foreach (var panel in panels)
         {
-            // 각 패널 중심 위치
             Vector2 panelCenter = panel.TransformPoint(panel.rect.center);
             float distance = Vector2.Distance(viewportCenter, panelCenter);
-
-            // 가까울수록 scale 커지게 계산
-            float t = Mathf.Clamp01(1f - (distance / 1500f)); // 거리 범위 조정
+            float t = Mathf.Clamp01(1f - (distance / 1500f));
             float targetScale = Mathf.Lerp(1f, maxScale, t);
-
-            // 부드러운 보간
             panel.localScale = Vector3.Lerp(panel.localScale, Vector3.one * targetScale, Time.deltaTime * scaleSpeed);
         }
+
+        AdjustContentPadding();
+    }
+
+    private void AdjustContentPadding(bool force = false)
+    {
+        if (horizontalLayoutGroup == null || scrollRect == null || scrollRect.viewport == null || panels.Length == 0)
+            return;
+
+        float viewportWidth = scrollRect.viewport.rect.width;
+        if (viewportWidth <= 0f)
+            return;
+
+        RectTransform referencePanel = panels[0];
+        float panelWidth = referencePanel.rect.width;
+        if (panelWidth <= 0f)
+            panelWidth = LayoutUtility.GetPreferredWidth(referencePanel);
+        if (panelWidth <= 0f)
+            return;
+
+        int padding = Mathf.RoundToInt(Mathf.Max(0f, (viewportWidth - panelWidth) * 0.5f));
+        if (!force && padding == lastPadding)
+            return;
+
+        lastPadding = padding;
+
+        if (horizontalLayoutGroup.padding.left == padding && horizontalLayoutGroup.padding.right == padding)
+            return;
+
+        horizontalLayoutGroup.padding.left = padding;
+        horizontalLayoutGroup.padding.right = padding;
+        LayoutRebuilder.MarkLayoutForRebuild(content);
     }
+
 }
