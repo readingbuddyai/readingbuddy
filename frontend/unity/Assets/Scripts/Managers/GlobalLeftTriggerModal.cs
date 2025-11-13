@@ -721,3 +721,49 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         }
     }
 }
+
+public class ButtonHoverFeedback : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    public float scaleMultiplier = 1.1f;
+    public float transitionDuration = 0.08f;
+
+    private Vector3 _originalScale;
+    private Coroutine _current;
+
+    private void Awake()
+    {
+        _originalScale = transform.localScale;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        StartScaling(_originalScale * scaleMultiplier);
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        StartScaling(_originalScale);
+    }
+
+    private void StartScaling(Vector3 target)
+    {
+        if (_current != null)
+            StopCoroutine(_current);
+        _current = StartCoroutine(LerpScale(target));
+    }
+
+    private IEnumerator LerpScale(Vector3 target)
+    {
+        Vector3 start = transform.localScale;
+        float elapsed = 0f;
+        while (elapsed < transitionDuration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / transitionDuration);
+            transform.localScale = Vector3.Lerp(start, target, t);
+            yield return null;
+        }
+        transform.localScale = target;
+        _current = null;
+    }
+}
