@@ -114,8 +114,13 @@ public class TrainController {
                         trainedStageService.saveProblemInfoToSession(stageSessionId, problems);
                     }
 
+                    String msg = "";
+                    if (stage.equals("3")) msg = "음소 개수 세기 문제가 생성되었습니다.";
+                    else if (stage.equals("4.1")) msg = "음절 분절 문제가 생성되었습니다.";
+                    else if (stage.equals("4.2")) msg = "음절 합성 문제가 생성되었습니다.";
+
                     return ResponseEntity.status(HttpStatus.CREATED)
-                            .body(ApiResponse.success("음소 개수 세기 문제가 생성되었습니다.", problemSetResponse));
+                            .body(ApiResponse.success(msg, problemSetResponse));
                 default:
                     return ResponseEntity.badRequest()
                             .body(ApiResponse.error("유효하지 않은 단계입니다. " + stage));
