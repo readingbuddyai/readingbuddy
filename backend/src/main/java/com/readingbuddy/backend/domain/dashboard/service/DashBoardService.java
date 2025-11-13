@@ -448,7 +448,12 @@ public class DashBoardService {
         LocalDateTime startDateTime = startDate.atStartOfDay();
         LocalDateTime endDateTime = endDate.atTime(LocalTime.MAX);
 
-        // 각 KC의 숙련도 변화 추이 조회
+        // 4.1, 4.2 stage의 경우 초성/중성/종성별로 그룹화하여 평균 처리
+        if (stage.equals("4.1") || stage.equals("4.2")) {
+            return getStageKcMasteryTrendGrouped(userId, stage, kcs, startDateTime, endDateTime);
+        }
+
+        // 기존 로직: 각 KC의 숙련도 변화 추이 조회
         List<KcTrend> kcTrends = kcs.stream()
                 .map(kc -> {
                     // 해당 KC의 기간 내 모든 숙련도 이력 조회
@@ -471,6 +476,96 @@ public class DashBoardService {
                             .kcId(kc.getId())
                             .kcCategory(kc.getCategory().name())
                             .kcDescription(kc.getCategory().getDescription())
+                            .masteryTrend(masteryTrend)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return StageKcMasteryTrendResponse.builder()
+                .stage(stage)
+                .kcTrends(kcTrends)
+                .build();
+    }
+
+    /**
+     * 4.1, 4.2 stage의 경우 초성/중성/종성별로 그룹화하여 평균 계산
+     */
+    private StageKcMasteryTrendResponse getStageKcMasteryTrendGrouped(
+            Long userId, String stage, List<KnowledgeComponent> kcs,
+            LocalDateTime startDateTime, LocalDateTime endDateTime) {
+
+        // KC를 초성/중성/종성으로 그룹화
+        java.util.Map<String, List<KnowledgeComponent>> kcsByGroup = kcs.stream()
+                .collect(Collectors.groupingBy(kc -> {
+                    String categoryName = kc.getCategory().name();
+                    if (categoryName.contains("ONSET")) {
+                        return "초성";
+                    } else if (categoryName.contains("NUCLEUS")) {
+                        return "중성";
+                    } else if (categoryName.contains("CODA")) {
+                        return "종성";
+                    } else {
+                        return "기타";
+                    }
+                }));
+
+        // 각 그룹별로 평균 숙련도 변화 추이 계산
+        List<KcTrend> kcTrends = kcsByGroup.entrySet().stream()
+                .map(entry -> {
+                    String groupName = entry.getKey();
+                    List<KnowledgeComponent> groupKcs = entry.getValue();
+
+                    // 모든 KC의 숙련도 이력을 시간대별로 수집
+                    java.util.Map<LocalDateTime, List<UserKcMastery>> masteryByTime = new java.util.HashMap<>();
+
+                    for (KnowledgeComponent kc : groupKcs) {
+                        List<UserKcMastery> masteryHistory = userKcMasteryRepository
+                                .findByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtAsc(
+                                        userId, kc.getId(), startDateTime, endDateTime);
+
+                        for (UserKcMastery mastery : masteryHistory) {
+                            masteryByTime.computeIfAbsent(mastery.getUpdatedAt(), k -> new java.util.ArrayList<>())
+                                    .add(mastery);
+                        }
+                    }
+
+                    // 시간대별로 평균 계산
+                    List<MasteryPoint> masteryTrend = masteryByTime.entrySet().stream()
+                            .sorted(java.util.Map.Entry.comparingByKey())
+                            .map(timeEntry -> {
+                                List<UserKcMastery> masteries = timeEntry.getValue();
+
+                                float avgPLearn = (float) masteries.stream()
+                                        .mapToDouble(UserKcMastery::getPLearn)
+                                        .average()
+                                        .orElse(0.0);
+                                float avgPTrain = (float) masteries.stream()
+                                        .mapToDouble(UserKcMastery::getPTrain)
+                                        .average()
+                                        .orElse(0.0);
+                                float avgPGuess = (float) masteries.stream()
+                                        .mapToDouble(UserKcMastery::getPGuess)
+                                        .average()
+                                        .orElse(0.0);
+                                float avgPSlip = (float) masteries.stream()
+                                        .mapToDouble(UserKcMastery::getPSlip)
+                                        .average()
+                                        .orElse(0.0);
+
+                                return MasteryPoint.builder()
+                                        .pLearn(avgPLearn)
+                                        .pTrain(avgPTrain)
+                                        .pGuess(avgPGuess)
+                                        .pSlip(avgPSlip)
+                                        .updatedAt(timeEntry.getKey())
+                                        .build();
+                            })
+                            .collect(Collectors.toList());
+
+                    return KcTrend.builder()
+                            .kcId(null) // 그룹화된 경우 특정 KC ID가 없음
+                            .kcCategory(groupName)
+                            .kcDescription(groupName + ((stage.equals("4.1")) ? " 분절" : " 합성") +  " 평균")
                             .masteryTrend(masteryTrend)
                             .build();
                 })
