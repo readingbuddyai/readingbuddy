@@ -64,7 +64,7 @@ public class DashBoardService {
         int totalProblemCount = (int) allProblems.stream()
                 .map(problem -> new java.util.AbstractMap.SimpleEntry<>(
                         problem.getProblemNumber(),
-                        problem.getSolvedAt().toLocalDate()
+                        problem.getSolvedAt()
                 ))
                 .distinct()
                 .count();
