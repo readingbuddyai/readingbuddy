@@ -56,6 +56,12 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
+    [Header("Progress Bar")]
+    public Image progressBarFill;
+    public Color progressBarBackgroundColor = new Color(1f, 1f, 1f, 0.25f);
+    public Color progressBarFillColor = new Color(1f, 1f, 1f, 0.9f);
+    public Vector2 progressBarSize = new Vector2(1200f, 18f);
+    public Vector2 progressBarOffset = new Vector2(0f, -30f);
     public Image mainImage;              // 중앙 큰 이미지
     public RectTransform optionsContainer; // 하단 옵션 버튼 부모
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
@@ -179,6 +185,9 @@ using OptionDto = StageQuestionModels.OptionDto;
         private StageSupplementController _supplementController;
         private StageSupplementDependencies _supplementDependencies;
         private int _currentProblemNumber;
+        private RectTransform _progressBarRoot;
+        private RectTransform _progressBarFillRect;
+        private float _progressBarMaxWidth;
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
         public bool applyAutoLayout = true;
@@ -517,6 +526,91 @@ using OptionDto = StageQuestionModels.OptionDto;
         return progressText;
     }
 
+    private void SetProgressDisplay(int index, int total)
+    {
+        if (progressText) progressText.text = $"문제 {index}/{total}";
+        var pt = EnsureProgressText();
+        if (pt != null) pt.text = $"{index} / {total}";
+        UpdateProgressBar(index, total);
+    }
+
+    private void UpdateProgressBar(int index, int total)
+    {
+        var fill = EnsureProgressBarFill();
+        if (fill == null) return;
+
+        total = Mathf.Max(1, total);
+        var ratio = Mathf.Clamp01((float)index / total);
+
+        if (_progressBarFillRect == null)
+            _progressBarFillRect = fill.rectTransform;
+
+        if (_progressBarRoot != null && _progressBarRoot.rect.width > 0f)
+            _progressBarMaxWidth = _progressBarRoot.rect.width;
+
+        if (_progressBarMaxWidth <= 0f)
+            _progressBarMaxWidth = progressBarSize.x;
+
+        _progressBarFillRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, _progressBarMaxWidth * ratio);
+    }
+
+    private Image EnsureProgressBarFill()
+    {
+        if (progressBarFill != null && progressBarFill.rectTransform != null)
+        {
+            _progressBarFillRect = progressBarFill.rectTransform;
+            _progressBarRoot = _progressBarFillRect.parent as RectTransform;
+            return progressBarFill;
+        }
+
+        if (_progressBarFillRect != null)
+            return _progressBarFillRect.GetComponent<Image>();
+
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas) return null;
+
+        if (_progressBarRoot == null)
+        {
+            var container = new GameObject("ProgressBar", typeof(RectTransform), typeof(Image));
+            container.layer = canvas.gameObject.layer;
+            _progressBarRoot = container.GetComponent<RectTransform>();
+            _progressBarRoot.SetParent(canvas.transform, false);
+            _progressBarRoot.anchorMin = new Vector2(0.5f, 1f);
+            _progressBarRoot.anchorMax = new Vector2(0.5f, 1f);
+            _progressBarRoot.pivot = new Vector2(0.5f, 1f);
+            _progressBarRoot.anchoredPosition = progressBarOffset;
+            _progressBarRoot.sizeDelta = progressBarSize;
+            var bg = container.GetComponent<Image>();
+            bg.color = progressBarBackgroundColor;
+            bg.raycastTarget = false;
+        }
+
+        if (_progressBarFillRect == null)
+        {
+            var fillObj = new GameObject("ProgressBarFill", typeof(RectTransform), typeof(Image));
+            fillObj.layer = _progressBarRoot.gameObject.layer;
+            fillObj.transform.SetParent(_progressBarRoot, false);
+            _progressBarFillRect = fillObj.GetComponent<RectTransform>();
+            _progressBarFillRect.anchorMin = new Vector2(0f, 0f);
+            _progressBarFillRect.anchorMax = new Vector2(0f, 1f);
+            _progressBarFillRect.pivot = new Vector2(0f, 0.5f);
+            _progressBarFillRect.anchoredPosition = Vector2.zero;
+            _progressBarFillRect.sizeDelta = new Vector2(progressBarSize.x, 0f);
+            var fillImage = fillObj.GetComponent<Image>();
+            fillImage.color = progressBarFillColor;
+            fillImage.raycastTarget = false;
+            progressBarFill = fillImage;
+        }
+
+        if (_progressBarRoot != null && _progressBarRoot.rect.width > 0f)
+            _progressBarMaxWidth = _progressBarRoot.rect.width;
+
+        if (_progressBarMaxWidth <= 0f)
+            _progressBarMaxWidth = progressBarSize.x;
+
+        return progressBarFill;
+    }
+
     private void TryApplyAutoLayout()
     {
         // 옵션 컨테이너: 화면 하단에 가로로 늘려 배치
@@ -811,11 +905,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         // 현재 문제 번호 저장 (attempt 로깅용)
         _currentProblemNumber = index;
         // 진행도 표시
-        if (progressText) progressText.text = $"문제 {index}/{total}";
-
-        // 이미지 로드 및 표시
-        var pt = EnsureProgressText();
-        if (pt != null) pt.text = $"{index} / {total}";
+        SetProgressDisplay(index, total);
         yield return LoadAndShowImage(q.imageUrl);
 
         // 1) [1.1.3] 안내 대사
