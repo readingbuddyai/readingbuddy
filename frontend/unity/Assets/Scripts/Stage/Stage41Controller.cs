@@ -123,6 +123,7 @@ public partial class Stage41Controller : MonoBehaviour
     private bool _awaitingUserArrangement;
     private List<string> _segmentReplies = new List<string>();
     private List<bool> _segmentCorrects = new List<bool>();
+    private List<List<string>> _segmentReplyCandidates = new List<List<string>>();
     private List<string> _expectedPhonemes = new List<string>();
     private int _expectedSegmentCount = 0; // 2 or 3
     private int _attemptCountForProblem = 0;
@@ -257,6 +258,7 @@ public partial class Stage41Controller : MonoBehaviour
             _attemptCountForProblem = 0;
             _segmentReplies.Clear();
             _segmentCorrects.Clear();
+            _segmentReplyCandidates.Clear();
             _expectedPhonemes = (q.phonemes != null) ? new List<string>(q.phonemes) : new List<string>();
             _expectedSegmentCount = (q.answerCnt > 0) ? q.answerCnt : (_expectedPhonemes != null ? _expectedPhonemes.Count : 3);
             Array.Clear(_finalizedSlots, 0, _finalizedSlots.Length);
@@ -473,6 +475,343 @@ public partial class Stage41Controller : MonoBehaviour
         if (jungseongText) jungseongText.text = string.Empty;
         if (jongseongText) jongseongText.text = string.Empty;
         SetAllBoxAlpha(dimAlpha);
+    }
+
+    public void OnSegmentRecognitionHypotheses(int segmentIndex, IList<string> candidates)
+    {
+        if (_expectedPhonemes == null) return;
+        if (segmentIndex < 0 || segmentIndex >= _expectedSegmentCount) return;
+        if (candidates == null) return;
+
+        EnsureSegmentListCapacity(segmentIndex);
+
+        var store = _segmentReplyCandidates[segmentIndex];
+        store.Clear();
+        foreach (var candidate in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
+            store.Add(candidate);
+        }
+
+        string best = SelectBestCandidateForSlot(segmentIndex, store);
+        if (string.IsNullOrEmpty(best))
+        {
+            return;
+        }
+
+        _segmentReplies[segmentIndex] = best;
+        SetSlotText(segmentIndex, best);
+
+        if (!_finalizedSlots[segmentIndex])
+            SetSlotAlpha(segmentIndex, dimAlpha);
+    }
+
+    private void EnsureSegmentListCapacity(int segmentIndex)
+    {
+        while (_segmentReplies.Count <= segmentIndex) _segmentReplies.Add(string.Empty);
+        while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
+        while (_segmentReplyCandidates.Count <= segmentIndex) _segmentReplyCandidates.Add(new List<string>());
+    }
+
+    private void EnsureExpectedPhonemeCapacity(int segmentIndex)
+    {
+        if (_expectedPhonemes == null)
+            _expectedPhonemes = new List<string>();
+        while (_expectedPhonemes.Count <= segmentIndex) _expectedPhonemes.Add(string.Empty);
+    }
+
+    private string SelectBestCandidateForSlot(int segmentIndex, IList<string> candidates)
+    {
+        if (candidates == null || candidates.Count == 0) return string.Empty;
+
+        string expected = GetTargetPhonemeAnswer(segmentIndex);
+        string normalizedExpected = NormalizePhoneme((expected ?? string.Empty).Trim());
+
+        string bestCandidate = string.Empty;
+        int bestScore = int.MinValue;
+
+        foreach (var candidate in candidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
+            string normalized = NormalizePhoneme(candidate.Trim());
+            if (string.IsNullOrEmpty(normalized)) continue;
+
+            if (string.Equals(normalized, normalizedExpected, StringComparison.Ordinal))
+            {
+                return normalized;
+            }
+
+            int similarityScore = ComputePhonemeSimilarityScore(normalizedExpected, normalized);
+            if (similarityScore > bestScore)
+            {
+                bestScore = similarityScore;
+                bestCandidate = normalized;
+            }
+        }
+
+        return bestCandidate;
+    }
+
+    private static int ComputePhonemeSimilarityScore(string expected, string candidate)
+    {
+        if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(candidate))
+            return int.MinValue;
+
+        // Prefer prefixes that match the beginning of the expected value.
+        int prefixMatches = 0;
+        int maxCheck = Mathf.Min(expected.Length, candidate.Length);
+        for (int i = 0; i < maxCheck; i++)
+        {
+            if (expected[i] == candidate[i]) prefixMatches++;
+            else break;
+        }
+
+        int distance = ComputeLevenshteinDistance(expected, candidate);
+        // Higher score is better: more prefix matches, smaller distance.
+        return prefixMatches * 10 - distance;
+    }
+
+    private static int ComputeLevenshteinDistance(string a, string b)
+    {
+        if (a == null) return b?.Length ?? 0;
+        if (b == null) return a.Length;
+
+        int lenA = a.Length;
+        int lenB = b.Length;
+
+        if (lenA == 0) return lenB;
+        if (lenB == 0) return lenA;
+
+        var d = new int[lenA + 1, lenB + 1];
+
+        for (int i = 0; i <= lenA; i++) d[i, 0] = i;
+        for (int j = 0; j <= lenB; j++) d[0, j] = j;
+
+        for (int i = 1; i <= lenA; i++)
+        {
+            for (int j = 1; j <= lenB; j++)
+            {
+                int cost = a[i - 1] == b[j - 1] ? 0 : 1;
+                int deletion = d[i - 1, j] + 1;
+                int insertion = d[i, j - 1] + 1;
+                int substitution = d[i - 1, j - 1] + cost;
+                d[i, j] = Mathf.Min(Mathf.Min(deletion, insertion), substitution);
+            }
+        }
+
+        return d[lenA, lenB];
+    }
+
+    private void HandleTutorialPrefillSlot(string args)
+    {
+        if (!TryParseTutorialSlotCommand(args, out int slotIndex, out var rawCandidates))
+        {
+            if (logVerbose)
+                Debug.LogWarning($"[Stage41][Tutorial] 잘못된 prefill 명령: '{args}'");
+            return;
+        }
+
+        slotIndex = Mathf.Clamp(slotIndex, 0, 2);
+
+        var normalizedCandidates = new List<string>();
+        foreach (var candidate in rawCandidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+                continue;
+            string normalized = NormalizePhoneme(candidate.Trim());
+            if (!string.IsNullOrEmpty(normalized))
+                normalizedCandidates.Add(normalized);
+        }
+
+        EnsureExpectedPhonemeCapacity(slotIndex);
+        if (normalizedCandidates.Count > 0)
+            _expectedPhonemes[slotIndex] = normalizedCandidates[0];
+
+        _expectedSegmentCount = Mathf.Max(_expectedSegmentCount, slotIndex + 1);
+
+        if (normalizedCandidates.Count == 0)
+        {
+            string fallback = GetTargetPhonemeAnswer(slotIndex);
+            if (!string.IsNullOrEmpty(fallback))
+                normalizedCandidates.Add(fallback);
+        }
+
+        if (normalizedCandidates.Count == 0)
+        {
+            if (logVerbose)
+                Debug.LogWarning("[Stage41][Tutorial] 후보가 없어 슬롯을 채울 수 없습니다.");
+            return;
+        }
+
+        OnSegmentRecognitionHypotheses(slotIndex, normalizedCandidates);
+    }
+
+    private void HandleTutorialClearSlot(string args)
+    {
+        if (!TryParseTutorialSlotCommand(args, out int slotIndex, out _))
+        {
+            if (logVerbose)
+                Debug.LogWarning($"[Stage41][Tutorial] 잘못된 clear 명령: '{args}'");
+            return;
+        }
+
+        if (slotIndex < 0 || slotIndex > 2)
+            return;
+
+        EnsureSegmentListCapacity(slotIndex);
+        _segmentReplyCandidates[slotIndex].Clear();
+        _segmentReplies[slotIndex] = string.Empty;
+        if (slotIndex < _segmentCorrects.Count)
+            _segmentCorrects[slotIndex] = false;
+        if (slotIndex < _expectedPhonemes.Count)
+            _expectedPhonemes[slotIndex] = string.Empty;
+        if (slotIndex < _finalizedSlots.Length)
+            _finalizedSlots[slotIndex] = false;
+
+        var slotHolder = ResolveTutorialSlotObject(IndexToSlotTarget(slotIndex));
+        if (slotHolder != null)
+        {
+            var draggables = slotHolder.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null) continue;
+                draggable.ReturnToOrigin();
+            }
+            ForceRefreshContainerLayout(slotHolder);
+        }
+
+        SetSlotText(slotIndex, string.Empty);
+        SetSlotAlpha(slotIndex, dimAlpha);
+    }
+
+    private void HandleTutorialToggleTileVisibility(string args, bool visible)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            if (logVerbose)
+                Debug.LogWarning("[Stage41][Tutorial] tile key가 비어 있습니다.");
+            return;
+        }
+
+        string key = args.Trim();
+        var tile = ResolveTutorialChoiceTile(key);
+        if (tile == null)
+        {
+            if (logVerbose)
+                Debug.LogWarning($"[Stage41][Tutorial] '{key}' 키에 해당하는 타일을 찾을 수 없습니다.");
+            return;
+        }
+
+        if (tile.gameObject.activeSelf != visible)
+        {
+            tile.gameObject.SetActive(visible);
+            ForceRefreshContainerLayout(choicesContainer);
+            ForceRefreshContainerLayout(consonantChoicesContainer);
+            ForceRefreshContainerLayout(vowelChoicesContainer);
+        }
+    }
+
+    private bool TryParseTutorialSlotCommand(string args, out int slotIndex, out List<string> rawCandidates)
+    {
+        slotIndex = -1;
+        rawCandidates = new List<string>();
+        if (string.IsNullOrWhiteSpace(args))
+            return false;
+
+        string slotPart = args;
+        string candidatePart = string.Empty;
+
+        int colon = args.IndexOf(':');
+        if (colon >= 0)
+        {
+            slotPart = args.Substring(0, colon);
+            candidatePart = args.Substring(colon + 1);
+        }
+        else
+        {
+            int comma = args.IndexOf(',');
+            if (comma >= 0)
+            {
+                slotPart = args.Substring(0, comma);
+                candidatePart = args.Substring(comma + 1);
+            }
+        }
+
+        slotPart = slotPart.Trim();
+        if (!TryMapSlotIdentifier(slotPart, out slotIndex))
+            return false;
+
+        if (!string.IsNullOrWhiteSpace(candidatePart))
+        {
+            var parts = candidatePart.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var part in parts)
+            {
+                var trimmed = part?.Trim();
+                if (!string.IsNullOrEmpty(trimmed))
+                    rawCandidates.Add(trimmed);
+            }
+        }
+
+        return true;
+    }
+
+    private bool TryMapSlotIdentifier(string token, out int slotIndex)
+    {
+        slotIndex = -1;
+        if (string.IsNullOrWhiteSpace(token))
+            return false;
+
+        // numeric index 0/1/2
+        if (int.TryParse(token, out slotIndex))
+        {
+            if (slotIndex >= 0 && slotIndex <= 2)
+                return true;
+            slotIndex = -1;
+            return false;
+        }
+
+        string normalized = token.Trim().ToLowerInvariant();
+        switch (normalized)
+        {
+            case "초성":
+            case "choseong":
+            case "initial":
+            case "initials":
+            case "initialconsonant":
+            case "초성슬롯":
+                slotIndex = 0;
+                return true;
+            case "중성":
+            case "jungseong":
+            case "medial":
+            case "medials":
+            case "vowel":
+            case "모음":
+            case "중성슬롯":
+                slotIndex = 1;
+                return true;
+            case "종성":
+            case "jongseong":
+            case "final":
+            case "finals":
+            case "받침":
+            case "종성슬롯":
+                slotIndex = 2;
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    private StageTutorialSlotTarget IndexToSlotTarget(int slotIndex)
+    {
+        switch (slotIndex)
+        {
+            case 0: return StageTutorialSlotTarget.Choseong;
+            case 1: return StageTutorialSlotTarget.Jungseong;
+            case 2: return StageTutorialSlotTarget.Jongsung;
+            default: return StageTutorialSlotTarget.None;
+        }
     }
 
     private void UpdatePhonemeBoxTexts()

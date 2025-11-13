@@ -112,6 +112,7 @@ public partial class Stage41Controller
         _tutorialDependencies.PulseSlot = (slotTarget, scale, duration, loops) => Co_TutorialPulseSlot(slotTarget, scale, duration, loops);
         _tutorialDependencies.AnimateChoiceDrag = (key, slotTarget, seconds, curve, keepInSlot) => Co_TutorialAnimateChoiceDrag(key, slotTarget, seconds, curve, keepInSlot);
         _tutorialDependencies.ChoiceDragRoot = choicesContainer != null ? choicesContainer.transform : null;
+        _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
         _tutorialDependencies.Log = message => { if (logVerbose) Debug.Log(message); };
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = logVerbose;
@@ -381,7 +382,9 @@ public partial class Stage41Controller
         hit = SearchIn(consonantChoicesContainer);
         if (hit != null) return hit;
         hit = SearchIn(vowelChoicesContainer);
-        return hit;
+        if (hit != null) return hit;
+
+        return ResolveChoiceByDraggableSymbol(normalizedKey);
     }
 
     private RectTransform FindChoiceTileRecursive(Transform parent, string trimmedKey, string normalizedKey, HashSet<Transform> rootStops)
@@ -474,7 +477,39 @@ public partial class Stage41Controller
         if (result.StartsWith("Tile_", StringComparison.OrdinalIgnoreCase))
             result = result.Substring("Tile_".Length);
 
-        return result.Trim();
+        result = result.Trim();
+        return NormalizePhoneme(result);
+    }
+
+    private RectTransform ResolveChoiceByDraggableSymbol(string normalizedKey)
+    {
+        if (string.IsNullOrEmpty(normalizedKey))
+            return null;
+
+        RectTransform SearchIn(GameObject container)
+        {
+            if (container == null)
+                return null;
+
+            var draggables = container.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null)
+                    continue;
+
+                string symbol = NormalizePhoneme((draggable.symbol ?? string.Empty).Trim());
+                if (string.Equals(symbol, normalizedKey, StringComparison.Ordinal))
+                    return draggable.GetComponent<RectTransform>();
+            }
+            return null;
+        }
+
+        var hit = SearchIn(choicesContainer);
+        if (hit != null) return hit;
+        hit = SearchIn(consonantChoicesContainer);
+        if (hit != null) return hit;
+        hit = SearchIn(vowelChoicesContainer);
+        return hit;
     }
 
     private System.Collections.IEnumerator Co_AnimateTutorialChoice(RectTransform tile, RectTransform slot, float seconds, AnimationCurve curve, bool keepInSlot)
@@ -697,6 +732,50 @@ public partial class Stage41Controller
             remedialImage.preserveAspect = true;
             remedialImage.enabled = true;
         }
+    }
+
+    private IEnumerator ExecuteTutorialCustomStep(string actionId)
+    {
+        if (string.IsNullOrWhiteSpace(actionId))
+            yield break;
+
+        string command = actionId;
+        string args = string.Empty;
+        int firstColon = actionId.IndexOf(':');
+        if (firstColon >= 0)
+        {
+            command = actionId.Substring(0, firstColon);
+            args = actionId.Substring(firstColon + 1);
+        }
+
+        command = command.Trim().ToLowerInvariant();
+        args = args?.Trim() ?? string.Empty;
+
+        switch (command)
+        {
+            case "prefillslot":
+            case "prefill":
+                HandleTutorialPrefillSlot(args);
+                break;
+            case "clearslot":
+            case "clear":
+                HandleTutorialClearSlot(args);
+                break;
+            case "hidetile":
+            case "hidechoice":
+                HandleTutorialToggleTileVisibility(args, false);
+                break;
+            case "showtile":
+            case "showchoice":
+                HandleTutorialToggleTileVisibility(args, true);
+                break;
+            default:
+                if (logVerbose)
+                    Debug.LogWarning($"[Stage41][Tutorial] Unknown custom action '{actionId}'");
+                break;
+        }
+
+        yield break;
     }
 
     private void UpdateSupplementQuestions(IEnumerable<QuestionDto> source)
