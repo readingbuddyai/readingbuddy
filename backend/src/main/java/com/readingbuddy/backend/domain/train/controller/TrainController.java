@@ -1,6 +1,7 @@
 package com.readingbuddy.backend.domain.train.controller;
 
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
+import com.readingbuddy.backend.auth.service.AuthService;
 import com.readingbuddy.backend.common.service.S3Service;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.response.*;
@@ -29,6 +30,7 @@ public class TrainController {
     private final TrainManager trainManager;
     private final TrainedStageService trainedStageService;
     private final S3Service s3Service;
+    private final AuthService authService;
 
     /**
      * 훈련 문제 세트 생성 API
@@ -114,8 +116,13 @@ public class TrainController {
                         trainedStageService.saveProblemInfoToSession(stageSessionId, problems);
                     }
 
+                    String msg = "";
+                    if (stage.equals("3")) msg = "음소 개수 세기 문제가 생성되었습니다.";
+                    else if (stage.equals("4.1")) msg = "음절 분절 문제가 생성되었습니다.";
+                    else if (stage.equals("4.2")) msg = "음절 합성 문제가 생성되었습니다.";
+
                     return ResponseEntity.status(HttpStatus.CREATED)
-                            .body(ApiResponse.success("음소 개수 세기 문제가 생성되었습니다.", problemSetResponse));
+                            .body(ApiResponse.success(msg, problemSetResponse));
                 default:
                     return ResponseEntity.badRequest()
                             .body(ApiResponse.error("유효하지 않은 단계입니다. " + stage));
@@ -174,6 +181,7 @@ public class TrainController {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
             StageStartResponse response = trainedStageService.startStage(userId, stage);
+            authService.checkAttendance(userId);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
         } catch (Exception e) {
