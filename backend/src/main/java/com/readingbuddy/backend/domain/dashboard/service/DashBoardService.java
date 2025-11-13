@@ -74,7 +74,7 @@ public class DashBoardService {
                 .collect(Collectors.groupingBy(problem ->
                         new java.util.AbstractMap.SimpleEntry<>(
                                 problem.getProblemNumber(),
-                                problem.getSolvedAt().toLocalDate()
+                                problem.getSolvedAt()
                         )
                 ))
                 .entrySet()
