@@ -569,7 +569,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uC2A4\uD1A41 Drag"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -621,7 +621,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uC2A4\uD1A42 Drag"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -673,7 +673,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uC2A4\uD1A43 Drag"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
