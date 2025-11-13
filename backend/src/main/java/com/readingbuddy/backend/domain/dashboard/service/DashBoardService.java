@@ -35,6 +35,7 @@ public class DashBoardService {
     private final TrainedProblemHistoriesRepository trainedProblemHistoriesRepository;
     private final UserKcMasteryRepository userKcMasteryRepository;
     private final KnowledgeComponentRepository knowledgeComponentRepository;
+    private final CalculateService calculateService;
 
     /**
      * 사용자별 해당 스테이지의 통계 정보 조회
@@ -461,6 +462,9 @@ public class DashBoardService {
                             .findByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtAsc(
                                     userId, kc.getId(), startDateTime, endDateTime);
 
+                    // 초기값 계산: 시작 날짜의 값 또는 그 이전 최신값
+                    MasteryPoint initialMastery = calculateService.calculateInitialMastery(userId, kc.getId(), startDateTime);
+
                     // MasteryPoint 리스트로 변환
                     List<MasteryPoint> masteryTrend = masteryHistory.stream()
                             .map(mastery -> MasteryPoint.builder()
@@ -476,6 +480,7 @@ public class DashBoardService {
                             .kcId(kc.getId())
                             .kcCategory(kc.getCategory().name())
                             .kcDescription(kc.getCategory().getDescription())
+                            .initialMastery(initialMastery)
                             .masteryTrend(masteryTrend)
                             .build();
                 })
@@ -514,6 +519,9 @@ public class DashBoardService {
                 .map(entry -> {
                     String groupName = entry.getKey();
                     List<KnowledgeComponent> groupKcs = entry.getValue();
+
+                    // 그룹 초기값 계산: 각 KC의 초기값을 평균
+                    MasteryPoint groupInitialMastery = calculateService.calculateGroupInitialMastery(userId, groupKcs, startDateTime);
 
                     // 모든 KC의 숙련도 이력을 시간대별로 수집
                     java.util.Map<LocalDateTime, List<UserKcMastery>> masteryByTime = new java.util.HashMap<>();
@@ -566,6 +574,7 @@ public class DashBoardService {
                             .kcId(null) // 그룹화된 경우 특정 KC ID가 없음
                             .kcCategory(groupName)
                             .kcDescription(groupName + ((stage.equals("4.1")) ? " 분절" : " 합성") +  " 평균")
+                            .initialMastery(groupInitialMastery)
                             .masteryTrend(masteryTrend)
                             .build();
                 })
