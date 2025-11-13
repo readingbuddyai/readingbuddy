@@ -25,6 +25,7 @@ public class StageKcMasteryTrendResponse {
         private Long kcId;
         private String kcCategory;
         private String kcDescription;
+        private MasteryPoint initialMastery;
         private List<MasteryPoint> masteryTrend;
     }
 
