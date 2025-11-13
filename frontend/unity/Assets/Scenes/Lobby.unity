@@ -791,7 +791,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   animator: {fileID: 344344927}
-  target: {fileID: 0}
+  target: {fileID: 1503421871}
   runSpeed: 2.5
   stopDistance: 0.25
   waitBeforeStart: 0.5

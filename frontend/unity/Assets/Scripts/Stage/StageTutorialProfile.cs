@@ -86,7 +86,8 @@ public enum StageTutorialActionType
     AnimateChoiceDrag,
     AwaitTrigger,
     SetProgressText,
-    CustomAction
+    CustomAction,
+    PlayTutorialVideo
 }
 
 public enum StageTutorialCursorTarget
