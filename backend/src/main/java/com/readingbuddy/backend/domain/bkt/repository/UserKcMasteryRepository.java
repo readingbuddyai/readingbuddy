@@ -32,6 +32,14 @@ public interface UserKcMasteryRepository extends JpaRepository<UserKcMastery, Lo
     Optional<UserKcMastery> findFirstByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
             Long userId, Long knowledgeComponentId, LocalDateTime startDateTime, LocalDateTime endDateTime);
 
+    // 특정 기간 내 KC의 최초 숙련도 조회
+    Optional<UserKcMastery> findFirstByUser_IdAndKnowledgeComponent_IdAndCreatedAtBetweenOrderByCreatedAtAsc(
+            Long userId, Long knowledgeComponentId, LocalDateTime startDateTime, LocalDateTime endDateTime);
+
+    // 특정 시점 이전의 KC 최신 숙련도 조회
+    Optional<UserKcMastery> findFirstByUser_IdAndKnowledgeComponent_IdAndCreatedAtBeforeOrderByCreatedAtDesc(
+            Long userId, Long knowledgeComponentId, LocalDateTime beforeDateTime);
+
     /**
      * 특정 카테고리 리스트에 해당하는 mastery의 날짜별 평균 계산
      */
