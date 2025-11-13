@@ -211,7 +211,7 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uBE44\uB514\uC624 Play"
     phase: 1
-    action: 4
+    action: 20
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -419,7 +419,7 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uCEE4\uC11C ON"
     phase: 1
-    action: 8
+    action: 12
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -445,7 +445,7 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uCEE4\uC11C \uC774\uB3D9"
     phase: 1
-    action: 9
+    action: 13
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -621,7 +621,7 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uCEE4\uC11C OFF"
     phase: 1
-    action: 8
+    action: 12
     audioClip: {fileID: 8300000, guid: bacdf2621263c694eb33ba49a2ade75e, type: 3}
     image: {fileID: 0}
     waitSeconds: 0

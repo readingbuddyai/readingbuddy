@@ -11,7 +11,7 @@ using TMPro;
 using Stage.UI;
 
 /// <summary>
-/// Stage 2.1 진행 컨트롤러 (마법 돌 퍼즐)
+/// Stage 2 진행 컨트롤러 (마법 돌 퍼즐)
 /// Stage11/Stage12와 동일한 책임 분리를 적용하여
 /// 세션/오디오/문항 관리 로직을 공통 컨트롤러에 위임한다.
 /// </summary>
@@ -20,9 +20,9 @@ public class Stage20Controller : MonoBehaviour
     [Header("API 설정")]
     public string baseUrl = "";
     [Tooltip("문제 세트 조회에 사용할 stage 값 (예: 1.2.1)")]
-    public string stage = "1.2.1";
+    public string stage = "2";
     [Tooltip("stage/start · check/voice 등 2단계 스테이지 값 (예: 2.1)")]
-    public string stageTwoPart = "2.1";
+    public string stageTwoPart = "2";
     public int count = 5;
     [Tooltip("Authorization: Bearer {token}")]
     public string authToken = "";

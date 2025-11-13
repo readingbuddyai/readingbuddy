@@ -1,7 +1,7 @@
 fileFormatVersion: 2
 guid: 7a8a346134d75994eb71ab5b839878fb
 ModelImporter:
-  serializedVersion: 21300
+  serializedVersion: 22200
   internalIDToNameTable: []
   externalObjects: {}
   materials:
@@ -44,7 +44,7 @@ ModelImporter:
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
-      loopTime: 0
+      loopTime: 1
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
@@ -102,7 +102,7 @@ ModelImporter:
       cycleOffset: 0
       loop: 0
       hasAdditiveReferencePose: 0
-      loopTime: 0
+      loopTime: 1
       loopBlend: 0
       loopBlendOrientation: 0
       loopBlendPositionY: 0
@@ -562,6 +562,7 @@ ModelImporter:
     addColliders: 0
     useSRGBMaterialColor: 1
     sortHierarchyByName: 1
+    importPhysicalCameras: 1
     importVisibility: 1
     importBlendShapes: 1
     importCameras: 1
@@ -589,6 +590,7 @@ ModelImporter:
     secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
     useFileScale: 1
+    strictVertexDataChecks: 0
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
@@ -831,14 +833,12 @@ ModelImporter:
     - name: Cloth.cloak.003
       parentName: Cloth.cloak.002
       position: {x: -2.4868996e-12, y: 10.717347, z: -0.0000042840866}
-      rotation: {x: 0.0000016987324, y: -0.0000000010608385, z: -0.000000024768113,
-        w: 1}
+      rotation: {x: 0.0000016987324, y: -0.0000000010608385, z: -0.000000024768113, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Cloth.cloak.004
       parentName: Cloth.cloak.003
       position: {x: -7.1054274e-13, y: 8.138105, z: -4.3021142e-12}
-      rotation: {x: -0.0000013969839, y: -0.0000000013693158, z: -0.000000031987557,
-        w: 1}
+      rotation: {x: -0.0000013969839, y: -0.0000000013693158, z: -0.000000031987557, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Cloth.cloak.004_end
       parentName: Cloth.cloak.004
@@ -888,8 +888,7 @@ ModelImporter:
     - name: Wing.L.003
       parentName: Wing.L.002
       position: {x: -0, y: 15.804555, z: 0.0000018626451}
-      rotation: {x: -0.0000007655472, y: -0.000000041909516, z: -0.0000014607796,
-        w: 1}
+      rotation: {x: -0.0000007655472, y: -0.000000041909516, z: -0.0000014607796, w: 1}
       scale: {x: 1, y: 0.99999994, z: 1}
     - name: Wing.L.003_end
       parentName: Wing.L.003
@@ -1174,8 +1173,7 @@ ModelImporter:
     - name: Hair.back.L.006
       parentName: Hair.back.L.005
       position: {x: -0.0000016407597, y: 17.341177, z: -0.000002568835}
-      rotation: {x: -0.00000028150592, y: -0.00000008940696, z: -0.0000002467034,
-        w: 1}
+      rotation: {x: -0.00000028150592, y: -0.00000008940696, z: -0.0000002467034, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Hair.back.L.007
       parentName: Hair.back.L.006
@@ -1260,8 +1258,7 @@ ModelImporter:
     - name: Equipment.hat.R.002
       parentName: Equipment.hat.R.001
       position: {x: 0.0000052154064, y: 14.402951, z: 0.0000011175871}
-      rotation: {x: 0.0000000018626451, y: -0.00000026635826, z: 0.00000022910535,
-        w: 1}
+      rotation: {x: 0.0000000018626451, y: -0.00000026635826, z: 0.00000022910535, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Equipment.hat.R.003
       parentName: Equipment.hat.R.002
@@ -1311,8 +1308,7 @@ ModelImporter:
     - name: Equipment.hat.L.002
       parentName: Equipment.hat.L.001
       position: {x: -0.0000052154064, y: 14.402951, z: 0.0000011175871}
-      rotation: {x: 0.0000000018626451, y: 0.00000026635826, z: -0.00000022910535,
-        w: 1}
+      rotation: {x: 0.0000000018626451, y: 0.00000026635826, z: -0.00000022910535, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Equipment.hat.L.003
       parentName: Equipment.hat.L.002
@@ -1562,8 +1558,7 @@ ModelImporter:
     - name: Cloth.cloakdummy.001
       parentName: Cloth.cloak.L.001
       position: {x: -0.0000014901161, y: -0.000006891787, z: -0.000010954682}
-      rotation: {x: -0.00000059604645, y: -0.000000012340024, z: -0.00000013131648,
-        w: 1}
+      rotation: {x: -0.00000059604645, y: -0.000000012340024, z: -0.00000013131648, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Cloth.cloakdummy.001_end
       parentName: Cloth.cloakdummy.001
@@ -1638,8 +1633,7 @@ ModelImporter:
     - name: Leg.toes.R.001
       parentName: Leg.foot.R.001
       position: {x: -0.0000001938886, y: 4.6476307, z: -0.000000025131063}
-      rotation: {x: 0.000000014901118, y: -0.000000007389856, z: 0.00000008055936,
-        w: 1}
+      rotation: {x: 0.000000014901118, y: -0.000000007389856, z: 0.00000008055936, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Leg.toes.R.001_end
       parentName: Leg.toes.R.001
@@ -1674,8 +1668,7 @@ ModelImporter:
     - name: Leg.toes.L.001
       parentName: Leg.foot.L.001
       position: {x: 0.00000019328232, y: 4.647631, z: 0.000000115727005}
-      rotation: {x: 0.000000029802283, y: 0.000000004945151, z: -0.000000081956344,
-        w: 1}
+      rotation: {x: 0.000000029802283, y: 0.000000004945151, z: -0.000000081956344, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Leg.toes.L.001_end
       parentName: Leg.toes.L.001
@@ -1695,8 +1688,7 @@ ModelImporter:
     - name: Cloth.dress.R.007
       parentName: Cloth.dress.R.006
       position: {x: -0.000000005820766, y: 7.0790424, z: -0.0000014202669}
-      rotation: {x: -0.00000009220094, y: -0.0000009617652, z: -0.00000034784898,
-        w: 1}
+      rotation: {x: -0.00000009220094, y: -0.0000009617652, z: -0.00000034784898, w: 1}
       scale: {x: 1, y: 1, z: 0.99999994}
     - name: Cloth.dress.R.007_end
       parentName: Cloth.dress.R.007
@@ -1711,8 +1703,7 @@ ModelImporter:
     - name: Cloth.dress.R.010
       parentName: Cloth.dress.R.009
       position: {x: -0.0000010011718, y: 7.0790424, z: -0.0000011175871}
-      rotation: {x: 0.00000023841858, y: -0.00000071473187, z: -0.000000003259629,
-        w: 1}
+      rotation: {x: 0.00000023841858, y: -0.00000071473187, z: -0.000000003259629, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Cloth.dress.R.011
       parentName: Cloth.dress.R.010
@@ -1752,8 +1743,7 @@ ModelImporter:
     - name: Cloth.dress.L.006
       parentName: Cloth.dress.L.005
       position: {x: -0.00000012805685, y: 7.0790486, z: 0.00000077998266}
-      rotation: {x: 0.00000009755604, y: -0.00000026013004, z: -0.00000062887557,
-        w: 1}
+      rotation: {x: 0.00000009755604, y: -0.00000026013004, z: -0.00000062887557, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Cloth.dress.L.007
       parentName: Cloth.dress.L.006
@@ -1778,8 +1768,7 @@ ModelImporter:
     - name: Cloth.dress.L.011
       parentName: Cloth.dress.L.010
       position: {x: 0.00000007566996, y: 7.079042, z: 0}
-      rotation: {x: 0.00000023283066, y: -0.000000054424167, z: 0.00000048917724,
-        w: 1}
+      rotation: {x: 0.00000023283066, y: -0.000000054424167, z: 0.00000048917724, w: 1}
       scale: {x: 0.99999994, y: 0.99999994, z: 1}
     - name: Cloth.dress.L.011_end
       parentName: Cloth.dress.L.011
@@ -1814,8 +1803,7 @@ ModelImporter:
     - name: Cloth.dress.back.002
       parentName: Cloth.dress.back.001
       position: {x: 1.110223e-14, y: 7.0790095, z: -0.00000074505806}
-      rotation: {x: 0.00000064074993, y: 0.000000009730194, z: -0.000000014647819,
-        w: 1}
+      rotation: {x: 0.00000064074993, y: 0.000000009730194, z: -0.000000014647819, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: Cloth.dress.back.003
       parentName: Cloth.dress.back.002
@@ -2134,13 +2122,13 @@ ModelImporter:
     hasTranslationDoF: 0
     hasExtraRoot: 1
     skeletonHasParents: 1
-  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: ef303e52c2585924db6d08cea3d7e737,
-    type: 3}
+  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: ef303e52c2585924db6d08cea3d7e737, type: 3}
   autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 2
   humanoidOversampling: 1
   avatarSetup: 2
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1
+  importBlendShapeDeformPercent: 0
   remapMaterialsIfMaterialImportModeIsNone: 0
   additionalBone: 0
   userData: 
