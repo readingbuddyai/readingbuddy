@@ -31,7 +31,9 @@ KcMastery _$KcMasteryFromJson(Map<String, dynamic> json) => KcMastery(
       pTrain: (json['pTrain'] as num?)?.toDouble(),
       pGuess: (json['pGuess'] as num?)?.toDouble(),
       pSlip: (json['pSlip'] as num?)?.toDouble(),
-      updatedAt: json['updatedAt'] as String?,
+      updatedAt: json['updatedAt'] == null
+          ? null
+          : DateTime.parse(json['updatedAt'] as String),
     );
 
 Map<String, dynamic> _$KcMasteryToJson(KcMastery instance) => <String, dynamic>{
@@ -41,5 +43,5 @@ Map<String, dynamic> _$KcMasteryToJson(KcMastery instance) => <String, dynamic>{
       'pTrain': instance.pTrain,
       'pGuess': instance.pGuess,
       'pSlip': instance.pSlip,
-      'updatedAt': instance.updatedAt,
+      'updatedAt': instance.updatedAt?.toIso8601String(),
     };

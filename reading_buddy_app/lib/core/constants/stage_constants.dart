@@ -118,6 +118,17 @@ class StageConstants {
     '글자',
     '읽기',
   ];
+
+  /// KC 데이터가 있는 스테이지 목록 (학습 추이 분석 대상)
+  /// Knowledge Component가 정의된 스테이지만 포함
+  static const List<String> kcEnabledStages = [
+    '1.1.1', // 모음 기초
+    '1.1.2', // 모음 심화
+    '1.2.1', // 자음 기초
+    '1.2.2', // 자음 심화
+    '4.1',   // 천천히 읽기
+    '4.2',   // 빠르게 읽기
+  ];
 }
 
 /// 편의 메서드를 위한 extension

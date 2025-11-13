@@ -15,6 +15,9 @@ import '../../features/dashboard/data/models/stage_mastery_response.dart';
 import '../../features/dashboard/data/models/attendance_response.dart';
 import '../../features/dashboard/data/models/phoneme_rank_response.dart';
 import '../../features/dashboard/data/models/last_played_stage_response.dart';
+import '../../features/dashboard/data/models/practice_list_response.dart';
+import '../../features/dashboard/data/models/all_kc_mastery_response.dart';
+import '../../features/dashboard/data/models/stage_kc_mastery_trend_response.dart';
 
 part 'api_client.g.dart';
 
@@ -117,6 +120,24 @@ abstract class ApiClient {
     @Query('stage') String stage,
     @Query('startdate') String? startDate,
     @Query('enddate') String? endDate,
+  );
+
+  /// 모든 KC 평균 숙련도 조회
+  @GET(ApiConstants.allKcMastery)
+  Future<ApiResponse<AllKcAverageMasteryResponse>> getAllKcAverageMastery();
+
+  /// Stage별 KC 숙련도 변화 추이 조회
+  @GET(ApiConstants.stageKcMasteryTrend)
+  Future<ApiResponse<StageKcMasteryTrendResponse>> getStageKcMasteryTrend(
+    @Query('stage') String stage,
+    @Query('startdate') String? startDate,
+    @Query('enddate') String? endDate,
+  );
+
+  /// 일별 학습 기록 상세 조회
+  @GET(ApiConstants.practiceList)
+  Future<ApiResponse<PracticeListResponse>> getPracticeList(
+    @Query('date') String date,
   );
 
   // ==================== Train APIs ====================

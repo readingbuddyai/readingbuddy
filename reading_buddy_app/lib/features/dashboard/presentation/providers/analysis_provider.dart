@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/error_state.dart';
+import '../../../../core/constants/stage_constants.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 import '../../../../core/providers/providers.dart';
 import '../../data/models/stage_info_response.dart';
@@ -11,7 +13,7 @@ import '../../data/models/phoneme_rank_response.dart';
 /// 학습 분석 화면 상태
 class AnalysisState {
   final bool isLoading;
-  final String? errorMessage;
+  final ErrorState? error;
   final String selectedStage;
 
   // 스테이지 통계
@@ -26,7 +28,7 @@ class AnalysisState {
 
   AnalysisState({
     this.isLoading = false,
-    this.errorMessage,
+    this.error,
     this.selectedStage = '1.1.1',
     this.stageInfo,
     this.tryAvg,
@@ -38,7 +40,8 @@ class AnalysisState {
 
   AnalysisState copyWith({
     bool? isLoading,
-    String? errorMessage,
+    ErrorState? error,
+    bool? clearError,
     String? selectedStage,
     StageInfoResponse? stageInfo,
     StageTryAvgResponse? tryAvg,
@@ -49,7 +52,7 @@ class AnalysisState {
   }) {
     return AnalysisState(
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage,
+      error: clearError == true ? null : (error ?? this.error),
       selectedStage: selectedStage ?? this.selectedStage,
       stageInfo: stageInfo ?? this.stageInfo,
       tryAvg: tryAvg ?? this.tryAvg,
@@ -71,39 +74,46 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
 
   /// 학습 분석 데이터 로드
   Future<void> _loadAnalysisData() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true, clearError: true);
 
     try {
       debugPrint('=== Analysis Data Load Start ===');
       debugPrint('Selected Stage: ${state.selectedStage}');
 
       // 실제 API 호출
-      final stageInfo = await dashboardRepository.getStageInfo(state.selectedStage);
+      final stageInfoResult = await dashboardRepository.getStageInfo(state.selectedStage);
       debugPrint('StageInfo loaded');
 
-      final tryAvg = await dashboardRepository.getStageTryAvg(state.selectedStage);
-      debugPrint('TryAvg loaded: ${tryAvg?.averageTryCount}');
+      final tryAvgResult = await dashboardRepository.getStageTryAvg(state.selectedStage);
+      debugPrint('TryAvg loaded');
 
-      final correctRate = await dashboardRepository.getStageCorrectRate(state.selectedStage);
-      debugPrint('CorrectRate loaded: ${correctRate?.correctRate}');
+      final correctRateResult = await dashboardRepository.getStageCorrectRate(state.selectedStage);
+      debugPrint('CorrectRate loaded');
 
-      final weakPhonemes = await dashboardRepository.getWrongPhonemesRank(5);
-      debugPrint('WeakPhonemes loaded: ${weakPhonemes.length} items');
+      final weakPhonemesResult = await dashboardRepository.getWrongPhonemesRank(5);
+      debugPrint('WeakPhonemes loaded');
 
-      final practicedPhonemes = await dashboardRepository.getTryPhonemesRank(5);
-      debugPrint('PracticedPhonemes loaded: ${practicedPhonemes.length} items');
+      final practicedPhonemesResult = await dashboardRepository.getTryPhonemesRank(5);
+      debugPrint('PracticedPhonemes loaded');
 
-      final mastery = await dashboardRepository.getStageMastery(state.selectedStage);
-      debugPrint('Mastery loaded: ${mastery?.averageMastery}');
+      // KC가 있는 스테이지만 mastery 조회
+      StageMasteryResponse? mastery;
+      if (StageConstants.kcEnabledStages.contains(state.selectedStage)) {
+        final masteryResult = await dashboardRepository.getStageMastery(state.selectedStage);
+        mastery = masteryResult.isSuccess ? masteryResult.dataOrNull : null;
+        debugPrint('Mastery loaded');
+      } else {
+        debugPrint('Mastery skipped: Stage ${state.selectedStage} has no KC');
+      }
 
       state = state.copyWith(
         isLoading: false,
-        stageInfo: stageInfo,
-        tryAvg: tryAvg,
-        correctRate: correctRate,
+        stageInfo: stageInfoResult.dataOrNull,
+        tryAvg: tryAvgResult.dataOrNull,
+        correctRate: correctRateResult.dataOrNull,
         mastery: mastery,
-        weakPhonemes: weakPhonemes,
-        practicedPhonemes: practicedPhonemes,
+        weakPhonemes: weakPhonemesResult.dataOrNull,
+        practicedPhonemes: practicedPhonemesResult.dataOrNull,
       );
       debugPrint('=== Analysis Data Load Complete ===');
     } catch (e, stackTrace) {
@@ -112,7 +122,7 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
       debugPrint('StackTrace: $stackTrace');
       state = state.copyWith(
         isLoading: false,
-        errorMessage: '데이터를 불러오는데 실패했습니다.',
+        error: ErrorState.unknown('데이터를 불러오는데 실패했습니다.'),
       );
     }
   }
@@ -121,26 +131,32 @@ class AnalysisNotifier extends StateNotifier<AnalysisState> {
   Future<void> selectStage(String stage) async {
     if (state.selectedStage == stage) return;
 
-    state = state.copyWith(selectedStage: stage, isLoading: true);
+    state = state.copyWith(selectedStage: stage, isLoading: true, clearError: true);
 
     try {
       // 실제 API 호출
-      final stageInfo = await dashboardRepository.getStageInfo(stage);
-      final tryAvg = await dashboardRepository.getStageTryAvg(stage);
-      final correctRate = await dashboardRepository.getStageCorrectRate(stage);
-      final mastery = await dashboardRepository.getStageMastery(stage);
+      final stageInfoResult = await dashboardRepository.getStageInfo(stage);
+      final tryAvgResult = await dashboardRepository.getStageTryAvg(stage);
+      final correctRateResult = await dashboardRepository.getStageCorrectRate(stage);
+
+      // KC가 있는 스테이지만 mastery 조회
+      StageMasteryResponse? mastery;
+      if (StageConstants.kcEnabledStages.contains(stage)) {
+        final masteryResult = await dashboardRepository.getStageMastery(stage);
+        mastery = masteryResult.dataOrNull;
+      }
 
       state = state.copyWith(
         isLoading: false,
-        stageInfo: stageInfo,
-        tryAvg: tryAvg,
-        correctRate: correctRate,
+        stageInfo: stageInfoResult.dataOrNull,
+        tryAvg: tryAvgResult.dataOrNull,
+        correctRate: correctRateResult.dataOrNull,
         mastery: mastery,
       );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: '스테이지 데이터를 불러오는데 실패했습니다.',
+        error: ErrorState.unknown('스테이지 데이터를 불러오는데 실패했습니다.'),
       );
     }
   }

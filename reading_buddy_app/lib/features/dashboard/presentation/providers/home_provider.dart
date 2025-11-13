@@ -1,15 +1,20 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/error_state.dart';
+import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/constants/learning_constants.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/constants/stage_constants.dart';
 import '../../data/models/attendance_response.dart';
 import '../../data/models/last_played_stage_response.dart';
+import '../../data/models/stage_mastery_response.dart';
+import '../../data/models/all_kc_mastery_response.dart';
 import '../../data/models/stage_correct_rate_response.dart';
 
 /// 홈 화면 상태
 class HomeState {
   final bool isLoading;
-  final String? errorMessage;
+  final ErrorState? error;
 
   // 출석 데이터
   final bool attendedToday;
@@ -38,7 +43,7 @@ class HomeState {
 
   HomeState({
     this.isLoading = false,
-    this.errorMessage,
+    this.error,
     this.attendedToday = false,
     this.consecutiveDays = 0,
     this.todayPlaytime = '00:00',
@@ -58,7 +63,8 @@ class HomeState {
 
   HomeState copyWith({
     bool? isLoading,
-    String? errorMessage,
+    ErrorState? error,
+    bool? clearError,  // 에러 제거용 플래그
     bool? attendedToday,
     int? consecutiveDays,
     String? todayPlaytime,
@@ -77,7 +83,7 @@ class HomeState {
   }) {
     return HomeState(
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage,
+      error: clearError == true ? null : (error ?? this.error),
       attendedToday: attendedToday ?? this.attendedToday,
       consecutiveDays: consecutiveDays ?? this.consecutiveDays,
       todayPlaytime: todayPlaytime ?? this.todayPlaytime,
@@ -107,20 +113,15 @@ class HomeNotifier extends StateNotifier<HomeState> {
 
   /// 홈 화면 데이터 로드
   Future<void> _loadHomeData() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // 오늘 날짜 (yyMMdd 형식)
-      final now = DateTime.now();
-      final today = '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-
-      // 이번 주 시작일 (월요일)
-      final weekStart = now.subtract(Duration(days: now.weekday - 1));
-      final weekStartDate = '${weekStart.year.toString().substring(2)}${weekStart.month.toString().padLeft(2, '0')}${weekStart.day.toString().padLeft(2, '0')}';
-
-      // 최근 30일 (연속 출석 계산용)
-      final thirtyDaysAgo = now.subtract(const Duration(days: 30));
-      final thirtyDaysStartDate = '${thirtyDaysAgo.year.toString().substring(2)}${thirtyDaysAgo.month.toString().padLeft(2, '0')}${thirtyDaysAgo.day.toString().padLeft(2, '0')}';
+      // 날짜 계산
+      final today = DateFormatter.todayYyMMdd();
+      final weekStartDate = DateFormatter.weekStartYyMMdd();
+      final thirtyDaysStartDate = DateFormatter.daysAgoYyMMdd(
+        LearningConstants.consecutiveDaysCheckPeriod,
+      );
 
       // 1-3. 병렬 처리: 출석 데이터 + 마지막 플레이 스테이지 조회
       final results = await Future.wait([
@@ -130,57 +131,75 @@ class HomeNotifier extends StateNotifier<HomeState> {
         dashboardRepository.getLastPlayedStage(),
       ]);
 
-      final todayData = results[0] as AttendanceResponse?;
-      final weekData = results[1] as AttendanceResponse?;
-      final thirtyDaysData = results[2] as AttendanceResponse?;
-      final lastPlayedStage = results[3] as LastPlayedStageResponse?;
+      final todayData = results[0].isSuccess ? results[0].dataOrNull as AttendanceResponse? : null;
+      final weekData = results[1].isSuccess ? results[1].dataOrNull as AttendanceResponse? : null;
+      final thirtyDaysData = results[2].isSuccess ? results[2].dataOrNull as AttendanceResponse? : null;
+      final lastPlayedStage = results[3].isSuccess ? results[3].dataOrNull as LastPlayedStageResponse? : null;
 
       // 4. 마지막 플레이 스테이지의 숙련도 조회 (또는 기본 스테이지)
       final lastStageId = lastPlayedStage?.stage ?? '1.1.1';
 
-      // 5. 전체 스테이지 숙련도 조회 (8개) - 병렬 처리!
-      final allStages = StageConstants.allStages;
-      final masteryFutures = allStages.map((stageConfig) {
-        return dashboardRepository.getStageMastery(stageConfig.id);
-      }).toList();
+      // 5. 전체 KC 숙련도 조회 (단일 API 호출로 최적화!) + 마지막 스테이지 데이터
+      const allStages = StageConstants.allStages;
 
       // 마지막 플레이 스테이지 숙련도 & 정답률 함께 조회
-      masteryFutures.add(dashboardRepository.getStageMastery(lastStageId));
-
-      final correctRateFuture = dashboardRepository.getStageCorrectRate(lastStageId);
-
       final results2 = await Future.wait([
-        Future.wait(masteryFutures),
-        correctRateFuture,
+        dashboardRepository.getAllKcAverageMastery(),
+        dashboardRepository.getStageMastery(lastStageId),
+        dashboardRepository.getStageCorrectRate(lastStageId),
       ]);
 
-      final masteryResults = results2[0] as List;
-      final lastStageCorrectRateData = results2[1] as StageCorrectRateResponse?;
+      final allKcMasteryData = results2[0].isSuccess ? results2[0].dataOrNull as AllKcAverageMasteryResponse? : null;
+      final lastStageMastery = results2[1].isSuccess ? results2[1].dataOrNull as StageMasteryResponse? : null;
+      final lastStageCorrectRateData = results2[2].isSuccess ? results2[2].dataOrNull as StageCorrectRateResponse? : null;
 
-      // 전체 스테이지 숙련도 계산
-      final masteryList = <double>[];
-      int completedCount = 0;
+      // 전체 스테이지 숙련도 계산 (KC 데이터를 스테이지별로 그룹화)
+      final stageMasteryMap = <String, List<double>>{};
 
-      for (int i = 0; i < allStages.length; i++) {
-        final mastery = masteryResults[i];
-        if (mastery != null && mastery.averageMastery != null) {
-          final masteryPercent = mastery.averageMastery! * 100;
-          masteryList.add(masteryPercent);
-
-          // 70% 이상이면 완료로 간주
-          if (masteryPercent >= 70) {
-            completedCount++;
+      final kcMasteries = allKcMasteryData?.kcMasteries;
+      if (kcMasteries != null) {
+        for (final kc in kcMasteries) {
+          if (kc.stage != null && kc.pLearn != null) {
+            stageMasteryMap.putIfAbsent(kc.stage!, () => []).add(kc.pLearn!);
           }
         }
       }
 
-      // 평균 숙련도 계산
-      final averageMastery = masteryList.isNotEmpty
-          ? masteryList.reduce((a, b) => a + b) / masteryList.length
-          : 0.0;
+      // 각 스테이지별 평균 숙련도 계산
+      final masteryResults = <StageMasteryResponse?>[];
+      final masteryList = <double>[];
+      int completedCount = 0;
 
-      // 마지막 스테이지 숙련도 & 정답률
-      final lastStageMastery = masteryResults.last;
+      for (final stageConfig in allStages) {
+        final stageId = stageConfig.id;
+        final kcMasteryList = stageMasteryMap[stageId];
+
+        if (kcMasteryList != null && kcMasteryList.isNotEmpty) {
+          final avgMastery = kcMasteryList.reduce((a, b) => a + b) / kcMasteryList.length;
+          final masteryPercent = avgMastery * 100;
+
+          masteryList.add(masteryPercent);
+          masteryResults.add(StageMasteryResponse(averageMastery: avgMastery));
+
+          // 완료 임계값 이상이면 완료로 간주
+          if (masteryPercent >= LearningConstants.masteryCompletionThreshold) {
+            completedCount++;
+          }
+        } else {
+          // KC 데이터가 없는 스테이지 (2, 1.1, 1.2 등)
+          masteryResults.add(null);
+        }
+      }
+
+      // 평균 숙련도 계산 (전체 KC 평균 사용)
+      final overallMastery = allKcMasteryData?.overallAverageMastery;
+      final averageMastery = overallMastery != null
+          ? overallMastery * 100
+          : (masteryList.isNotEmpty
+              ? masteryList.reduce((a, b) => a + b) / masteryList.length
+              : 0.0);
+
+      // 마지막 스테이지 정답률
       final lastStageCorrectRate = lastStageCorrectRateData?.correctRate;
 
       // 6. 똑똑한 추천 로직
@@ -199,7 +218,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
         final mastery = masteryResults[i];
         if (mastery != null && mastery.averageMastery != null) {
           final masteryPercent = mastery.averageMastery! * 100;
-          if (masteryPercent < 70) {
+          if (masteryPercent < LearningConstants.masteryCompletionThreshold) {
             firstLowMasteryStageId = allStages[i].id;
             break;
           }
@@ -216,38 +235,40 @@ class HomeNotifier extends StateNotifier<HomeState> {
         recommendedStageId = firstLowMasteryStageId;
         final stageConfig = StageConfig.findById(firstLowMasteryStageId);
         recommendedStageName = stageConfig?.displayName ?? firstLowMasteryStageId;
-        recommendedMessage = '이전 단계를 먼저 완성해보세요!';
+        recommendedMessage = LearningConstants.recommendReviewPrevious;
       } else {
         // 이전이 다 OK!
         final lastMasteryPercent = lastStageMastery?.masteryPercent ?? 0;
         final correctRate = lastStageCorrectRate ?? 0;
 
-        if (correctRate >= 80 && lastMasteryPercent >= 70) {
+        if (correctRate >= LearningConstants.correctRateExcellentThreshold &&
+            lastMasteryPercent >= LearningConstants.masteryCompletionThreshold) {
           // 완벽! 다음 단계로
           final nextStageIndex = lastStageIndex + 1;
           if (nextStageIndex < allStages.length) {
             recommendedStageId = allStages[nextStageIndex].id;
             recommendedStageName = allStages[nextStageIndex].displayName;
-            recommendedMessage = '완벽해요! 다음 단계로 가볼까요?';
+            recommendedMessage = LearningConstants.recommendNextStage;
           } else {
             // 마지막 스테이지까지 다 완료
             recommendedStageId = lastStageId;
             final stageConfig = StageConfig.findById(lastStageId);
             recommendedStageName = stageConfig?.displayName ?? lastStageId;
-            recommendedMessage = '모든 단계를 완료했어요! 🎉';
+            recommendedMessage = LearningConstants.congratsAllComplete;
           }
-        } else if (correctRate >= 80 && lastMasteryPercent < 70) {
+        } else if (correctRate >= LearningConstants.correctRateExcellentThreshold &&
+            lastMasteryPercent < LearningConstants.masteryCompletionThreshold) {
           // 방금 잘함! 조금만 더
           recommendedStageId = lastStageId;
           final stageConfig = StageConfig.findById(lastStageId);
           recommendedStageName = stageConfig?.displayName ?? lastStageId;
-          recommendedMessage = '잘하셨어요! 조금만 더 연습하면 완성!';
+          recommendedMessage = LearningConstants.recommendPracticeMore;
         } else {
           // 나머지 → 다시 도전
           recommendedStageId = lastStageId;
           final stageConfig = StageConfig.findById(lastStageId);
           recommendedStageName = stageConfig?.displayName ?? lastStageId;
-          recommendedMessage = '다시 도전해보세요!';
+          recommendedMessage = LearningConstants.recommendRetry;
         }
       }
 
@@ -257,10 +278,14 @@ class HomeNotifier extends StateNotifier<HomeState> {
 
       // 주간 데이터
       final weeklyAttendDays = weekData?.periodData?.totalAttendDays ?? 0;
-      final weeklyPlaytime = _calculateTotalPlaytime(weekData?.periodData?.attendDates ?? []);
+      final weeklyPlaytime = DateFormatter.sumPlaytimes(
+        weekData?.periodData?.attendDates.map((e) => e.playtime).toList() ?? [],
+      );
 
       // 연속 출석 계산 (최근 30일 데이터 사용)
-      final consecutiveDays = _calculateConsecutiveDays(thirtyDaysData?.periodData?.attendDates ?? []);
+      final consecutiveDays = DateFormatter.calculateConsecutiveDays(
+        thirtyDaysData?.periodData?.attendDates.map((e) => DateTime.parse(e.attendDate)).toList() ?? [],
+      );
 
       // 전체 출석 일수 (최근 30일)
       final totalAttendDays = thirtyDaysData?.periodData?.totalAttendDays ?? 0;
@@ -290,68 +315,9 @@ class HomeNotifier extends StateNotifier<HomeState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: '데이터를 불러오는데 실패했습니다.',
+        error: ErrorState.unknown('데이터를 불러오는데 실패했습니다.'),
       );
     }
-  }
-
-  /// 총 학습 시간 계산 (분:초를 시간 분 형식으로)
-  String _calculateTotalPlaytime(List<AttendDateInfo> attendDates) {
-    int totalMinutes = 0;
-    int totalSeconds = 0;
-
-    for (final item in attendDates) {
-      final parts = item.playtime.split(':');
-      if (parts.length == 2) {
-        totalMinutes += int.tryParse(parts[0]) ?? 0;
-        totalSeconds += int.tryParse(parts[1]) ?? 0;
-      }
-    }
-
-    totalMinutes += totalSeconds ~/ 60;
-    totalSeconds = totalSeconds % 60;
-
-    final hours = totalMinutes ~/ 60;
-    final minutes = totalMinutes % 60;
-
-    if (hours > 0) {
-      return '$hours시간 $minutes분';
-    } else {
-      return '$minutes분';
-    }
-  }
-
-  /// 연속 출석 일수 계산
-  int _calculateConsecutiveDays(List<AttendDateInfo> attendDates) {
-    if (attendDates.isEmpty) return 0;
-
-    // 날짜를 DateTime으로 변환하고 정렬
-    final dates = attendDates
-        .map((item) => DateTime.parse(item.attendDate))
-        .toList()
-      ..sort((a, b) => b.compareTo(a)); // 최신순 정렬
-
-    int consecutive = 1;
-    final today = DateTime.now();
-
-    // 오늘 출석하지 않았으면 0
-    if (dates.first.day != today.day ||
-        dates.first.month != today.month ||
-        dates.first.year != today.year) {
-      return 0;
-    }
-
-    // 연속 일수 계산
-    for (int i = 0; i < dates.length - 1; i++) {
-      final diff = dates[i].difference(dates[i + 1]).inDays;
-      if (diff == 1) {
-        consecutive++;
-      } else {
-        break;
-      }
-    }
-
-    return consecutive;
   }
 
   /// 새로고침

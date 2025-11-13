@@ -31,7 +31,7 @@ class KcMastery {
   final double? pTrain;
   final double? pGuess;
   final double? pSlip;
-  final String? updatedAt;
+  final DateTime? updatedAt;
 
   KcMastery({
     this.kcId,

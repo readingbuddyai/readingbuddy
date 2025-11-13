@@ -8,16 +8,16 @@ part of 'stage_info_response.dart';
 
 StageInfoResponse _$StageInfoResponseFromJson(Map<String, dynamic> json) =>
     StageInfoResponse(
-      stage: json['stage'] as String,
-      totalTryCount: (json['totalTryCount'] as num).toInt(),
-      totalCorrectCount: (json['totalCorrectCount'] as num).toInt(),
-      totalWrongCount: (json['totalWrongCount'] as num).toInt(),
+      stage: json['stage'] as String?,
+      totalProblemCount: (json['totalProblemCount'] as num?)?.toInt(),
+      correctProblemCount: (json['correctProblemCount'] as num?)?.toInt(),
+      correctRate: (json['correctRate'] as num?)?.toDouble(),
     );
 
 Map<String, dynamic> _$StageInfoResponseToJson(StageInfoResponse instance) =>
     <String, dynamic>{
       'stage': instance.stage,
-      'totalTryCount': instance.totalTryCount,
-      'totalCorrectCount': instance.totalCorrectCount,
-      'totalWrongCount': instance.totalWrongCount,
+      'totalProblemCount': instance.totalProblemCount,
+      'correctProblemCount': instance.correctProblemCount,
+      'correctRate': instance.correctRate,
     };

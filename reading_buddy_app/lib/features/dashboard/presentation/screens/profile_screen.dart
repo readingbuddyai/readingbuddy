@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
+import '../providers/home_provider.dart';
+import '../providers/analysis_provider.dart';
+import '../providers/attendance_provider.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -326,6 +329,13 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () async {
               final authNotifier = ref.read(authStateProvider.notifier);
               await authNotifier.logout();
+
+              // 모든 Dashboard Provider 상태 초기화
+              ref.invalidate(homeProvider);
+              ref.invalidate(analysisProvider);
+              ref.invalidate(attendanceProvider);
+              ref.invalidate(profileProvider);
+
               if (context.mounted) {
                 Navigator.pop(context);
                 context.go(AppRouter.login);

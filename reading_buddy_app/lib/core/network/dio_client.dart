@@ -107,7 +107,8 @@ class DioClient {
     return InterceptorsWrapper(
       onRequest: (options, handler) {
         _logger.d('''
-📤 REQUEST[${options.method}] => PATH: ${options.path}
+📤 REQUEST[${options.method}] => URI: ${options.uri}
+Query Params: ${options.queryParameters}
 Headers: ${options.headers}
 Data: ${options.data}
         ''');

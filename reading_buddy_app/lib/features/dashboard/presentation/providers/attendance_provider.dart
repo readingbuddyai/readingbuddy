@@ -1,11 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/error_state.dart';
+import '../../../../core/utils/date_formatter.dart';
 import '../../domain/repositories/dashboard_repository.dart';
+import '../../data/models/practice_list_response.dart';
 import '../../../../core/providers/providers.dart';
 
 /// 출석 화면 상태
 class AttendanceState {
   final bool isLoading;
-  final String? errorMessage;
+  final ErrorState? error;
 
   // 출석 데이터
   final Set<DateTime> attendedDates;
@@ -13,30 +16,45 @@ class AttendanceState {
   final int consecutiveDays;
   final int monthlyAttendDays;
 
+  // 선택된 날짜의 상세 데이터
+  final DateTime? selectedDate;
+  final PracticeListResponse? practiceData;
+  final bool isLoadingDetail;
+
   AttendanceState({
     this.isLoading = false,
-    this.errorMessage,
+    this.error,
     this.attendedDates = const {},
     this.playtimeMap = const {},
     this.consecutiveDays = 0,
     this.monthlyAttendDays = 0,
+    this.selectedDate,
+    this.practiceData,
+    this.isLoadingDetail = false,
   });
 
   AttendanceState copyWith({
     bool? isLoading,
-    String? errorMessage,
+    ErrorState? error,
+    bool? clearError,
     Set<DateTime>? attendedDates,
     Map<DateTime, String>? playtimeMap,
     int? consecutiveDays,
     int? monthlyAttendDays,
+    DateTime? selectedDate,
+    PracticeListResponse? practiceData,
+    bool? isLoadingDetail,
   }) {
     return AttendanceState(
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage,
+      error: clearError == true ? null : (error ?? this.error),
       attendedDates: attendedDates ?? this.attendedDates,
       playtimeMap: playtimeMap ?? this.playtimeMap,
       consecutiveDays: consecutiveDays ?? this.consecutiveDays,
       monthlyAttendDays: monthlyAttendDays ?? this.monthlyAttendDays,
+      selectedDate: selectedDate ?? this.selectedDate,
+      practiceData: practiceData ?? this.practiceData,
+      isLoadingDetail: isLoadingDetail ?? this.isLoadingDetail,
     );
   }
 }
@@ -51,19 +69,16 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
 
   /// 출석 데이터 로드
   Future<void> _loadAttendanceData() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true, clearError: true);
 
     try {
-      // 현재 날짜
-      final now = DateTime.now();
-      final today = '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
-
-      // 이번 달 1일
-      final monthStart = DateTime(now.year, now.month, 1);
-      final startDate = '${monthStart.year.toString().substring(2)}${monthStart.month.toString().padLeft(2, '0')}${monthStart.day.toString().padLeft(2, '0')}';
+      // 날짜 계산
+      final today = DateFormatter.todayYyMMdd();
+      final startDate = DateFormatter.monthStartYyMMdd();
 
       // 실제 API 호출 (이번 달 출석 데이터)
-      final monthData = await dashboardRepository.getAttendanceByPeriod(startDate, today);
+      final monthDataResult = await dashboardRepository.getAttendanceByPeriod(startDate, today);
+      final monthData = monthDataResult.dataOrNull;
 
       // 출석 데이터 처리
       final attendedDates = <DateTime>{};
@@ -79,7 +94,9 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       final monthlyAttendDays = monthData?.periodData?.totalAttendDays ?? 0;
 
       // 연속 출석 계산
-      final consecutiveDays = _calculateConsecutiveDays(monthData?.periodData?.attendDates ?? []);
+      final consecutiveDays = DateFormatter.calculateConsecutiveDays(
+        monthData?.periodData?.attendDates.map((e) => DateTime.parse(e.attendDate)).toList() ?? [],
+      );
 
       state = state.copyWith(
         isLoading: false,
@@ -91,39 +108,9 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: '출석 데이터를 불러오는데 실패했습니다.',
+        error: ErrorState.unknown('출석 데이터를 불러오는데 실패했습니다.'),
       );
     }
-  }
-
-  /// 연속 출석 일수 계산
-  int _calculateConsecutiveDays(List attendDates) {
-    if (attendDates.isEmpty) return 0;
-
-    final dates = attendDates
-        .map((item) => DateTime.parse(item.attendDate))
-        .toList()
-      ..sort((a, b) => b.compareTo(a));
-
-    int consecutive = 1;
-    final today = DateTime.now();
-
-    if (dates.first.day != today.day ||
-        dates.first.month != today.month ||
-        dates.first.year != today.year) {
-      return 0;
-    }
-
-    for (int i = 0; i < dates.length - 1; i++) {
-      final diff = dates[i].difference(dates[i + 1]).inDays;
-      if (diff == 1) {
-        consecutive++;
-      } else {
-        break;
-      }
-    }
-
-    return consecutive;
   }
 
   /// 특정 날짜의 출석 여부 확인
@@ -139,6 +126,44 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       orElse: () => DateTime(0),
     );
     return state.playtimeMap[key];
+  }
+
+  /// 날짜 선택 - 해당 날짜의 상세 학습 기록 조회
+  Future<void> selectDate(DateTime date) async {
+    // 이미 같은 날짜가 선택되어 있으면 취소 (토글)
+    if (state.selectedDate != null &&
+        state.selectedDate!.year == date.year &&
+        state.selectedDate!.month == date.month &&
+        state.selectedDate!.day == date.day) {
+      state = state.copyWith(
+        selectedDate: DateTime(0), // null 대신 빈 날짜로 초기화
+        practiceData: null,
+      );
+      return;
+    }
+
+    state = state.copyWith(
+      selectedDate: date,
+      isLoadingDetail: true,
+      clearError: true,
+    );
+
+    try {
+      // 날짜 형식 변환 (yyMMdd)
+      final dateStr = DateFormatter.toYyMMdd(date);
+
+      final practiceDataResult = await dashboardRepository.getPracticeList(dateStr);
+
+      state = state.copyWith(
+        practiceData: practiceDataResult.dataOrNull,
+        isLoadingDetail: false,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoadingDetail: false,
+        error: ErrorState.unknown('학습 기록을 불러오는데 실패했습니다.'),
+      );
+    }
   }
 
   /// 새로고침

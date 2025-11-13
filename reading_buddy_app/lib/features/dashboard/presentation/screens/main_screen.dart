@@ -58,7 +58,7 @@ class _MainScreenState extends State<MainScreen> {
             _buildNavItem(
               icon: Icons.calendar_today_outlined,
               selectedIcon: Icons.calendar_today,
-              label: '경과',
+              label: '상세',
               index: 2,
             ),
             _buildNavItem(

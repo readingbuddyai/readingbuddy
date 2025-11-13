@@ -14,7 +14,9 @@ StageCorrectRateResponse _$StageCorrectRateResponseFromJson(
       correctCount: (json['correctCount'] as num).toInt(),
       wrongCount: (json['wrongCount'] as num).toInt(),
       totalProblems: (json['totalProblems'] as num).toInt(),
-      completedAt: json['completedAt'] as String?,
+      completedAt: json['completedAt'] == null
+          ? null
+          : DateTime.parse(json['completedAt'] as String),
     );
 
 Map<String, dynamic> _$StageCorrectRateResponseToJson(
@@ -25,5 +27,5 @@ Map<String, dynamic> _$StageCorrectRateResponseToJson(
       'correctCount': instance.correctCount,
       'wrongCount': instance.wrongCount,
       'totalProblems': instance.totalProblems,
-      'completedAt': instance.completedAt,
+      'completedAt': instance.completedAt?.toIso8601String(),
     };

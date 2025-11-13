@@ -5,7 +5,7 @@ part 'last_played_stage_response.g.dart';
 @JsonSerializable()
 class LastPlayedStageResponse {
   final String? stage;
-  final String? playedAt;
+  final DateTime? playedAt;
 
   LastPlayedStageResponse({
     this.stage,

@@ -24,6 +24,9 @@ class ApiConstants {
   static const String tryPhonemesRank = '/api/dashboard/try/phonemes/rank';
   static const String kcMasteryTrend = '/api/dashboard/kc/mastery-trend';
   static const String stageMastery = '/api/dashboard/stage/mastery';
+  static const String stageKcMasteryTrend = '/api/dashboard/stage/kc-mastery-trend';
+  static const String allKcMastery = '/api/dashboard/kc/all-mastery';
+  static const String practiceList = '/api/dashboard/practice/list';
 
   // Train Endpoints
   static const String lastStage = '/api/train/last/stage';

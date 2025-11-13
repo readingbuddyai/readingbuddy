@@ -10,12 +10,14 @@ LastPlayedStageResponse _$LastPlayedStageResponseFromJson(
         Map<String, dynamic> json) =>
     LastPlayedStageResponse(
       stage: json['stage'] as String?,
-      playedAt: json['playedAt'] as String?,
+      playedAt: json['playedAt'] == null
+          ? null
+          : DateTime.parse(json['playedAt'] as String),
     );
 
 Map<String, dynamic> _$LastPlayedStageResponseToJson(
         LastPlayedStageResponse instance) =>
     <String, dynamic>{
       'stage': instance.stage,
-      'playedAt': instance.playedAt,
+      'playedAt': instance.playedAt?.toIso8601String(),
     };

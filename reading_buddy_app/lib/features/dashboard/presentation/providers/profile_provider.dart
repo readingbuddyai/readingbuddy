@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/error_state.dart';
+import '../../../../core/utils/date_formatter.dart';
+import '../../../../core/constants/learning_constants.dart';
 import '../../domain/repositories/dashboard_repository.dart';
 import '../../../../core/providers/providers.dart';
 import '../../../../core/storage/token_storage.dart';
@@ -6,7 +9,7 @@ import '../../../../core/storage/token_storage.dart';
 /// 프로필 화면 상태
 class ProfileState {
   final bool isLoading;
-  final String? errorMessage;
+  final ErrorState? error;
 
   // 사용자 정보
   final int? userId;
@@ -20,7 +23,7 @@ class ProfileState {
 
   ProfileState({
     this.isLoading = false,
-    this.errorMessage,
+    this.error,
     this.userId,
     this.email,
     this.nickname,
@@ -31,7 +34,8 @@ class ProfileState {
 
   ProfileState copyWith({
     bool? isLoading,
-    String? errorMessage,
+    ErrorState? error,
+    bool? clearError,
     int? userId,
     String? email,
     String? nickname,
@@ -41,7 +45,7 @@ class ProfileState {
   }) {
     return ProfileState(
       isLoading: isLoading ?? this.isLoading,
-      errorMessage: errorMessage,
+      error: clearError == true ? null : (error ?? this.error),
       userId: userId ?? this.userId,
       email: email ?? this.email,
       nickname: nickname ?? this.nickname,
@@ -64,7 +68,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 
   /// 프로필 데이터 로드
   Future<void> _loadProfileData() async {
-    state = state.copyWith(isLoading: true, errorMessage: null);
+    state = state.copyWith(isLoading: true, clearError: true);
 
     try {
       // 사용자 정보 로드 (저장된 정보에서 가져오기)
@@ -73,21 +77,24 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
       final nickname = await _tokenStorage.getUserNickname();
 
       // 실제 API 호출로 학습 통계 가져오기
-      final now = DateTime.now();
-      final today = '${now.year.toString().substring(2)}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+      final today = DateFormatter.todayYyMMdd();
+      final startDate = DateFormatter.daysAgoYyMMdd(
+        LearningConstants.defaultStatsPeriodDays,
+      );
 
-      // 전체 기간 데이터 (최근 1년)
-      final oneYearAgo = now.subtract(const Duration(days: 365));
-      final startDate = '${oneYearAgo.year.toString().substring(2)}${oneYearAgo.month.toString().padLeft(2, '0')}${oneYearAgo.day.toString().padLeft(2, '0')}';
-
-      final allData = await dashboardRepository.getAttendanceByPeriod(startDate, today);
+      final allDataResult = await dashboardRepository.getAttendanceByPeriod(startDate, today);
+      final allData = allDataResult.dataOrNull;
 
       // 총 학습 시간 계산
-      final totalLearningTime = _calculateTotalPlaytime(allData?.periodData?.attendDates ?? []);
+      final totalLearningTime = DateFormatter.sumPlaytimes(
+        allData?.periodData?.attendDates.map((e) => e.playtime).toList() ?? [],
+      );
       final totalAttendDays = allData?.periodData?.totalAttendDays ?? 0;
 
       // 연속 출석 계산
-      final consecutiveDays = _calculateConsecutiveDays(allData?.periodData?.attendDates ?? []);
+      final consecutiveDays = DateFormatter.calculateConsecutiveDays(
+        allData?.periodData?.attendDates.map((e) => DateTime.parse(e.attendDate)).toList() ?? [],
+      );
 
       state = state.copyWith(
         isLoading: false,
@@ -101,65 +108,9 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        errorMessage: '프로필 정보를 불러오는데 실패했습니다.',
+        error: ErrorState.unknown('프로필 정보를 불러오는데 실패했습니다.'),
       );
     }
-  }
-
-  /// 총 학습 시간 계산
-  String _calculateTotalPlaytime(List attendDates) {
-    int totalMinutes = 0;
-    int totalSeconds = 0;
-
-    for (final item in attendDates) {
-      final parts = item.playtime.split(':');
-      if (parts.length == 2) {
-        totalMinutes += int.tryParse(parts[0]) ?? 0;
-        totalSeconds += int.tryParse(parts[1]) ?? 0;
-      }
-    }
-
-    totalMinutes += totalSeconds ~/ 60;
-    totalSeconds = totalSeconds % 60;
-
-    final hours = totalMinutes ~/ 60;
-    final minutes = totalMinutes % 60;
-
-    if (hours > 0) {
-      return '$hours시간 $minutes분';
-    } else {
-      return '$minutes분';
-    }
-  }
-
-  /// 연속 출석 일수 계산
-  int _calculateConsecutiveDays(List attendDates) {
-    if (attendDates.isEmpty) return 0;
-
-    final dates = attendDates
-        .map((item) => DateTime.parse(item.attendDate))
-        .toList()
-      ..sort((a, b) => b.compareTo(a));
-
-    int consecutive = 1;
-    final today = DateTime.now();
-
-    if (dates.first.day != today.day ||
-        dates.first.month != today.month ||
-        dates.first.year != today.year) {
-      return 0;
-    }
-
-    for (int i = 0; i < dates.length - 1; i++) {
-      final diff = dates[i].difference(dates[i + 1]).inDays;
-      if (diff == 1) {
-        consecutive++;
-      } else {
-        break;
-      }
-    }
-
-    return consecutive;
   }
 
   /// 새로고침

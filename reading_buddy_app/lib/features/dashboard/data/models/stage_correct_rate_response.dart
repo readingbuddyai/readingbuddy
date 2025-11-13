@@ -9,7 +9,7 @@ class StageCorrectRateResponse {
   final int correctCount;
   final int wrongCount;
   final int totalProblems;
-  final String? completedAt;
+  final DateTime? completedAt;
 
   StageCorrectRateResponse({
     required this.stage,
