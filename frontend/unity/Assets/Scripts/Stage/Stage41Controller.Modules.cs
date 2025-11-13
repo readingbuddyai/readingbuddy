@@ -858,7 +858,32 @@ public partial class Stage41Controller
         ClearDraggablesInSlot(jungseongBox);
         ClearDraggablesInSlot(jongseongBox);
 
+        if (logVerbose)
+        {
+            Debug.Log($"[Stage41][Tutorial] clear slot objs → 초성 자식 {LogSlotChildren(choseongBox)}, 중성 자식 {LogSlotChildren(jungseongBox)}, 종성 자식 {LogSlotChildren(jongseongBox)}");
+        }
+
         RestoreTutorialChoiceTiles();
+    }
+
+    private string LogSlotChildren(GameObject slot)
+    {
+        if (slot == null)
+            return "(slot null)";
+        var t = slot.transform;
+        if (t.childCount == 0)
+            return "0";
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append(t.childCount);
+        sb.Append(':');
+        for (int i = 0; i < t.childCount; i++)
+        {
+            var child = t.GetChild(i);
+            sb.Append(child.name);
+            if (i < t.childCount - 1)
+                sb.Append(',');
+        }
+        return sb.ToString();
     }
 
     private void ClearDraggablesInSlot(GameObject slot)
@@ -873,6 +898,16 @@ public partial class Stage41Controller
                 continue;
             draggable.ReturnToOrigin();
         }
+
+        var texts = slot.GetComponentsInChildren<TMPro.TMP_Text>(true);
+        foreach (var txt in texts)
+        {
+            if (txt == null)
+                continue;
+            txt.text = string.Empty;
+        }
+
+        Canvas.ForceUpdateCanvases();
         ForceRefreshContainerLayout(slot);
     }
 }

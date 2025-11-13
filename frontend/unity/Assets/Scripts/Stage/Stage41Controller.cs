@@ -226,6 +226,7 @@ public partial class Stage41Controller : MonoBehaviour
             RestoreTutorialChoiceTiles();
         }
         SetGameplaySlotsActive(false);
+        HandleTutorialClearAllSlots();
 
         if (logVerbose)
         {
