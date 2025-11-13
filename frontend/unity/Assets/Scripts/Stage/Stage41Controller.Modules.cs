@@ -112,9 +112,11 @@ public partial class Stage41Controller
         _tutorialDependencies.PulseSlot = (slotTarget, scale, duration, loops) => Co_TutorialPulseSlot(slotTarget, scale, duration, loops);
         _tutorialDependencies.AnimateChoiceDrag = (key, slotTarget, seconds, curve, keepInSlot) => Co_TutorialAnimateChoiceDrag(key, slotTarget, seconds, curve, keepInSlot);
         _tutorialDependencies.ChoiceDragRoot = choicesContainer != null ? choicesContainer.transform : null;
+        _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
         _tutorialDependencies.Log = message => { if (logVerbose) Debug.Log(message); };
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = logVerbose;
+        _tutorialDependencies.ClearSlotContents = ClearTutorialSlotContents;
 
         if (tutorialProfile != null)
         {
@@ -172,6 +174,48 @@ public partial class Stage41Controller
         ForceRefreshContainerLayout(choicesContainer);
         ForceRefreshContainerLayout(consonantChoicesContainer);
         ForceRefreshContainerLayout(vowelChoicesContainer);
+    }
+
+    private void ClearTutorialSlotContents()
+    {
+        RestoreTutorialChoiceTiles();
+
+        for (int slot = 0; slot < 3; slot++)
+        {
+            ClearTutorialSlot(slot);
+        }
+    }
+
+    private void ClearTutorialSlot(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex > 2)
+            return;
+
+        EnsureSegmentListCapacity(slotIndex);
+        _segmentReplyCandidates[slotIndex].Clear();
+        _segmentReplies[slotIndex] = string.Empty;
+        if (slotIndex < _segmentCorrects.Count)
+            _segmentCorrects[slotIndex] = false;
+        if (slotIndex < _expectedPhonemes.Count)
+            _expectedPhonemes[slotIndex] = string.Empty;
+        if (slotIndex < _finalizedSlots.Length)
+            _finalizedSlots[slotIndex] = false;
+
+        var slotHolder = ResolveTutorialSlotObject(IndexToSlotTarget(slotIndex));
+        if (slotHolder != null)
+        {
+            var draggables = slotHolder.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null)
+                    continue;
+                draggable.ReturnToOrigin();
+            }
+            ForceRefreshContainerLayout(slotHolder);
+        }
+
+        SetSlotText(slotIndex, string.Empty);
+        SetSlotAlpha(slotIndex, dimAlpha);
     }
 
     private void ForceRefreshContainerLayout(GameObject container)
@@ -381,7 +425,9 @@ public partial class Stage41Controller
         hit = SearchIn(consonantChoicesContainer);
         if (hit != null) return hit;
         hit = SearchIn(vowelChoicesContainer);
-        return hit;
+        if (hit != null) return hit;
+
+        return ResolveChoiceByDraggableSymbol(normalizedKey);
     }
 
     private RectTransform FindChoiceTileRecursive(Transform parent, string trimmedKey, string normalizedKey, HashSet<Transform> rootStops)
@@ -474,7 +520,39 @@ public partial class Stage41Controller
         if (result.StartsWith("Tile_", StringComparison.OrdinalIgnoreCase))
             result = result.Substring("Tile_".Length);
 
-        return result.Trim();
+        result = result.Trim();
+        return NormalizePhoneme(result);
+    }
+
+    private RectTransform ResolveChoiceByDraggableSymbol(string normalizedKey)
+    {
+        if (string.IsNullOrEmpty(normalizedKey))
+            return null;
+
+        RectTransform SearchIn(GameObject container)
+        {
+            if (container == null)
+                return null;
+
+            var draggables = container.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null)
+                    continue;
+
+                string symbol = NormalizePhoneme((draggable.symbol ?? string.Empty).Trim());
+                if (string.Equals(symbol, normalizedKey, StringComparison.Ordinal))
+                    return draggable.GetComponent<RectTransform>();
+            }
+            return null;
+        }
+
+        var hit = SearchIn(choicesContainer);
+        if (hit != null) return hit;
+        hit = SearchIn(consonantChoicesContainer);
+        if (hit != null) return hit;
+        hit = SearchIn(vowelChoicesContainer);
+        return hit;
     }
 
     private System.Collections.IEnumerator Co_AnimateTutorialChoice(RectTransform tile, RectTransform slot, float seconds, AnimationCurve curve, bool keepInSlot)
@@ -699,6 +777,56 @@ public partial class Stage41Controller
         }
     }
 
+    private IEnumerator ExecuteTutorialCustomStep(string actionId)
+    {
+        if (string.IsNullOrWhiteSpace(actionId))
+            yield break;
+
+        string command = actionId;
+        string args = string.Empty;
+        int firstColon = actionId.IndexOf(':');
+        if (firstColon >= 0)
+        {
+            command = actionId.Substring(0, firstColon);
+            args = actionId.Substring(firstColon + 1);
+        }
+
+        command = command.Trim().ToLowerInvariant();
+        args = args?.Trim() ?? string.Empty;
+
+        switch (command)
+        {
+            case "prefillslot":
+            case "prefill":
+                HandleTutorialPrefillSlot(args);
+                break;
+            case "clearslot":
+            case "clear":
+                HandleTutorialClearSlot(args);
+                break;
+            case "clearallslots":
+            case "clearallslottexts":
+            case "clearallslottext":
+                HandleTutorialClearAllSlots();
+                HandleTutorialClearAllSlotObjects();
+                break;
+            case "hidetile":
+            case "hidechoice":
+                HandleTutorialToggleTileVisibility(args, false);
+                break;
+            case "showtile":
+            case "showchoice":
+                HandleTutorialToggleTileVisibility(args, true);
+                break;
+            default:
+                if (logVerbose)
+                    Debug.LogWarning($"[Stage41][Tutorial] Unknown custom action '{actionId}'");
+                break;
+        }
+
+        yield break;
+    }
+
     private void UpdateSupplementQuestions(IEnumerable<QuestionDto> source)
     {
         var list = new List<StageQuestionModels.QuestionDto>();
@@ -722,5 +850,64 @@ public partial class Stage41Controller
             }
         }
         _supplementQuestionController.SetQuestions(list);
+    }
+
+    private void HandleTutorialClearAllSlotObjects()
+    {
+        ClearDraggablesInSlot(choseongBox);
+        ClearDraggablesInSlot(jungseongBox);
+        ClearDraggablesInSlot(jongseongBox);
+
+        if (logVerbose)
+        {
+            Debug.Log($"[Stage41][Tutorial] clear slot objs → 초성 자식 {LogSlotChildren(choseongBox)}, 중성 자식 {LogSlotChildren(jungseongBox)}, 종성 자식 {LogSlotChildren(jongseongBox)}");
+        }
+
+        RestoreTutorialChoiceTiles();
+    }
+
+    private string LogSlotChildren(GameObject slot)
+    {
+        if (slot == null)
+            return "(slot null)";
+        var t = slot.transform;
+        if (t.childCount == 0)
+            return "0";
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append(t.childCount);
+        sb.Append(':');
+        for (int i = 0; i < t.childCount; i++)
+        {
+            var child = t.GetChild(i);
+            sb.Append(child.name);
+            if (i < t.childCount - 1)
+                sb.Append(',');
+        }
+        return sb.ToString();
+    }
+
+    private void ClearDraggablesInSlot(GameObject slot)
+    {
+        if (slot == null)
+            return;
+
+        var draggables = slot.GetComponentsInChildren<PhonemeDraggableUI>(true);
+        foreach (var draggable in draggables)
+        {
+            if (draggable == null)
+                continue;
+            draggable.ReturnToOrigin();
+        }
+
+        var texts = slot.GetComponentsInChildren<TMPro.TMP_Text>(true);
+        foreach (var txt in texts)
+        {
+            if (txt == null)
+                continue;
+            txt.text = string.Empty;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        ForceRefreshContainerLayout(slot);
     }
 }

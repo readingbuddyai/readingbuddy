@@ -947,7 +947,7 @@ public class Stage20Controller : MonoBehaviour
         if (stone == null || slot == null)
             return;
 
-        Transform container = slot.slotParent != null ? slot.slotParent : slot.transform;
+        Transform container = slot.SlotParent != null ? slot.SlotParent : slot.transform;
         stone.transform.SetParent(container, false);
         stone.transform.SetAsLastSibling();
 
@@ -1001,7 +1001,7 @@ public class Stage20Controller : MonoBehaviour
             if (zone == null)
                 continue;
 
-            targetParent = zone.slotParent != null ? zone.slotParent : zone.transform;
+            targetParent = zone.SlotParent != null ? zone.SlotParent : zone.transform;
             if (targetParent != null)
                 break;
         }
@@ -1135,8 +1135,8 @@ public class Stage20Controller : MonoBehaviour
 
             if (targetNumber > 0)
             {
-                int slotNumber = slot.slotNumber != 0 ? slot.slotNumber : ExtractNumberFromName(slot.gameObject.name);
-                if (slotNumber == targetNumber)
+                int slotNumberValue = slot.SlotNumber != 0 ? slot.SlotNumber : ExtractNumberFromName(slot.gameObject.name);
+                if (slotNumberValue == targetNumber)
                     return slot;
             }
         }

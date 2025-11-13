@@ -255,9 +255,9 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
-  - name: "\uC635\uC158 ON"
+  - name: "\uB2E8\uC5B4 Set"
     phase: 1
-    action: 6
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -279,7 +279,33 @@ MonoBehaviour:
     choiceTileKey: 
     choiceReturnToOrigin: 1
     progressText: 
-    customActionId: 
+    customActionId: "SetWordLabel:\uC232"
+    awaitRelease: 0
+  - name: "\uB2E8\uC5B4 ON"
+    phase: 1
+    action: 19
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: "ShowWordLabel:\uC232"
     awaitRelease: 0
   - name: "\uD6A8\uACFC\uC74C"
     phase: 1
@@ -306,32 +332,6 @@ MonoBehaviour:
     choiceReturnToOrigin: 1
     progressText: 
     customActionId: 
-    awaitRelease: 0
-  - name: "\uB2E8\uC5B4 ON"
-    phase: 0
-    action: 13
-    audioClip: {fileID: 0}
-    image: {fileID: 0}
-    waitSeconds: 0
-    panelImmediate: 0
-    boolValue: 0
-    cursorTarget: 0
-    cursorMoveSeconds: 0
-    cursorMoveCurve:
-      serializedVersion: 2
-      m_Curve: []
-      m_PreInfinity: 0
-      m_PostInfinity: 0
-      m_RotationOrder: 4
-    enablePulse: 0
-    pulseScale: 0
-    pulseDuration: 0
-    pulseLoops: 0
-    slotTarget: 0
-    choiceTileKey: 
-    choiceReturnToOrigin: 1
-    progressText: 
-    customActionId: "SetWordLabel:\uC232"
     awaitRelease: 0
   - name: "\uC74C\uC131 \uC548\uB0B4(\uC790 \uC774\uB807\uAC8C)"
     phase: 1
@@ -515,6 +515,32 @@ MonoBehaviour:
     progressText: 
     customActionId: 
     awaitRelease: 0
+  - name: "\uC635\uC158 ON"
+    phase: 1
+    action: 6
+    audioClip: {fileID: 0}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 0
+      m_PostInfinity: 0
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 0
   - name: "\uC74C\uC131 \uC548\uB0B4(\uC232\uC740 \uCD1D)"
     phase: 1
     action: 0
@@ -569,7 +595,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uC2A4\uD1A41 Drag"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -621,7 +647,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uC2A4\uD1A42 Drag"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -673,7 +699,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uC2A4\uD1A43 Drag"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -751,7 +777,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uBC84\uD2BC Pulse"
     phase: 1
-    action: 10
+    action: 14
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -768,7 +794,7 @@ MonoBehaviour:
     enablePulse: 0
     pulseScale: 0
     pulseDuration: 0
-    pulseLoops: 0
+    pulseLoops: 2
     slotTarget: 0
     choiceTileKey: 
     choiceReturnToOrigin: 1
@@ -829,7 +855,7 @@ MonoBehaviour:
     awaitRelease: 0
   - name: "\uB2E8\uC5B4 OFF"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -851,7 +877,7 @@ MonoBehaviour:
     choiceTileKey: 
     choiceReturnToOrigin: 1
     progressText: 
-    customActionId: HidWordLabel
+    customActionId: HideWordLabel
     awaitRelease: 0
   - name: "\uC635\uC158 OFF"
     phase: 1

@@ -247,6 +247,7 @@ public class StageTutorialController
             yield return WaitForRightTriggerPress(true);
         }
 
+        yield return PreparePanelForReopen();
         yield return ShowPanel(false);
         LogVerbose("[StageTutorial] Tutorial panel ON (after trigger)");
 
@@ -1086,6 +1087,38 @@ public class StageTutorialController
             throw new InvalidOperationException("StageTutorialController is not initialized. Call Initialize() first.");
     }
 
+    private IEnumerator PreparePanelForReopen()
+    {
+        HideIntroOptions();
+
+        yield return ToggleChoices(false, null);
+        yield return ToggleSlots(false, false);
+
+        _deps.ClearSlotContents?.Invoke();
+
+        if (_deps.OptionsContainer != null)
+            _deps.OptionsContainer.gameObject.SetActive(false);
+
+        if (_deps.ChoicesContainer != null)
+            _deps.ChoicesContainer.gameObject.SetActive(false);
+        else if (_deps.ChoicesRoot != null)
+            _deps.ChoicesRoot.SetActive(false);
+
+        if (_deps.SlotsContainer != null)
+            _deps.SlotsContainer.gameObject.SetActive(false);
+        else if (_deps.SlotsRoot != null)
+            _deps.SlotsRoot.SetActive(false);
+
+        ToggleSlotRect(_deps.ChoseongSlot, false);
+        ToggleSlotRect(_deps.JungseongSlot, false);
+        ToggleSlotRect(_deps.JongsungSlot, false);
+
+        ClearMainImage();
+        SetProgressText(string.Empty);
+
+        yield break;
+    }
+
     [Serializable]
     public class IntroOption
     {
@@ -1149,5 +1182,6 @@ public class StageTutorialDependencies
     public Action<string> LogWarning;
     public bool VerboseLogging;
     public bool ManageOptionsContainerContents = true;
+    public Action ClearSlotContents;
 }
 
