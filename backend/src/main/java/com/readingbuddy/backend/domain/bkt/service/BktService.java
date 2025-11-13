@@ -5,6 +5,8 @@ import com.readingbuddy.backend.domain.bkt.entity.UserKcMastery;
 import com.readingbuddy.backend.domain.bkt.enums.KcCategory;
 import com.readingbuddy.backend.domain.bkt.repository.KnowledgeComponentRepository;
 import com.readingbuddy.backend.domain.bkt.repository.UserKcMasteryRepository;
+import com.readingbuddy.backend.domain.dashboard.dto.response.DailyKcMasteryAvg;
+import com.readingbuddy.backend.domain.dashboard.dto.response.DailyKcMasteryByDateResponse;
 import com.readingbuddy.backend.domain.train.dto.result.KcWithCorrectRate;
 import com.readingbuddy.backend.domain.bkt.entity.PhonemesKcMap;
 import com.readingbuddy.backend.domain.bkt.repository.PhonemesKcMapRepository;
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigInteger;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -183,7 +186,7 @@ public class BktService {
     /**
      * 4.1 초성(ONSET_1) 카테고리 전체 평균 mastery
      */
-    public Double getOnset1AverageMastery(Long userId) {
+    public List<DailyKcMasteryAvg> getOnset1AverageMastery(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<KcCategory> onsetCategories = Arrays.asList(
                 KcCategory.LABIAL_ONSET_1,
                 KcCategory.VELAR_ONSET_1,
@@ -193,13 +196,13 @@ public class BktService {
                 KcCategory.GLOTTAL_AND_ALVEOLAR_ONSET_1
         );
 
-        return userKcMasteryRepository.getAverageMasteryByCategories(userId, onsetCategories);
+        return userKcMasteryRepository.getDailyAverageMasteryByCategories(userId, onsetCategories, startDate, endDate);
     }
 
     /**
      * 4.1 종성(CODA_1) 카테고리 전체 평균 mastery
      */
-    public Double getCoda1AverageMastery(Long userId) {
+    public List<DailyKcMasteryAvg> getCoda1AverageMastery(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<KcCategory> codaCategories = Arrays.asList(
                 KcCategory.LABIAL_CODA_1,
                 KcCategory.VELAR_CODA_1,
@@ -209,25 +212,25 @@ public class BktService {
                 KcCategory.GLOTTAL_AND_ALVEOLAR_CODA_1
         );
 
-        return userKcMasteryRepository.getAverageMasteryByCategories(userId, codaCategories);
+        return userKcMasteryRepository.getDailyAverageMasteryByCategories(userId, codaCategories, startDate, endDate);
     }
 
     /**
      * 4.1 중성(NUCLEUS_1) 카테고리 전체 평균 mastery
      */
-    public Double getNucleus1AverageMastery(Long userId) {
+    public List<DailyKcMasteryAvg> getNucleus1AverageMastery(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<KcCategory> nucleusCategories = Arrays.asList(
                 KcCategory.MONOPHTHONG_NUCLEUS_1,
                 KcCategory.DIPHTHONG_NUCLEUS_1
         );
 
-        return userKcMasteryRepository.getAverageMasteryByCategories(userId, nucleusCategories);
+        return userKcMasteryRepository.getDailyAverageMasteryByCategories(userId, nucleusCategories, startDate, endDate);
     }
 
     /**
      * 4.2 초성(ONSET_2) 카테고리 전체 평균 mastery
      */
-    public Double getOnset2AverageMastery(Long userId) {
+    public List<DailyKcMasteryAvg> getOnset2AverageMastery(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<KcCategory> onsetCategories = Arrays.asList(
                 KcCategory.LABIAL_ONSET_2,
                 KcCategory.VELAR_ONSET_2,
@@ -237,13 +240,13 @@ public class BktService {
                 KcCategory.GLOTTAL_AND_ALVEOLAR_ONSET_2
         );
 
-        return userKcMasteryRepository.getAverageMasteryByCategories(userId, onsetCategories);
+        return userKcMasteryRepository.getDailyAverageMasteryByCategories(userId, onsetCategories, startDate, endDate);
     }
 
     /**
      * 4.2 종성(CODA_2) 카테고리 전체 평균 mastery
      */
-    public Double getCoda2AverageMastery(Long userId) {
+    public List<DailyKcMasteryAvg> getCoda2AverageMastery(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<KcCategory> codaCategories = Arrays.asList(
                 KcCategory.LABIAL_CODA_2,
                 KcCategory.VELAR_CODA_2,
@@ -253,18 +256,100 @@ public class BktService {
                 KcCategory.GLOTTAL_AND_ALVEOLAR_CODA_2
         );
 
-        return userKcMasteryRepository.getAverageMasteryByCategories(userId, codaCategories);
+        return userKcMasteryRepository.getDailyAverageMasteryByCategories(userId, codaCategories,  startDate, endDate);
     }
 
     /**
      * 4.2 중성(NUCLEUS_2) 카테고리 전체 평균 mastery
      */
-    public Double getNucleus2AverageMastery(Long userId) {
+    public List<DailyKcMasteryAvg> getNucleus2AverageMastery(Long userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<KcCategory> nucleusCategories = Arrays.asList(
                 KcCategory.MONOPHTHONG_NUCLEUS_2,
                 KcCategory.DIPHTHONG_NUCLEUS_2
         );
 
-        return userKcMasteryRepository.getAverageMasteryByCategories(userId, nucleusCategories);
+        return userKcMasteryRepository.getDailyAverageMasteryByCategories(userId, nucleusCategories, startDate, endDate);
+    }
+
+    /**
+     * 4.1 단계의 날짜별 초성/중성/종성 평균을 한 번에 조회
+     */
+    public List<DailyKcMasteryByDateResponse> getStage4_1DailyAverageMastery(
+            Long userId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+
+        // 각 카테고리별 조회
+        List<DailyKcMasteryAvg> onsetList = getOnset1AverageMastery(userId, startDateTime, endDateTime);
+        List<DailyKcMasteryAvg> nucleusList = getNucleus1AverageMastery(userId, startDateTime, endDateTime);
+        List<DailyKcMasteryAvg> codaList = getCoda1AverageMastery(userId, startDateTime, endDateTime);
+
+        // 날짜별로 합치기
+        Map<LocalDate, DailyKcMasteryByDateResponse> resultMap = new HashMap<>();
+
+        // onset 데이터 추가
+        onsetList.forEach(item ->
+            resultMap.computeIfAbsent(item.getDate(),
+                date -> DailyKcMasteryByDateResponse.builder().date(date).build())
+                     .setOnset(item.getAvgMastery())
+        );
+
+        // nucleus 데이터 추가
+        nucleusList.forEach(item ->
+            resultMap.computeIfAbsent(item.getDate(),
+                date -> DailyKcMasteryByDateResponse.builder().date(date).build())
+                     .setNucleus(item.getAvgMastery())
+        );
+
+        // coda 데이터 추가
+        codaList.forEach(item ->
+            resultMap.computeIfAbsent(item.getDate(),
+                date -> DailyKcMasteryByDateResponse.builder().date(date).build())
+                     .setCoda(item.getAvgMastery())
+        );
+
+        // 날짜순으로 정렬해서 반환
+        return resultMap.values().stream()
+                .sorted(Comparator.comparing(DailyKcMasteryByDateResponse::getDate))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 4.2 단계의 날짜별 초성/중성/종성 평균을 한 번에 조회
+     */
+    public List<DailyKcMasteryByDateResponse> getStage4_2DailyAverageMastery(
+            Long userId, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+
+        // 각 카테고리별 조회
+        List<DailyKcMasteryAvg> onsetList = getOnset2AverageMastery(userId, startDateTime, endDateTime);
+        List<DailyKcMasteryAvg> nucleusList = getNucleus2AverageMastery(userId, startDateTime, endDateTime);
+        List<DailyKcMasteryAvg> codaList = getCoda2AverageMastery(userId, startDateTime, endDateTime);
+
+        // 날짜별로 합치기
+        Map<LocalDate, DailyKcMasteryByDateResponse> resultMap = new HashMap<>();
+
+        // onset 데이터 추가
+        onsetList.forEach(item ->
+            resultMap.computeIfAbsent(item.getDate(),
+                date -> DailyKcMasteryByDateResponse.builder().date(date).build())
+                     .setOnset(item.getAvgMastery())
+        );
+
+        // nucleus 데이터 추가
+        nucleusList.forEach(item ->
+            resultMap.computeIfAbsent(item.getDate(),
+                date -> DailyKcMasteryByDateResponse.builder().date(date).build())
+                     .setNucleus(item.getAvgMastery())
+        );
+
+        // coda 데이터 추가
+        codaList.forEach(item ->
+            resultMap.computeIfAbsent(item.getDate(),
+                date -> DailyKcMasteryByDateResponse.builder().date(date).build())
+                     .setCoda(item.getAvgMastery())
+        );
+
+        // 날짜순으로 정렬해서 반환
+        return resultMap.values().stream()
+                .sorted(Comparator.comparing(DailyKcMasteryByDateResponse::getDate))
+                .collect(Collectors.toList());
     }
 }
