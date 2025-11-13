@@ -22,9 +22,32 @@ public class StoneDropZone : MonoBehaviour, IDropHandler
         // Stage20Controller가 할당되지 않았으면 자동으로 찾기
         if (stageController == null)
         {
-            stageController = FindObjectOfType<Stage30Controller>();
-            if (stageController == null)
-                stageController = FindObjectOfType<Stage20Controller>();
+            // 우선 현재 계층에서 Stage20 → Stage30 순으로 탐색해
+            // Stage20 환경에서는 Stage20Controller가 먼저 선택되도록 한다.
+            var stage20InParents = GetComponentInParent<Stage20Controller>();
+            var stage30InParents = GetComponentInParent<Stage30Controller>();
+
+            if (stage20InParents != null)
+            {
+                stageController = stage20InParents;
+            }
+            else if (stage30InParents != null)
+            {
+                stageController = stage30InParents;
+            }
+            else
+            {
+                // 씬 전체에서 탐색할 때도 Stage20 → Stage30 순서로 우선 순위를 유지한다.
+                var stage20 = FindObjectOfType<Stage20Controller>();
+                if (stage20 != null)
+                {
+                    stageController = stage20;
+                }
+                else
+                {
+                    stageController = FindObjectOfType<Stage30Controller>();
+                }
+            }
         }
         
         // slotNumber가 0이면 이름에서 자동으로 파싱 (예: "Slot_1" -> 1)

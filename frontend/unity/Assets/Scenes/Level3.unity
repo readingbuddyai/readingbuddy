@@ -836,7 +836,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1531654774631091544, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1803794739739986439, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_AnchorMax.y
@@ -894,9 +894,21 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2580005756848837998, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_text
+      value: 
+      objectReference: {fileID: 0}
     - target: {fileID: 2809735202690206645, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_Name
       value: '[UI]'
+      objectReference: {fileID: 0}
+    - target: {fileID: 3041564761881029515, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 1600
+      objectReference: {fileID: 0}
+    - target: {fileID: 3220044088515874986, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3295208403801412450, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_text
@@ -904,7 +916,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4180564851563606244, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4328687355459763924, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_IsActive
@@ -996,6 +1008,14 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4787685531431028243, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4842611514983477753, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 1600
+      objectReference: {fileID: 0}
+    - target: {fileID: 4917457096106975652, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 5694564339668791967, guid: 905794e6247728045af85a33f2e0da17, type: 3}
@@ -1102,6 +1122,10 @@ PrefabInstance:
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
       value: UnityEngine.Object, UnityEngine
       objectReference: {fileID: 0}
+    - target: {fileID: 6461446869985768180, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 1500
+      objectReference: {fileID: 0}
     - target: {fileID: 6520598252298826021, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -1182,9 +1206,53 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: stageTwoPart
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8035834406542135662, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: -1600
+      objectReference: {fileID: 0}
     - target: {fileID: 8161379662550019334, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_SizeDelta.x
       value: 8000
+      objectReference: {fileID: 0}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_text
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_fontSize
+      value: 600
+      objectReference: {fileID: 0}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_fontSizeBase
+      value: 600
+      objectReference: {fileID: 0}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -961912866348053561, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_VerticalAlignment
+      value: 512
+      objectReference: {fileID: 0}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_enableWordWrapping
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_HorizontalAlignment
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8937599497308061188, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_hasFontAssetChanged
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 8511619077277003333, guid: 905794e6247728045af85a33f2e0da17, type: 3}
@@ -1316,9 +1384,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baseUrl: https://readingbuddyai.co.kr
   stage: 3
-  stageTwoPart: 2.2
-  count: 5
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyODQyMjU5LCJleHAiOjE3NjI5Mjg2NTl9.8uWZeR5EpQKWyuWSG0vbfr0cXcsy4k65KmBM_lHAC6eCAizHTo7w9w5rkHNe8i3s
+  stageTwoPart: 
+  count: 3
+  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMyIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYzMDM5MDQ1LCJleHAiOjE3NjMxMjU0NDV9.Ho7LXGC10IJUT__qnCt4bpT1ghJW4Wm5T3eIlwfYKPdrbp4VILm-vZupMgpVLJuB
   stageSessionId: 
   bypassStartRequest: 0
   bypassVoiceUpload: 0
