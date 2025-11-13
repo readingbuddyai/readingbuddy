@@ -70,7 +70,7 @@ public class UserService {
 
     private void validateEmailIsUnique(String email) {
         if (userRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("유효하지 않은 이메일 형식입니다.");
+            throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
         }
     }
 
