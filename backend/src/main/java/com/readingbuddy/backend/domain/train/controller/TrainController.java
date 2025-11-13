@@ -1,6 +1,7 @@
 package com.readingbuddy.backend.domain.train.controller;
 
 import com.readingbuddy.backend.auth.dto.CustomUserDetails;
+import com.readingbuddy.backend.auth.service.AuthService;
 import com.readingbuddy.backend.common.service.S3Service;
 import com.readingbuddy.backend.domain.train.dto.request.AttemptRequest;
 import com.readingbuddy.backend.domain.train.dto.response.*;
@@ -29,6 +30,7 @@ public class TrainController {
     private final TrainManager trainManager;
     private final TrainedStageService trainedStageService;
     private final S3Service s3Service;
+    private final AuthService authService;
 
     /**
      * 훈련 문제 세트 생성 API
@@ -174,6 +176,7 @@ public class TrainController {
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
             StageStartResponse response = trainedStageService.startStage(userId, stage);
+            authService.checkAttendance(userId);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
         } catch (Exception e) {
