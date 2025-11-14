@@ -57,8 +57,8 @@ using OptionDto = StageQuestionModels.OptionDto;
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
     [Header("Progress Bar")]
-    [Tooltip("프로젝트에서 ProgressBar를 사용하지 않으려면 꺼두세요.")]
-    public bool showProgressBar = false;
+    [Tooltip("ProgressBar/ProgressText을 씬에서 숨기려면 꺼두세요.")]
+    public bool showProgressUI = false;
     public Image progressBarFill;
     public Color progressBarBackgroundColor = new Color(1f, 1f, 1f, 0.25f);
     public Color progressBarFillColor = new Color(1f, 1f, 1f, 0.9f);
@@ -501,6 +501,8 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private Text EnsureProgressText()
     {
+        if (!showProgressUI)
+            return null;
         if (progressText) return progressText;
         var go = GameObject.Find("ProgressText");
         if (go)
@@ -530,6 +532,8 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private void SetProgressDisplay(int index, int total)
     {
+        if (!showProgressUI)
+            return;
         if (progressText) progressText.text = $"문제 {index}/{total}";
         var pt = EnsureProgressText();
         if (pt != null) pt.text = $"{index} / {total}";
@@ -538,7 +542,7 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private void UpdateProgressBar(int index, int total)
     {
-        if (!showProgressBar)
+        if (!showProgressUI)
             return;
         var fill = EnsureProgressBarFill();
         if (fill == null) return;
@@ -560,7 +564,7 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private Image EnsureProgressBarFill()
     {
-        if (!showProgressBar)
+        if (!showProgressUI)
             return null;
 
         if (progressBarFill != null && progressBarFill.rectTransform != null)
