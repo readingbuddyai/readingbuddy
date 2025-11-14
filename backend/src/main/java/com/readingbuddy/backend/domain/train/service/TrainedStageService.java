@@ -24,18 +24,20 @@ import com.readingbuddy.backend.domain.user.entity.User;
 import com.readingbuddy.backend.domain.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class TrainedStageService {
+
+    private static final Set<String> VALID_STAGES = Set.of(
+            "1.1.1", "1.1.2", "1.2.1", "1.2.2", "2", "3", "4.1", "4.2"
+    );
 
     private final UserRepository userRepository;
     private final TrainedStageHistoriesRepository trainedStageHistoriesRepository;
@@ -264,5 +266,17 @@ public class TrainedStageService {
                 .stage(lastStage.getStage())
                 .playedAt(lastStage.getStartedAt())
                 .build();
+    }
+
+    public void stageBlock(String stage) throws BadRequestException {
+        if (stage == null || stage.isBlank()) {
+            throw new BadRequestException("Stage 값이 비어있습니다.");
+        }
+        if (!VALID_STAGES.contains(stage)) {
+            throw new BadRequestException(
+                    String.format("유효하지 않은 stage입니다. 입력값: '%s', 유효한 값: %s",
+                            stage, VALID_STAGES)
+            );
+        }
     }
 }
