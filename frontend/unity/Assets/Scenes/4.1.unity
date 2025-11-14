@@ -7370,7 +7370,7 @@ MonoBehaviour:
   audioSource: {fileID: 454267245}
   sfxStart: {fileID: 8300000, guid: 3b37cea90cc807b4a8d4cba2a56e0eff, type: 3}
   sfxNext: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}
-  clipIntroAdvancedMagic: {fileID: 8300000, guid: 58b560e1a9d9a754a858e698ccc7952e, type: 3}
+  clipIntroAdvancedMagic: {fileID: 0}
   clipIntroListenPhonemes: {fileID: 8300000, guid: 8bedc13bf0c6ae3409fd66bc73438cb9, type: 3}
   clipFocusListen: {fileID: 8300000, guid: 9977bc26e07c9d7409cf4d676c7170ab, type: 3}
   clipPromptFirstPiece: {fileID: 8300000, guid: 2b4546ca4edb032459c8a6c8d33a9c3b, type: 3}
