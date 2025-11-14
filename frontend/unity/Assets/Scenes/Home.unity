@@ -2274,6 +2274,18 @@ PrefabInstance:
       propertyPath: m_LocalPosition.z
       value: 5
       objectReference: {fileID: 0}
+    - target: {fileID: 5527471269757012474, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
+      propertyPath: m_Size.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5527471269757012474, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
+      propertyPath: m_Size.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5527471269757012474, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
+      propertyPath: m_Size.z
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5661465194025752794, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -2322,6 +2334,18 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 1.15
       objectReference: {fileID: 0}
+    - target: {fileID: 6921923404999956023, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
+      propertyPath: m_Size.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6921923404999956023, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
+      propertyPath: m_Size.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6921923404999956023, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
+      propertyPath: m_Size.z
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6925993387896509817, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
@@ -2353,9 +2377,6 @@ PrefabInstance:
       addedObject: {fileID: 1654435212}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 569446855392808248, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 0}
-    - targetCorrespondingSourceObject: {fileID: 7552461553926164084, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
       insertIndex: -1
       addedObject: {fileID: 0}
     - targetCorrespondingSourceObject: {fileID: 4129747505671239216, guid: ffc003753b3c7ec47be5050cb4eee702, type: 3}
