@@ -1406,6 +1406,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8300000, guid: 37b1849475249324097970721cb00f1c, type: 3}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: endModalButtonSize.y
+      value: 600
+      objectReference: {fileID: 0}
+    - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: clipRemedialNextLesson
       value: 
       objectReference: {fileID: 8300000, guid: 9e7802724fb712944844813a2e183b67, type: 3}

@@ -14,6 +14,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 #endif
 using UnityEngine.XR;
+using UnityEngine.Video;
 using Stage.UI;
 using QuestionDto = StageQuestionModels.QuestionDto;
 using OptionDto = StageQuestionModels.OptionDto;
@@ -37,9 +38,9 @@ using OptionDto = StageQuestionModels.OptionDto;
     {
         [Header("API 설정")]
         public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
-        public string stage = "1.2";
+        public string stage = "1.1.2";
         [Tooltip("stage/start, check/voice 등 2레벨 스테이지 파라미터가 필요한 요청에 사용됩니다. 비워두면 stage 값이 사용됩니다.")]
-        public string stageTwoPart = "1.2";
+        public string stageTwoPart = "1.1.2";
         public int count = 5;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰
@@ -61,6 +62,11 @@ using OptionDto = StageQuestionModels.OptionDto;
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
     [Tooltip("튜토리얼 등에서 노출할 단어 텍스트(TMP)")]
     public TMP_Text optionWordText;
+
+    [Header("Video (for mp4 imageUrl)")]
+    public RawImage videoSurface;
+    public VideoPlayer videoPlayer;
+    public bool videoLoop = true;
 
     [Header("Intro Tutorial")]
     public StageTutorialProfile tutorialProfile;
@@ -161,6 +167,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         private bool _guideLocked;
         private Vector2 _guideFinalPos;
         private Vector2 _guideFinalSize;
+        private RenderTexture _videoRT;
         private StageSessionController _sessionController;
         private readonly StageQuestionController<QuestionDto> _questionController = new StageQuestionController<QuestionDto>();
         private StageTutorialController _tutorialController;
@@ -236,15 +243,62 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private void Start()
     {
-        // baseUrl 자동 해석 (ENV > Resources > Inspector)
-        baseUrl   = EnvConfig.ResolveBaseUrl(baseUrl);
-        authToken = EnvConfig.ResolveAuthToken(authToken);
+        StartCoroutine(InitializeWithAuth());
+    }
+
+    private IEnumerator InitializeWithAuth()
+    {
+        Debug.Log("[Stage12] Waiting for AuthManager...");
+
+        float timeout = 5f;
+        float elapsed = 0f;
+        while (AuthManager.Instance == null && elapsed < timeout)
+        {
+            yield return new WaitForSeconds(0.1f);
+            elapsed += 0.1f;
+        }
+
+        if (AuthManager.Instance == null)
+        {
+            Debug.LogError("[Stage12] ?? AuthManager.Instance is null after timeout! Returning to Home.");
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            }
+            yield break;
+        }
+
+        Debug.Log("[Stage12] AuthManager found!");
+
+        if (!AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.LogError("[Stage12] ?? User is not logged in! Returning to Home.");
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            }
+            yield break;
+        }
+
+        Debug.Log("[Stage12] User is logged in!");
+
+        baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
+
+        if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
+        {
+            authToken = AuthManager.Instance.GetAccessToken();
+            Debug.Log("[Stage12] ? Access token retrieved from AuthManager");
+        }
+        else
+        {
+            authToken = EnvConfig.ResolveAuthToken(authToken);
+            Debug.Log("[Stage12] Using authToken from EnvConfig (fallback)");
+        }
+
         if (applyAutoLayout)
             TryApplyAutoLayout();
-        // 가이드 시작 크기는 최초 1회만 적용
         if (guideImage && guideStartSize.sqrMagnitude > 0)
             guideImage.sizeDelta = guideStartSize;
-        // 초입에는 메인 이미지와 옵션 영역을 숨깁니다.
         if (mainImage)
         {
             mainImage.enabled = false;
@@ -269,7 +323,6 @@ using OptionDto = StageQuestionModels.OptionDto;
         }
         StartCoroutine(RunStage());
     }
-
     private StageSessionController GetSessionController()
     {
         if (_sessionController == null)
@@ -828,15 +881,56 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private IEnumerator LoadAndShowImage(string imageUrl)
     {
+        StopVideoIfAny();
+
         if (mainImage != null)
         {
-            // 로드 전에는 보이지 않게
             mainImage.enabled = false;
             mainImage.sprite = null;
         }
 
         if (string.IsNullOrEmpty(imageUrl) || mainImage == null)
             yield break;
+
+        string lowerUrl = imageUrl.ToLowerInvariant();
+        if (lowerUrl.EndsWith(".mp4") || lowerUrl.Contains("content-type=video"))
+        {
+            if (videoPlayer == null || videoSurface == null)
+            {
+                Debug.LogError("[Stage12] mp4인데 VideoPlayer/VideoSurface가 연결되지 않았어요.");
+                yield break;
+            }
+
+            if (_videoRT == null)
+            {
+                _videoRT = new RenderTexture(1280, 720, 0, RenderTextureFormat.ARGB32);
+                _videoRT.Create();
+            }
+
+            videoPlayer.targetTexture = _videoRT;
+            videoSurface.texture = _videoRT;
+            if (mainImage) mainImage.enabled = false;
+            videoSurface.gameObject.SetActive(true);
+
+            videoPlayer.isLooping = videoLoop;
+            videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
+            var targetAudio = videoPlayer.GetTargetAudioSource(0);
+            if (targetAudio == null && audioSource != null)
+                videoPlayer.SetTargetAudioSource(0, audioSource);
+
+            videoPlayer.url = imageUrl;
+
+            bool prepared = false;
+            videoPlayer.errorReceived += (vp, msg) => Debug.LogError($"[Stage12] Video error: {msg}");
+            videoPlayer.prepareCompleted += (vp) => prepared = true;
+
+            videoPlayer.Prepare();
+            while (!prepared)
+                yield return null;
+
+            videoPlayer.Play();
+            yield break;
+        }
 
         using (var req = UnityWebRequestTexture.GetTexture(imageUrl))
         {
@@ -866,11 +960,29 @@ using OptionDto = StageQuestionModels.OptionDto;
             var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
             mainImage.sprite = sprite;
             mainImage.preserveAspect = true;
-            mainImage.enabled = true; // 로드 후 표시
+            mainImage.enabled = true;
             Debug.Log($"[Stage12] 이미지 로드 OK: {imageUrl} ({tex.width}x{tex.height})");
         }
     }
 
+    private void StopVideoIfAny()
+    {
+        if (videoPlayer != null)
+        {
+            try { videoPlayer.Stop(); } catch { }
+            videoPlayer.targetTexture = null;
+        }
+        if (videoSurface != null)
+        {
+            videoSurface.gameObject.SetActive(false);
+        }
+        if (_videoRT != null)
+        {
+            _videoRT.Release();
+            Destroy(_videoRT);
+            _videoRT = null;
+        }
+    }
     private IEnumerator PlayClip(AudioClip clip)
     {
         if (_audioController == null)
@@ -1166,7 +1278,10 @@ using OptionDto = StageQuestionModels.OptionDto;
     private string ResolveAnswerValue(QuestionDto q)
     {
         if (q == null) return string.Empty;
-        string normalized = NormalizeField(q.value);
+        string normalized = NormalizeField(q.problemWord);
+        if (!string.IsNullOrEmpty(normalized)) return normalized;
+
+        normalized = NormalizeField(q.value);
         if (!string.IsNullOrEmpty(normalized)) return normalized;
 
         if (q.options != null && q.options.Count > 0)
