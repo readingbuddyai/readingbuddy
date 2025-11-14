@@ -404,7 +404,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baseUrl: https://readingbuddyai.co.kr
   stage: 1.1.1
-  stageTwoPart: 1.1
+  stageTwoPart: 1.1.1
   count: 3
   authToken: 
   stageSessionId: 
