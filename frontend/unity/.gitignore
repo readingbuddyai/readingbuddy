@@ -67,3 +67,6 @@ sysinfo.txt
 
 # Unity Cloud Build
 /[Bb]uilds/[Uu]serSettings/
+
+# Bezi Sidekick Package Icons (auto-generated)
+Packages/com.bezi.sidekick/Editor/Resources/Icons/
