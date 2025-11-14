@@ -15,7 +15,16 @@ public class UIBendDistributor : MonoBehaviour
     public RectTransform referenceRect;
 
     void OnEnable()  { Apply(); StartCoroutine(RefreshTMPNextFrame()); }
-    void OnValidate() { Apply(); StartCoroutine(RefreshTMPNextFrame()); }
+    void OnValidate() 
+    { 
+        Apply(); 
+        // OnValidate는 에디터에서도 호출되며, GameObject가 비활성화되어 있을 수 있음
+        // 코루틴은 활성화된 GameObject에서만 시작 가능
+        if (isActiveAndEnabled)
+        {
+            StartCoroutine(RefreshTMPNextFrame()); 
+        }
+    }
 
     public void Apply()
     {

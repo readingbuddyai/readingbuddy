@@ -102,9 +102,13 @@ public partial class Stage41Controller
         _tutorialDependencies.CorrectSfx = clipGreat;
         _tutorialDependencies.MoveCursorSmooth = null;
         _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops);
-        _tutorialDependencies.ChoseongSlot = choseongBox != null ? choseongBox.GetComponent<RectTransform>() : null;
-        _tutorialDependencies.JungseongSlot = jungseongBox != null ? jungseongBox.GetComponent<RectTransform>() : null;
-        _tutorialDependencies.JongsungSlot = jongseongBox != null ? jongseongBox.GetComponent<RectTransform>() : null;
+        // 튜토리얼 전용 슬롯이 있으면 사용, 없으면 본 훈련 슬롯 사용
+        var tutorialChoseong = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+        var tutorialJungseong = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+        var tutorialJongseong = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+        _tutorialDependencies.ChoseongSlot = tutorialChoseong != null ? tutorialChoseong.GetComponent<RectTransform>() : null;
+        _tutorialDependencies.JungseongSlot = tutorialJungseong != null ? tutorialJungseong.GetComponent<RectTransform>() : null;
+        _tutorialDependencies.JongsungSlot = tutorialJongseong != null ? tutorialJongseong.GetComponent<RectTransform>() : null;
         _tutorialDependencies.ResolveChoiceTile = ResolveTutorialChoiceTile;
         _tutorialDependencies.ResolveSlotTarget = ResolveTutorialSlotTarget;
         _tutorialDependencies.ToggleChoices = (show, slotTarget) => Co_TutorialToggleChoices(show, slotTarget);
@@ -135,6 +139,8 @@ public partial class Stage41Controller
         _tutorialController.introOptionCursor = introOptionCursor;
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
+        // 튜토리얼에서 트리거 입력을 받도록 설정 (원래대로)
+        _tutorialController.requireTriggerAfterTutorial = requireTriggerAfterTutorial;
         _tutorialController.guide3DCharacter = guide3DCharacter;
 
         _tutorialController.Initialize(_tutorialDependencies);
@@ -328,9 +334,13 @@ public partial class Stage41Controller
 
     private System.Collections.IEnumerator Co_TutorialToggleSlots(bool show)
     {
-        if (choseongBox) choseongBox.SetActive(show);
-        if (jungseongBox) jungseongBox.SetActive(show);
-        if (jongseongBox) jongseongBox.SetActive(show);
+        // 튜토리얼 전용 슬롯이 있으면 그것만, 없으면 본 훈련 슬롯 사용
+        var tutorialChoseong = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+        var tutorialJungseong = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+        var tutorialJongseong = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+        if (tutorialChoseong) tutorialChoseong.SetActive(show);
+        if (tutorialJungseong) tutorialJungseong.SetActive(show);
+        if (tutorialJongseong) tutorialJongseong.SetActive(show);
         yield break;
     }
 
@@ -373,29 +383,42 @@ public partial class Stage41Controller
 
     private RectTransform ResolveTutorialSlotTarget(StageTutorialSlotTarget target)
     {
+        // 튜토리얼 전용 슬롯이 있으면 그것을, 없으면 본 훈련 슬롯 사용
+        GameObject targetBox = null;
+        TMP_Text targetText = null;
+        
         switch (target)
         {
             case StageTutorialSlotTarget.Choseong:
-                return choseongText != null ? choseongText.rectTransform : (choseongBox != null ? choseongBox.GetComponent<RectTransform>() : null);
+                targetBox = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+                targetText = choseongText;
+                break;
             case StageTutorialSlotTarget.Jungseong:
-                return jungseongText != null ? jungseongText.rectTransform : (jungseongBox != null ? jungseongBox.GetComponent<RectTransform>() : null);
+                targetBox = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+                targetText = jungseongText;
+                break;
             case StageTutorialSlotTarget.Jongsung:
-                return jongseongText != null ? jongseongText.rectTransform : (jongseongBox != null ? jongseongBox.GetComponent<RectTransform>() : null);
+                targetBox = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+                targetText = jongseongText;
+                break;
             default:
                 return null;
         }
+        
+        return targetText != null ? targetText.rectTransform : (targetBox != null ? targetBox.GetComponent<RectTransform>() : null);
     }
 
     private GameObject ResolveTutorialSlotObject(StageTutorialSlotTarget target)
     {
+        // 튜토리얼 전용 슬롯이 있으면 사용, 없으면 본 훈련 슬롯 사용
         switch (target)
         {
             case StageTutorialSlotTarget.Choseong:
-                return choseongBox;
+                return tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
             case StageTutorialSlotTarget.Jungseong:
-                return jungseongBox;
+                return tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
             case StageTutorialSlotTarget.Jongsung:
-                return jongseongBox;
+                return tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
             default:
                 return null;
         }
@@ -854,13 +877,17 @@ public partial class Stage41Controller
 
     private void HandleTutorialClearAllSlotObjects()
     {
-        ClearDraggablesInSlot(choseongBox);
-        ClearDraggablesInSlot(jungseongBox);
-        ClearDraggablesInSlot(jongseongBox);
+        // 튜토리얼 전용 슬롯이 있으면 그것만 초기화, 없으면 본 훈련 슬롯 초기화
+        var tutorialChoseong = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+        var tutorialJungseong = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+        var tutorialJongseong = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+        ClearDraggablesInSlot(tutorialChoseong);
+        ClearDraggablesInSlot(tutorialJungseong);
+        ClearDraggablesInSlot(tutorialJongseong);
 
         if (logVerbose)
         {
-            Debug.Log($"[Stage41][Tutorial] clear slot objs → 초성 자식 {LogSlotChildren(choseongBox)}, 중성 자식 {LogSlotChildren(jungseongBox)}, 종성 자식 {LogSlotChildren(jongseongBox)}");
+            Debug.Log($"[Stage41][Tutorial] clear slot objs → 초성 자식 {LogSlotChildren(tutorialChoseong)}, 중성 자식 {LogSlotChildren(tutorialJungseong)}, 종성 자식 {LogSlotChildren(tutorialJongseong)}");
         }
 
         RestoreTutorialChoiceTiles();
