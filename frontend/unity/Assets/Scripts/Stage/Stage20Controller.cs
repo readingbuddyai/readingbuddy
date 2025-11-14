@@ -65,6 +65,10 @@ public class Stage20Controller : MonoBehaviour
     public KeyCode tutorialFallbackKey = KeyCode.Space;
     [Min(0f)] public float tutorialClipGapSeconds = 0.9f;
 
+    [Header("Mic Indicator")]
+    [Tooltip("[1.1.4] 종료 직후부터 녹음 3초 동안 표시될 마이크 아이콘 오브젝트")]
+    public GameObject micIndicator;
+
     [Header("오디오 재생")]
     public AudioSource audioSource;
     public AudioClip sfxStart;
@@ -205,6 +209,8 @@ public class Stage20Controller : MonoBehaviour
         ConfigureTutorialController();
         _tutorialController?.PrepareForStageStart();
         ResetStoneUI();
+        if (micIndicator)
+            micIndicator.SetActive(false);
         StartCoroutine(RunStage());
     }
 
@@ -519,11 +525,15 @@ public class Stage20Controller : MonoBehaviour
 
         if (!bypassVoiceUpload)
         {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return RecordAndUpload(problem, index);
+            if (micIndicator) micIndicator.SetActive(false);
         }
         else
         {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return new WaitForSeconds(recordSeconds);
+            if (micIndicator) micIndicator.SetActive(false);
         }
 
         if (clipPerfect) yield return PlayClip(clipPerfect);
