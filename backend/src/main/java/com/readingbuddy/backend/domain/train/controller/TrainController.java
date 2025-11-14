@@ -9,6 +9,7 @@ import com.readingbuddy.backend.domain.train.dto.result.ProblemResult;
 import com.readingbuddy.backend.domain.train.service.*;
 import com.readingbuddy.backend.common.util.format.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.apache.coyote.BadRequestException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -47,6 +48,8 @@ public class TrainController {
             @RequestParam String stageSessionId) {
 
         try {
+            trainedStageService.stageBlock(stage);
+
             ProblemSetResponse problemSetResponse;
             List<ProblemResult> problems = new ArrayList<>();
             String message = "";
@@ -127,6 +130,9 @@ public class TrainController {
                     return ResponseEntity.badRequest()
                             .body(ApiResponse.error("유효하지 않은 단계입니다. " + stage));
             }
+        } catch (BadRequestException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("잘못된 요청입니다.: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("문제 생성 중 오류가 발생했습니다: " + e.getMessage()));
@@ -144,6 +150,8 @@ public class TrainController {
     ) {
 
         try {
+            trainedStageService.stageBlock(stage);
+
             // 파일 검증
             if (audioFile.isEmpty()) {
                 return ResponseEntity.badRequest()
@@ -161,6 +169,9 @@ public class TrainController {
 
             return ResponseEntity.ok(ApiResponse.success("음성 인식이 완료되었습니다.", aiResponse));
 
+        } catch (BadRequestException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("잘못된 요청입니다.: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("음성 처리 중 오류가 발생했습니다: " + e.getMessage()));
@@ -178,12 +189,17 @@ public class TrainController {
             @RequestParam("totalProblems") Integer totalProblems) {
 
         try {
+            trainedStageService.stageBlock(stage);
+
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
             StageStartResponse response = trainedStageService.startStage(userId, stage);
             authService.checkAttendance(userId);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("스테이지가 시작되었습니다.", response));
+        } catch (BadRequestException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("잘못된 요청입니다.: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("스테이지 시작 중 오류가 발생했습니다: " + e.getMessage()));
@@ -200,12 +216,16 @@ public class TrainController {
             @RequestBody AttemptRequest request) {
 
         try {
+            trainedStageService.stageBlock(request.getStage());
             // JWT에서 직접 userId 가져오기
             Long userId = customUserDetails.getId();
             AttemptResponse response = trainedStageService.submitAttempt(userId, request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success("문제 풀이가 기록되었습니다.", response));
-        } catch (Exception e) {
+        } catch (BadRequestException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error("잘못된 요청입니다.: " + e.getMessage()));
+        }  catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("문제 풀이 기록 중 오류가 발생했습니다: " + e.getMessage()));
         }
