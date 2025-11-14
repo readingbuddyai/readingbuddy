@@ -79,7 +79,10 @@ public partial class Stage41Controller : MonoBehaviour
     public AudioClip clipStageCompleteVoice;   // 종료 시 추가 재생할 음성
     public Button againButtonPrefab;
     public Button lobbyButtonPrefab;
+    public Button optionButtonPrefab;
     public Vector2 endModalButtonSize = new Vector2(600f, 300f);
+    public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
+    public TMP_FontAsset tmpFont;
 
     [Header("가이드 이동/축소")]
     public Vector2 guideStartSize = new Vector2(1500, 1500);
@@ -139,6 +142,7 @@ public partial class Stage41Controller : MonoBehaviour
     private int[] _attemptsPerSlot = new int[3]; // 슬롯별 드래그 시도 횟수
     private Coroutine _blinkCo;
     private GameObject _focusedBox;
+    private string _currentWordVoiceUrl;
     private bool[] _finalizedSlots = new bool[3]; // 각 슬롯(초/중/종) 최종 확정 여부
 
     #region DTOs
@@ -182,8 +186,56 @@ public partial class Stage41Controller : MonoBehaviour
 
     private void Start()
     {
+        StartCoroutine(InitializeWithAuth());
+    }
+
+    private IEnumerator InitializeWithAuth()
+    {
+        Debug.Log("[Stage41] Waiting for AuthManager...");
+        float timeout = 5f;
+        float elapsed = 0f;
+        while (AuthManager.Instance == null && elapsed < timeout)
+        {
+            yield return new WaitForSeconds(0.1f);
+            elapsed += 0.1f;
+        }
+
+        if (AuthManager.Instance == null)
+        {
+            Debug.LogError("[Stage41] ⚠️ AuthManager.Instance is null after timeout! Returning to Home.");
+            if (SceneLoader.Instance != null)
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            else
+                SceneManager.LoadScene("Home");
+            yield break;
+        }
+
+        Debug.Log("[Stage41] AuthManager found!");
+
+        if (!AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.LogError("[Stage41] ⚠️ User is not logged in! Returning to Home.");
+            if (SceneLoader.Instance != null)
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            else
+                SceneManager.LoadScene("Home");
+            yield break;
+        }
+
+        Debug.Log("[Stage41] User is logged in!");
+
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
-        authToken = EnvConfig.ResolveAuthToken(authToken);
+
+        if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
+        {
+            authToken = AuthManager.Instance.GetAccessToken();
+            Debug.Log("[Stage41] ✓ Access token retrieved from AuthManager");
+        }
+        else
+        {
+            authToken = EnvConfig.ResolveAuthToken(authToken);
+            Debug.Log("[Stage41] Using authToken from EnvConfig (fallback)");
+        }
 
         if (guideRect && guideStartSize.sqrMagnitude > 0)
             guideRect.sizeDelta = guideStartSize;
@@ -303,6 +355,7 @@ public partial class Stage41Controller : MonoBehaviour
 
             SetProgressLabel(_currentProblemNumber, questions.Count);
             if (wordText) wordText.text = q.problemWord ?? string.Empty;
+            _currentWordVoiceUrl = q.voiceUrl;
             ClearPhonemeBoxes();
             if (logVerbose)
             {
@@ -419,7 +472,6 @@ public partial class Stage41Controller : MonoBehaviour
 
     private void ShowEndModal()
     {
-        // Canvas를 먼저 찾고, 그 하위에서 EndModal을 찾아 (비활성화 포함)
         var canvas = FindObjectOfType<Canvas>();
         if (!canvas)
         {
@@ -427,45 +479,162 @@ public partial class Stage41Controller : MonoBehaviour
             return;
         }
 
-        var modalTransform = canvas.transform.Find("EndModal");
-        if (modalTransform == null)
+        var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
+        overlay.layer = canvas.gameObject.layer;
+        var rt = overlay.GetComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = Vector2.zero;
+        var bg = overlay.GetComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.6f);
+        bg.raycastTarget = true;
+
+        var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        panel.layer = canvas.gameObject.layer;
+        var prt = panel.GetComponent<RectTransform>();
+        prt.SetParent(overlay.transform, false);
+        prt.anchorMin = new Vector2(0.5f, 0.5f);
+        prt.anchorMax = new Vector2(0.5f, 0.5f);
+        prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(2200f, 1500f);
+        var pbg = panel.GetComponent<Image>();
+        pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
+
+        var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
+        title.layer = canvas.gameObject.layer;
+        var trt = title.GetComponent<RectTransform>();
+        trt.SetParent(panel.transform, false);
+        trt.anchorMin = new Vector2(0.5f, 1f);
+        trt.anchorMax = new Vector2(0.5f, 1f);
+        trt.pivot = new Vector2(0.5f, 1f);
+        trt.anchoredPosition = new Vector2(0f, -80f);
+        trt.sizeDelta = new Vector2(1000f, 150f);
+        var titleText = title.GetComponent<Text>();
+        titleText.text = "마법 학습을 마쳤어요!";
+        titleText.alignment = TextAnchor.MiddleCenter;
+        titleText.fontSize = 100;
+        titleText.fontStyle = FontStyle.Bold;
+        titleText.color = Color.white;
+        titleText.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+        Vector2 btnSize = (endModalButtonSize.sqrMagnitude > 0f) ? endModalButtonSize : optionButtonPreferredSize;
+        float gap = 40f;
+
+        Button ResolveButton(Button preferred, string[] resourcePaths, out bool isCustom)
         {
-            Debug.LogWarning("[Stage41] Canvas 하위에 EndModal 오브젝트를 찾을 수 없습니다.");
-            return;
+            if (preferred)
+            {
+                isCustom = true;
+                return preferred;
+            }
+            foreach (var path in resourcePaths)
+            {
+                var loaded = Resources.Load<Button>(path);
+                if (loaded)
+                {
+                    isCustom = true;
+                    return loaded;
+                }
+                var go = Resources.Load<GameObject>(path);
+                if (go)
+                {
+                    var childBtn = go.GetComponentInChildren<Button>(true) ?? go.GetComponent<Button>();
+                    if (childBtn)
+                    {
+                        isCustom = true;
+                        return childBtn;
+                    }
+                }
+            }
+            isCustom = false;
+            return optionButtonPrefab;
         }
 
-        modalTransform.gameObject.SetActive(true);
-        Debug.Log("[Stage41] EndModal 활성화 완료!");
+        bool againCustom;
+        var btn1 = Instantiate(ResolveButton(againButtonPrefab, new[] { "againbutton", "UI/againbutton", "Images/againbutton" }, out againCustom), panel.transform as RectTransform);
+        var btn1rt = btn1.GetComponent<RectTransform>();
+        btn1rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn1rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn1rt.pivot = new Vector2(1f, 0.5f);
+        btn1rt.sizeDelta = btnSize;
+        btn1rt.anchoredPosition = new Vector2(-gap * 0.5f, -100f);
+        if (!againCustom)
+        {
+            var txt1 = btn1.GetComponentInChildren<Text>();
+            var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
+            if (txt1)
+            {
+                txt1.text = "다시 학습하기";
+                if (uiFont) txt1.font = uiFont;
+            }
+            else if (tmp1)
+            {
+                tmp1.text = "다시 학습하기";
+                if (tmpFont) tmp1.font = tmpFont;
+            }
+        }
+        btn1.onClick.AddListener(() => { Destroy(overlay); RestartStage(); });
+
+        bool lobbyCustom;
+        var btn2 = Instantiate(ResolveButton(lobbyButtonPrefab, new[] { "lobbybutton", "UI/lobbybutton", "Images/lobbybutton" }, out lobbyCustom), panel.transform as RectTransform);
+        var btn2rt = btn2.GetComponent<RectTransform>();
+        btn2rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn2rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn2rt.pivot = new Vector2(0f, 0.5f);
+        btn2rt.sizeDelta = btnSize;
+        btn2rt.anchoredPosition = new Vector2(gap * 0.5f, -100f);
+        if (!lobbyCustom)
+        {
+            var txt2 = btn2.GetComponentInChildren<Text>();
+            var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
+            if (txt2)
+            {
+                txt2.text = "로비로 나가기";
+                if (uiFont) txt2.font = uiFont;
+            }
+            else if (tmp2)
+            {
+                tmp2.text = "로비로 나가기";
+                if (tmpFont) tmp2.font = tmpFont;
+            }
+        }
+        btn2.onClick.AddListener(() => { Destroy(overlay); GoToLobby(); });
     }
 
     public void OnClickAgainButton()
     {
         Debug.Log("[Stage41] 다시 학습하기 버튼 클릭됨");
-
-        // EndModal 비활성화
         var modal = GameObject.Find("EndModal");
-        if (modal) modal.SetActive(false);
-
-        // 세션 초기화 후 스테이지 재시작
-        StopAllCoroutines();
-        stageSessionId = string.Empty;
-        _supplementController?.Clear();
-        StartCoroutine(RunStage());
+        if (modal) Destroy(modal);
+        RestartStage();
     }
 
     public void OnClickLobbyButton()
     {
         Debug.Log("[Stage41] 로비로 나가기 버튼 클릭됨");
-
-        // EndModal 비활성화
         var modal = GameObject.Find("EndModal");
-        if (modal) modal.SetActive(false);
+        if (modal) Destroy(modal);
+        GoToLobby();
+    }
 
-        // 로비 씬 이동
+    private void RestartStage()
+    {
+        StopAllCoroutines();
+        stageSessionId = string.Empty;
+        _supplementController?.Clear();
+        ResetUI();
+        StartCoroutine(RunStage());
+    }
+
+    private void GoToLobby()
+    {
         if (SceneLoader.Instance != null)
             SceneLoader.Instance.LoadScene(SceneId.Lobby);
         else
-            SceneManager.LoadScene("Lobby");  // 직접 이름으로 로드
+            SceneManager.LoadScene("Lobby");
     }
 
     // 드래그로 재배열 완료 시 외부에서 호출: 초/중/종 순
@@ -499,7 +668,7 @@ public partial class Stage41Controller : MonoBehaviour
         }
         else
         {
-            StartCoroutine(PlayClip(clipTryAgain));    // [4.1.12]
+            StartCoroutine(PlayClipThenReplayWord(clipTryAgain));    // [4.1.12]
         }
     }
 
@@ -1062,6 +1231,19 @@ public partial class Stage41Controller : MonoBehaviour
             audioSource.Play();
             yield return new WaitWhile(() => audioSource.isPlaying);
         }
+    }
+
+    private IEnumerator ReplayCurrentWord()
+    {
+        if (string.IsNullOrEmpty(_currentWordVoiceUrl)) yield break;
+        yield return PlayVoiceUrl(_currentWordVoiceUrl);
+    }
+
+    private IEnumerator PlayClipThenReplayWord(AudioClip clip)
+    {
+        if (!clip) yield break;
+        yield return PlayClip(clip);
+        yield return ReplayCurrentWord();
     }
 
     // Wrapper: runs the upload coroutine and ensures pending counter is decreased
@@ -1681,6 +1863,7 @@ public partial class Stage41Controller : MonoBehaviour
             ShowChoicePanelsForSlot(slot);
             _awaitingUserArrangement = true; // 드래그를 즉시 허용
             yield return PlayClip(clipFindCorrect); // [4.1.10]
+            yield return ReplayCurrentWord();
             // 사용자가 올바르게 배치하거나 3회 실패로 자동완료될 때까지 대기
             while (_awaitingUserArrangement) yield return null;
         }
@@ -1779,7 +1962,7 @@ public partial class Stage41Controller : MonoBehaviour
             }
             else
             {
-                StartCoroutine(PlayClip(clipTryAgain)); // [4.1.12]
+                StartCoroutine(PlayClipThenReplayWord(clipTryAgain)); // [4.1.12]
             }
             return;
         }
