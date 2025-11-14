@@ -62,9 +62,9 @@ public class TrainManager {
         StageSessionInfo stageSessionInfo = stageSessions.get(stageSessionId);
 
         String path = "/check";
-        if (HangulChecker.classify(target).equals("JAMO_ONLY")) path += "/jamo";
+        if (target.length() >= 2) path += "/word";
         else if (HangulChecker.classify(target).equals("SYLLABLE_ONLY")) path += "/syllable";
-        else if (target.length() >= 2) path += "/word";
+        else if (HangulChecker.classify(target).equals("JAMO_ONLY")) path += "/jamo";
 
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         try {
