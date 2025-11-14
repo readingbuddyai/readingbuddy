@@ -5585,15 +5585,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_ValidColorGradient.key0.b
-      value: 1
+      value: 0.44587618
       objectReference: {fileID: 0}
     - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_ValidColorGradient.key0.g
-      value: 0.8834448
+      value: 0.3754716
       objectReference: {fileID: 0}
     - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_ValidColorGradient.key0.r
-      value: 0.6
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8764581999604970884, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_ValidColorGradient.key1.b
