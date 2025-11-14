@@ -96,7 +96,6 @@ public partial class Stage41Controller : MonoBehaviour
     public AudioClip sfxNext;
 
     [Header("대사 오디오")]
-    public AudioClip clipIntroAdvancedMagic;     // [4.1.1]
     public AudioClip clipIntroListenPhonemes;    // [4.1.2]
     public AudioClip clipFocusListen;            // [4.1.3]
     public AudioClip clipPromptFirstPiece;       // [4.1.4]
@@ -247,13 +246,12 @@ public partial class Stage41Controller : MonoBehaviour
             bool jongseongBoxActive = jongseongBox != null && jongseongBox.activeSelf;
 
             Debug.Log(
-                $"[Stage41] Before IntroAdvancedMagic: panelActive={panelActive}, guideActive={guideActive}, " +
+                $"[Stage41] Before IntroListenPhonemes: panelActive={panelActive}, guideActive={guideActive}, " +
                 $"choicesActive={choicesActive}, consonantChoicesActive={consonantChoicesActive}, " +
                 $"vowelChoicesActive={vowelChoicesActive}, choseongBoxActive={choseongBoxActive}, " +
                 $"jungseongBoxActive={jungseongBoxActive}, jongseongBoxActive={jongseongBoxActive}");
         }
 
-        yield return PlayClip(clipIntroAdvancedMagic);   // [4.1.1]
         yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
 
         // 본 훈련 시작 시 패널 표시

@@ -102,6 +102,11 @@ public class Stage30Controller : MonoBehaviour
     public AudioClip clipFeedbackGreatJob;
     public AudioClip clipFinalEncouragement;
 
+    [Header("End Modal (Stage Complete)")]
+    public Button againButtonPrefab;
+    public Button lobbyButtonPrefab;
+    public Vector2 endModalButtonSize = new Vector2(600f, 300f);
+
     [Header("튜토리얼 UI")]
     public RectTransform tutorialOptionsContainer;
     public TMP_Text tutorialOptionWordText;
@@ -282,6 +287,62 @@ public class Stage30Controller : MonoBehaviour
 
         if (clipFinalEncouragement)
             yield return PlayClip(clipFinalEncouragement);
+
+        // 종료 모달 표시
+        ShowEndModal();
+    }
+
+    private void ShowEndModal()
+    {
+        // Canvas를 먼저 찾고, 그 하위에서 EndModal을 찾아 (비활성화 포함)
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas)
+        {
+            Debug.LogWarning("[Stage30] Canvas를 찾을 수 없습니다.");
+            return;
+        }
+
+        var modalTransform = canvas.transform.Find("EndModal");
+        if (modalTransform == null)
+        {
+            Debug.LogWarning("[Stage30] Canvas 하위에 EndModal 오브젝트를 찾을 수 없습니다.");
+            return;
+        }
+
+        modalTransform.gameObject.SetActive(true);
+        Debug.Log("[Stage30] EndModal 활성화 완료!");
+    }
+
+    public void OnClickAgainButton()
+    {
+        Debug.Log("[Stage30] 다시 학습하기 버튼 클릭됨");
+
+        // EndModal 비활성화
+        var modal = GameObject.Find("EndModal");
+        if (modal) modal.SetActive(false);
+
+        // 세션 초기화 후 스테이지 재시작
+        StopAllCoroutines();
+        stageSessionId = string.Empty;
+        StartCoroutine(RunStage());
+    }
+
+    public void OnClickLobbyButton()
+    {
+        Debug.Log("[Stage30] 로비로 나가기 버튼 클릭됨");
+
+        // EndModal 비활성화
+        var modal = GameObject.Find("EndModal");
+        if (modal) modal.SetActive(false);
+
+        // 로비 씬으로 이동
+        if (SceneLoader.Instance != null)
+            SceneLoader.Instance.LoadScene(SceneId.Lobby);
+        else
+        {
+            Debug.LogWarning("[Stage30] SceneLoader.Instance가 없습니다. SceneManager로 대체 시도");
+            UnityEngine.SceneManagement.SceneManager.LoadScene(SceneId.Lobby);
+        }
     }
 
     private IEnumerator RunIntroSequence()
@@ -513,16 +574,38 @@ public class Stage30Controller : MonoBehaviour
 
         string stageForUpload = GetStageForVoiceUpload();
         var sessionController = GetSessionController();
+        // Stage41처럼 정답 값(problemWord)을 answer 파라미터로 전달
+        // Stage30은 problemWord가 유니코드 형식일 수 있으므로 NormalizeWordLabel로 변환
+        string rawProblemWord = problem != null ? (problem.problemWord ?? string.Empty) : string.Empty;
+        string answerValue = NormalizeWordLabel(rawProblemWord);
         yield return sessionController.CheckVoice(
             stageSessionId,
             stageForUpload,
             Mathf.Max(1, problemNumber),
-            string.Empty,
+            answerValue,
             wav,
             result =>
             {
                 if (result != null && !string.IsNullOrWhiteSpace(result.RawBody))
+                {
+                    // 응답 파싱하여 reply 추출
+                    try
+                    {
+                        var parsed = JsonUtility.FromJson<VoiceReplyResp>(result.RawBody);
+                        string reply = parsed?.data?.reply ?? string.Empty;
+                        bool isReplyCorrect = parsed?.data?.isReplyCorrect ?? false;
+                        
+                        if (verboseLogging)
+                            Debug.Log($"[Stage30] check/voice 응답 - reply='{reply}', isReplyCorrect={isReplyCorrect}");
+                    }
+                    catch (Exception ex)
+                    {
+                        if (verboseLogging)
+                            Debug.LogWarning($"[Stage30] check/voice 응답 파싱 실패: {ex.Message}");
+                    }
+                    
                     CollectFeedback(result.RawBody);
+                }
             });
     }
 
@@ -1245,6 +1328,11 @@ public class Stage30Controller : MonoBehaviour
         public string sessionId;
         public List<Problem> problems;
     }
+
+    [Serializable]
+    private class VoiceReplyData { public string reply; public bool isReplyCorrect; public float accuracy; public string audioUrl; }
+    [Serializable]
+    private class VoiceReplyResp { public bool success = true; public string message; public VoiceReplyData data; }
 
     [Serializable]
     private class ProblemListResponse
