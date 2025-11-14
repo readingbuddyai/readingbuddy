@@ -39,7 +39,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
         public string stage = "1.1.1";
         [Tooltip("stage/start, check/voice 등 2레벨 스테이지 파라미터가 필요한 요청에 사용됩니다. 비워두면 stage 값이 사용됩니다.")]
-        public string stageTwoPart = "1.1";
+        public string stageTwoPart = "1.1.1";
         public int count = 5;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰

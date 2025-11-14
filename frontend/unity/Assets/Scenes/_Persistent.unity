@@ -5467,6 +5467,10 @@ PrefabInstance:
       propertyPath: m_Parameters.widthCurve.m_Curve.Array.data[0].outWeight
       value: 0.18095839
       objectReference: {fileID: 0}
+    - target: {fileID: 2253945262555098467, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
+      propertyPath: m_MoveSpeed
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 2804289884270011078, guid: 58d75f56a2a05da419624b1bc8f8ec5c, type: 3}
       propertyPath: m_AllowHoveredActivate
       value: 1

@@ -14,15 +14,27 @@ public class UIBendDistributor : MonoBehaviour
 
     public RectTransform referenceRect;
 
-    void OnEnable()  { Apply(); StartCoroutine(RefreshTMPNextFrame()); }
-    void OnValidate() 
-    { 
-        Apply(); 
-        // OnValidate는 에디터에서도 호출되며, GameObject가 비활성화되어 있을 수 있음
-        // 코루틴은 활성화된 GameObject에서만 시작 가능
-        if (isActiveAndEnabled)
+    void OnEnable()
+    {
+        Apply();
+
+        // 플레이 중일 때만 코루틴 돌리기 (에디터 모드 NRE 방지)
+        if (Application.isPlaying)
         {
-            StartCoroutine(RefreshTMPNextFrame()); 
+            StopAllCoroutines();
+            StartCoroutine(RefreshTMPNextFrame());
+        }
+    }
+
+    void OnValidate()
+    {
+        Apply();
+
+        // 인스펙터 값 바꿀 때도, 플레이 중일 때만 코루틴 실행
+        if (Application.isPlaying)
+        {
+            StopAllCoroutines();
+            StartCoroutine(RefreshTMPNextFrame());
         }
     }
 
@@ -34,6 +46,8 @@ public class UIBendDistributor : MonoBehaviour
         var graphics = GetComponentsInChildren<Graphic>(includeInactive);
         foreach (var g in graphics)
         {
+            if (g == null) continue;
+
             var tmp = g.GetComponent<TMP_Text>();
             if (tmp != null)
             {
@@ -63,10 +77,16 @@ public class UIBendDistributor : MonoBehaviour
     {
         // Distributor 주입 후 한 프레임 기다렸다가 강제 재생성
         yield return null;
+
         Canvas.ForceUpdateCanvases();
+
         var tmps = GetComponentsInChildren<TMP_Text>(includeInactive);
         foreach (var t in tmps)
         {
+            // 코루틴 도는 동안 삭제/비활성된 TMP 방어
+            if (t == null) continue;
+            if (!t.gameObject.activeInHierarchy) continue;
+
             t.havePropertiesChanged = true;
             t.ForceMeshUpdate(true, true);
             t.UpdateVertexData(TMP_VertexDataUpdateFlags.All);
