@@ -46,6 +46,13 @@ public partial class Stage41Controller : MonoBehaviour
     public GameObject choseongBox;
     public GameObject jungseongBox;
     public GameObject jongseongBox;
+    [Header("Tutorial Slots (Optional - if not set, uses gameplay slots)")]
+    [Tooltip("튜토리얼 전용 초성 슬롯. 설정하지 않으면 choseongBox를 사용합니다.")]
+    public GameObject tutorialChoseongBox;
+    [Tooltip("튜토리얼 전용 중성 슬롯. 설정하지 않으면 jungseongBox를 사용합니다.")]
+    public GameObject tutorialJungseongBox;
+    [Tooltip("튜토리얼 전용 종성 슬롯. 설정하지 않으면 jongseongBox를 사용합니다.")]
+    public GameObject tutorialJongseongBox;
     public GameObject micIndicator;
     [Tooltip("보기 상자(자모 후보) 컨테이너(공용, 선택)")]
     public GameObject choicesContainer;
@@ -249,7 +256,19 @@ public partial class Stage41Controller : MonoBehaviour
         yield return PlayClip(clipIntroAdvancedMagic);   // [4.1.1]
         yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
 
+        // 본 훈련 시작 시 패널 표시
+        if (_tutorialController != null)
+        {
+            yield return _tutorialController.ShowPanel(false);
+            if (logVerbose)
+                Debug.Log("[Stage41] Panel shown at start of main training");
+        }
+
         EnsureGameplayUiVisible();
+        // 본 훈련 슬롯 텍스트 초기화 (튜토리얼 슬롯과 분리되어 있으면 자동으로 초기화됨)
+        SetSlotText(0, string.Empty);
+        SetSlotText(1, string.Empty);
+        SetSlotText(2, string.Empty);
 
         if (!bypassStartRequest && string.IsNullOrWhiteSpace(stageSessionId))
             yield return StartStageSession();
@@ -674,7 +693,42 @@ public partial class Stage41Controller : MonoBehaviour
 
         if (logVerbose)
             Debug.Log($"[Stage41][Tutorial] Prefill slot {slotIndex} with '{string.Join(",", normalizedCandidates)}'");
-        OnSegmentRecognitionHypotheses(slotIndex, normalizedCandidates);
+        
+        // 튜토리얼 슬롯에만 텍스트 설정 (본 훈련 슬롯은 건드리지 않음)
+        EnsureSegmentListCapacity(slotIndex);
+        var store = _segmentReplyCandidates[slotIndex];
+        store.Clear();
+        foreach (var candidate in normalizedCandidates)
+        {
+            if (string.IsNullOrWhiteSpace(candidate)) continue;
+            store.Add(candidate);
+        }
+        
+        string best = SelectBestCandidateForSlot(slotIndex, store);
+        if (string.IsNullOrEmpty(best))
+        {
+            if (logVerbose)
+                Debug.LogWarning($"[Stage41][Tutorial] Prefill: best candidate를 찾을 수 없습니다.");
+            return;
+        }
+        
+        // 튜토리얼 슬롯에만 텍스트 설정
+        var tutorialSlot = ResolveTutorialSlotObject(IndexToSlotTarget(slotIndex));
+        if (tutorialSlot != null)
+        {
+            var tutorialText = tutorialSlot.GetComponentInChildren<TMP_Text>(true);
+            if (tutorialText != null)
+            {
+                tutorialText.text = best;
+                if (logVerbose)
+                    Debug.Log($"[Stage41][Tutorial] Set tutorial slot {slotIndex} text to '{best}'");
+            }
+        }
+        else
+        {
+            if (logVerbose)
+                Debug.LogWarning($"[Stage41][Tutorial] Prefill: tutorial slot {slotIndex}을 찾을 수 없습니다.");
+        }
     }
 
     private void HandleTutorialClearSlot(string args)
@@ -1792,7 +1846,11 @@ public partial class Stage41Controller : MonoBehaviour
 
         if (logVerbose)
         {
-            Debug.Log($"[Stage41][Tutorial] ClearAllSlots → repliesCount={_segmentReplies.Count}, expectedCount={_expectedPhonemes.Count}, choseongChildren={GetChildCount(choseongBox)}, jungseongChildren={GetChildCount(jungseongBox)}, jongseongChildren={GetChildCount(jongseongBox)}");
+            // 튜토리얼 슬롯이 있으면 그것을, 없으면 본 훈련 슬롯을 로그에 표시
+            var tutorialChoseong = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+            var tutorialJungseong = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+            var tutorialJongseong = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+            Debug.Log($"[Stage41][Tutorial] ClearAllSlots → repliesCount={_segmentReplies.Count}, expectedCount={_expectedPhonemes.Count}, choseongChildren={GetChildCount(tutorialChoseong)}, jungseongChildren={GetChildCount(tutorialJungseong)}, jongseongChildren={GetChildCount(tutorialJongseong)}");
         }
     }
 
