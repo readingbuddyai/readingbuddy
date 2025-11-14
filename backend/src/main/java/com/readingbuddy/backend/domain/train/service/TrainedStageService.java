@@ -179,6 +179,8 @@ public class TrainedStageService {
                 .map(Map.Entry::getKey)
                 .collect(java.util.stream.Collectors.toSet());
 
+        trainManager.removeStageSession(stageSessionId);
+
         return StageCompleteResponse.builder()
                 .stageSessionId(stageSessionId)
                 .voiceResult(voiceResult)
