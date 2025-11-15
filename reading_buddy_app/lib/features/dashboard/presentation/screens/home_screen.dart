@@ -24,34 +24,33 @@ class HomeScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                        child: Icon(
-                          Icons.person,
-                          color: theme.colorScheme.primary,
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // 로고 파일 없으면 기본 아이콘 표시
+                            return CircleAvatar(
+                              radius: 20,
+                              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                              child: Icon(
+                                Icons.person,
+                                color: theme.colorScheme.primary,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Reading Buddy',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            if (homeState.consecutiveDays > 0)
-                              Text(
-                                '🔥 ${homeState.consecutiveDays}일 연속 출석 중!',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.warningColor,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                          ],
+                        child: Text(
+                          'Reading Buddy',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -72,9 +71,6 @@ class HomeScreen extends ConsumerWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Card(
-                    color: homeState.attendedToday
-                        ? AppTheme.successColor.withOpacity(0.1)
-                        : theme.colorScheme.surface,
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(

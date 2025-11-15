@@ -134,7 +134,7 @@ class _DeviceAuthScreenState extends ConsumerState<DeviceAuthScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '코드는 1분 후 만료됩니다',
+                          '코드는 3분 후 만료됩니다',
                           style: TextStyle(
                             color: Colors.orange.shade900,
                             fontWeight: FontWeight.w500,
@@ -159,7 +159,6 @@ class _DeviceAuthScreenState extends ConsumerState<DeviceAuthScreen> {
                   textAlign: TextAlign.center,
                   decoration: const InputDecoration(
                     labelText: '인증 코드',
-                    hintText: '1234',
                     prefixIcon: Icon(Icons.vpn_key),
                   ),
                   inputFormatters: [
@@ -365,7 +364,7 @@ class _DeviceAuthContentState extends ConsumerState<DeviceAuthContent> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '코드는 1분 후 만료됩니다',
+                      '코드는 3분 후 만료됩니다',
                       style: TextStyle(
                         color: Colors.orange.shade900,
                         fontWeight: FontWeight.w500,
@@ -390,7 +389,6 @@ class _DeviceAuthContentState extends ConsumerState<DeviceAuthContent> {
               textAlign: TextAlign.center,
               decoration: const InputDecoration(
                 labelText: '인증 코드',
-                hintText: '1234',
                 prefixIcon: Icon(Icons.vpn_key),
               ),
               inputFormatters: [

@@ -198,8 +198,8 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
               // KC 숙련도 추이 섹션
               const SliverToBoxAdapter(
                 child: SectionHeader(
-                  title: 'KC 숙련도 추이',
-                  subtitle: '스테이지별 KC 학습 변화',
+                  title: '숙련도 그래프',
+                  subtitle: '스테이지별 숙련도 학습 변화',
                 ),
               ),
 
@@ -403,8 +403,10 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                 label,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
@@ -412,7 +414,10 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: color,
+                  fontSize: 15,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

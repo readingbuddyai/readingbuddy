@@ -8,18 +8,14 @@ import '../../features/dashboard/presentation/screens/main_screen.dart';
 /// 앱 라우팅 설정
 class AppRouter {
   static const String splash = '/';
-  static const String login = '/login';
+  static const String login = '/';
   static const String signup = '/signup';
   static const String deviceAuth = '/device-auth';
   static const String main = '/main';
 
   static GoRouter router = GoRouter(
-    initialLocation: splash,
+    initialLocation: login,
     routes: [
-      GoRoute(
-        path: splash,
-        builder: (context, state) => const SplashScreen(),
-      ),
       GoRoute(
         path: login,
         builder: (context, state) => const LoginScreen(),

@@ -251,11 +251,8 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
           child: _buildPronunciationCard(context, validSessions),
         ),
 
-        // 구분선
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Divider(thickness: 2),
-        ),
+        // 여백 추가 (구분선 대신)
+        const SizedBox(height: 8),
 
         // 4. 세션 목록 (유효한 세션만)
         ...validSessions.map((session) {

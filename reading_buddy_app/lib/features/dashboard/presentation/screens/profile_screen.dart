@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../providers/profile_provider.dart';
 import '../providers/home_provider.dart';
@@ -111,18 +112,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
 
-              const Divider(),
-
               // 설정 항목들
-              ListTile(
-                leading: Icon(Icons.devices, color: theme.colorScheme.primary),
-                title: const Text('VR 기기 연결'),
-                subtitle: const Text('VR 기기와 앱을 연결하세요'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  context.push(AppRouter.deviceAuth);
-                },
-              ),
               ListTile(
                 leading: Icon(Icons.palette, color: theme.colorScheme.primary),
                 title: const Text('테마 설정'),
@@ -186,7 +176,16 @@ class ProfileScreen extends ConsumerWidget {
                 },
               ),
 
-              const Divider(),
+              // VR 기기 연결 (맨 아래로 이동)
+              ListTile(
+                leading: Icon(Icons.devices, color: theme.colorScheme.primary),
+                title: const Text('VR 기기 연결'),
+                subtitle: const Text('VR 기기와 앱을 연결하세요'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  context.push(AppRouter.deviceAuth);
+                },
+              ),
 
               // 로그아웃
               ListTile(
