@@ -66,52 +66,50 @@ Phase 3: 148h → 전체 정제 (목표 WER < 15%)
 ## 프로젝트 구조
 
 ```
-finetuning-dev/
+Fine-tuning/
 ├── README.md                   # 프로젝트 개요
 ├── .gitignore                  # Git 제외 파일 설정
+├── requirements.txt            # Python 의존성
 │
-└── Fine-tuning/                # 학습 파이프라인
-    ├── requirements.txt        # Python 의존성
+├── docs/                       # 문서
+│   ├── analysis.md             # 프로젝트 분석 보고서
+│   ├── TRAINING_PLAN.md        # 학습 계획 문서
+│   ├── USAGE.md                # 사용 가이드
+│   ├── TRAIN_FULL_GUIDE.md     # 전체 학습 가이드
+│   └── UPDATE_VALIDATION_SETTINGS.md
+│
+├── scripts/                    # 실행 스크립트
+│   ├── training/               # 학습 스크립트
+│   │   ├── train_all_phases.py          # Phase 1-3 학습 (메인)
+│   │   ├── train_all_phases_all.py      # 전체 데이터 (r=16)
+│   │   └── train_all_phases_all_r32_optimized.py  # r=32 최적화
+│   │
+│   ├── evaluation/             # 평가 스크립트
+│   │   ├── evaluate_all_models.py       # 전체 모델 평가
+│   │   ├── evaluate_test.py             # 테스트셋 평가
+│   │   └── compare_base_r16_r32.py      # 모델 비교
+│   │
+│   ├── data_prep/              # 데이터 준비
+│   │   └── split_full_validation.py     # Validation 분할
+│   │
+│   └── testing/                # 테스트 스크립트
+│       ├── test.py
+│       ├── test_dataset.py
+│       ├── test_phase2_dataset.py
+│       └── test_val_loading.py
+│
+└── results/                    # 실험 결과
+    ├── comparison_results/     # 모델 비교 결과
+    │   ├── summary.json
+    │   ├── results_base.json
+    │   ├── results_lora_r16_*.json
+    │   └── results_lora_r32_*.json
     │
-    ├── docs/                   # 문서
-    │   ├── analysis.md         # 프로젝트 분석 보고서
-    │   ├── TRAINING_PLAN.md    # 학습 계획 문서
-    │   ├── USAGE.md            # 사용 가이드
-    │   ├── TRAIN_FULL_GUIDE.md # 전체 학습 가이드
-    │   └── UPDATE_VALIDATION_SETTINGS.md
+    ├── evaluation_results/     # 평가 결과
+    │   ├── comparison_summary.json
+    │   └── results_*.json
     │
-    ├── scripts/                # 실행 스크립트
-    │   ├── training/           # 학습 스크립트
-    │   │   ├── train_all_phases.py          # Phase 1-3 학습 (메인)
-    │   │   ├── train_all_phases_all.py      # 전체 데이터 (r=16)
-    │   │   └── train_all_phases_all_r32_optimized.py  # r=32 최적화
-    │   │
-    │   ├── evaluation/         # 평가 스크립트
-    │   │   ├── evaluate_all_models.py       # 전체 모델 평가
-    │   │   ├── evaluate_test.py             # 테스트셋 평가
-    │   │   └── compare_base_r16_r32.py      # 모델 비교
-    │   │
-    │   ├── data_prep/          # 데이터 준비
-    │   │   └── split_full_validation.py     # Validation 분할
-    │   │
-    │   └── testing/            # 테스트 스크립트
-    │       ├── test.py
-    │       ├── test_dataset.py
-    │       ├── test_phase2_dataset.py
-    │       └── test_val_loading.py
-    │
-    └── results/                # 실험 결과
-        ├── comparison_results/ # 모델 비교 결과
-        │   ├── summary.json
-        │   ├── results_base.json
-        │   ├── results_lora_r16_*.json
-        │   └── results_lora_r32_*.json
-        │
-        ├── evaluation_results/ # 평가 결과
-        │   ├── comparison_summary.json
-        │   └── results_*.json
-        │
-        └── baseline_test_results.json
+    └── baseline_test_results.json
 ```
 
 ---
@@ -135,7 +133,6 @@ pip install jiwer  # WER 계산용
 
 또는 requirements.txt 사용:
 ```bash
-cd Fine-tuning
 pip install -r requirements.txt
 ```
 
@@ -156,7 +153,7 @@ pip install -r requirements.txt
 
 #### Phase 1 (30h)
 ```bash
-cd Fine-tuning/scripts/training
+cd scripts/training
 python train_all_phases.py --phase 1 --gpu 0
 ```
 
@@ -184,7 +181,7 @@ tail -f training.log
 
 ### 3. 모델 평가
 ```bash
-cd Fine-tuning/scripts/evaluation
+cd scripts/evaluation
 python evaluate_test.py \
   --model /path/to/checkpoint-best \
   --test_dir /path/to/test/data
@@ -226,10 +223,10 @@ python compare_base_r16_r32.py
 ## 문서
 
 ### 핵심 문서
-- [프로젝트 분석 보고서](Fine-tuning/docs/analysis.md) - 전체 프로젝트 분석 및 학습 내용
-- [학습 계획](Fine-tuning/docs/TRAINING_PLAN.md) - Phase별 학습 전략 및 하이퍼파라미터
-- [사용 가이드](Fine-tuning/docs/USAGE.md) - train_all_phases.py 상세 사용법
-- [전체 학습 가이드](Fine-tuning/docs/TRAIN_FULL_GUIDE.md) - 3500h 전체 데이터 학습 방법
+- [프로젝트 분석 보고서](docs/analysis.md) - 전체 프로젝트 분석 및 학습 내용
+- [학습 계획](docs/TRAINING_PLAN.md) - Phase별 학습 전략 및 하이퍼파라미터
+- [사용 가이드](docs/USAGE.md) - train_all_phases.py 상세 사용법
+- [전체 학습 가이드](docs/TRAIN_FULL_GUIDE.md) - 3500h 전체 데이터 학습 방법
 
 ### 주요 내용
 - **LoRA 설정**: r=16/32, alpha=32, target_modules=[q_proj, k_proj, v_proj]
@@ -245,7 +242,6 @@ python compare_base_r16_r32.py
 현재 148h 서브셋에서 WER 14.8% 달성 후, 3500h 전체 데이터로 확장 예정:
 
 ```bash
-cd Fine-tuning
 python scripts/training/train_all_phases_all.py \
   --resume_from ./checkpoints/phase3_148h/final_model \
   --epochs 3 \
