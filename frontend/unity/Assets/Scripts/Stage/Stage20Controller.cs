@@ -149,10 +149,25 @@ public class Stage20Controller : MonoBehaviour
     private readonly HashSet<string> _feedbackKeys = new HashSet<string>();
     private string _tutorialOptionWordCache = string.Empty;
     private bool _tutorialOptionUseWordLabel;
+    private bool _isInitialized = false;
+    private Coroutine _initializeCoroutine = null;
+    private Coroutine _runStageCoroutine = null;
 
     private void Start()
     {
-        StartCoroutine(InitializeWithAuth());
+        if (_isInitialized)
+        {
+            Debug.LogWarning("[Stage20] 이미 초기화되었습니다. 중복 초기화를 건너뜁니다.");
+            return;
+        }
+
+        if (_initializeCoroutine != null)
+        {
+            Debug.LogWarning("[Stage20] 초기화가 이미 진행 중입니다. 중복 초기화를 건너뜁니다.");
+            return;
+        }
+
+        _initializeCoroutine = StartCoroutine(InitializeWithAuth());
     }
 
     private IEnumerator InitializeWithAuth()
@@ -191,27 +206,81 @@ public class Stage20Controller : MonoBehaviour
 
         Debug.Log("[Stage20] User is logged in!");
 
+        string originalBaseUrl = baseUrl;
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
+        Debug.Log($"[Stage20] ✅ baseUrl 설정 완료: 원본={originalBaseUrl}, 최종={baseUrl}");
+        
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            Debug.LogError("[Stage20] ❌ baseUrl이 비어있습니다! 네트워크 요청이 실패할 수 있습니다.");
+        }
 
         if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
         {
+            Debug.Log("[Stage20] 🔑 AuthManager에서 토큰 가져오기 시작...");
             authToken = AuthManager.Instance.GetAccessToken();
-            Debug.Log("[Stage20] Access token retrieved from AuthManager");
+            
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogError("[Stage20] ❌ AuthManager에서 토큰을 가져왔지만 토큰이 비어있습니다. 403 에러가 발생할 수 있습니다.");
+                Debug.LogError($"[Stage20] 디버깅: authToken == null = {authToken == null}, empty = {string.IsNullOrEmpty(authToken)}, whitespace = {string.IsNullOrWhiteSpace(authToken)}");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage20] ✅ Access token retrieved from AuthManager (len={authToken.Length}, preview={preview})");
+                Debug.Log($"[Stage20] 🔍 토큰 저장 전: this.authToken 필드 현재 상태 확인");
+            }
         }
         else
         {
+            Debug.LogWarning($"[Stage20] ⚠️ AuthManager 없음 또는 로그인 안 됨: Instance={AuthManager.Instance != null}, IsLoggedIn={AuthManager.Instance?.IsLoggedIn() ?? false}");
             authToken = EnvConfig.ResolveAuthToken(authToken);
-            Debug.Log("[Stage20] Using authToken from EnvConfig (fallback)");
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogWarning("[Stage20] ❌ EnvConfig에서도 토큰을 찾지 못했습니다. 403 에러가 발생할 수 있습니다.");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage20] ✅ Using authToken from EnvConfig (fallback, len={authToken.Length}, preview={preview})");
+            }
         }
 
+        // ConfigureSessionController 호출 직전 최종 확인
+        Debug.Log($"[Stage20] 🔍 ConfigureSessionController 호출 직전: authToken null={authToken == null}, empty={string.IsNullOrEmpty(authToken)}, len={authToken?.Length ?? 0}");
         ConfigureSessionController();
+        Debug.Log($"[Stage20] ✅ ConfigureSessionController 완료");
         ConfigureAudioController();
         ConfigureTutorialController();
         _tutorialController?.PrepareForStageStart();
         ResetStoneUI();
         if (micIndicator)
             micIndicator.SetActive(false);
-        StartCoroutine(RunStage());
+        
+        _isInitialized = true;
+        _initializeCoroutine = null;
+        
+        // RunStage가 이미 실행 중이면 중복 실행 방지
+        if (_runStageCoroutine != null)
+        {
+            Debug.LogWarning("[Stage20] RunStage가 이미 실행 중입니다. 중복 실행을 건너뜁니다.");
+            yield break;
+        }
+        
+        _runStageCoroutine = StartCoroutine(RunStage());
+    }
+
+    private void OnDestroy()
+    {
+        StopAllCoroutines();
+        _initializeCoroutine = null;
+        _runStageCoroutine = null;
+        _isInitialized = false;
     }
 
     private void ConfigureSessionController()
@@ -228,7 +297,27 @@ public class Stage20Controller : MonoBehaviour
     private StageSessionController GetSessionController()
     {
         if (_sessionController == null)
-            ConfigureSessionController();
+            _sessionController = new StageSessionController();
+
+        // 매번 최신 baseUrl과 authToken으로 업데이트 (Stage11Controller와 동일한 방식)
+        // 디버깅: Configure 호출 전 토큰 상태 확인
+        if (string.IsNullOrWhiteSpace(authToken))
+        {
+            Debug.LogWarning($"[Stage20] GetSessionController 호출 시 authToken이 비어있습니다! (baseUrl={baseUrl})");
+        }
+        else
+        {
+            string preview = authToken.Length > 20
+                ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                : authToken;
+            if (verboseLogging)
+                Debug.Log($"[Stage20] GetSessionController: Configure 호출 (authToken 길이={authToken.Length}, 미리보기={preview})");
+        }
+
+        _sessionController.Configure(baseUrl, authToken);
+        _sessionController.Log = verboseLogging ? (Action<string>)Debug.Log : null;
+        _sessionController.LogWarning = Debug.LogWarning;
+        _sessionController.LogError = Debug.LogError;
         return _sessionController;
     }
 
@@ -249,6 +338,8 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator RunStage()
     {
+        // 코루틴이 이미 실행 중인지 확인 (이 체크는 코루틴 시작 전에만 의미가 있음)
+        // 실제로는 StartCoroutine 호출 전에 체크해야 하므로 여기서는 로그만 남김
         ConfigureTutorialController();
         _tutorialController?.ResetAfterStageRestart();
 
@@ -326,6 +417,8 @@ public class Stage20Controller : MonoBehaviour
 
         // 종료 모달 표시
         ShowEndModal();
+        
+        _runStageCoroutine = null;
     }
 
     private void ShowEndModal()
@@ -452,9 +545,20 @@ public class Stage20Controller : MonoBehaviour
     private void RestartStage()
     {
         StopAllCoroutines();
+        _initializeCoroutine = null;
+        _runStageCoroutine = null;
         stageSessionId = string.Empty;
         ResetStoneUI();
-        StartCoroutine(RunStage());
+        
+        // RunStage가 이미 실행 중이면 중복 실행 방지
+        if (_runStageCoroutine == null)
+        {
+            _runStageCoroutine = StartCoroutine(RunStage());
+        }
+        else
+        {
+            Debug.LogWarning("[Stage20] RestartStage: RunStage가 이미 실행 중입니다.");
+        }
     }
 
 

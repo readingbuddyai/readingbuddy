@@ -1187,6 +1187,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 992510693253336452, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: authToken
+      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMyIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYzMjU3MTE0LCJleHAiOjE3NjMzNDM1MTR9.whInu31A-QiptHnQfksVThF3ZNhJmRNbOP6SrA_DC_tdxOPWOG3NTUJmJv0r1UGR
+      objectReference: {fileID: 0}
+    - target: {fileID: 992510693253336452, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: optionLabelMode
       value: 1
       objectReference: {fileID: 0}
@@ -1589,6 +1593,10 @@ PrefabInstance:
     - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: stage
       value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: authToken
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_Enabled

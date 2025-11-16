@@ -1,4 +1,7 @@
+using System;
+using System.Collections;
 using UnityEngine;
+using UnityEngine.Networking;
 
 /// <summary>
 /// 인증 토큰을 관리하는 싱글톤 매니저
@@ -28,6 +31,8 @@ public class AuthManager : MonoBehaviour
     private string _refreshToken;
     private int _userId;
     private string _userName;
+    private string _baseUrl = "";
+    private bool _isRefreshing = false;
 
     private void Awake()
     {
@@ -53,12 +58,121 @@ public class AuthManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 토큰 만료 시 자동 로그아웃 처리
+    /// Base URL 설정 (토큰 갱신 시 사용)
+    /// </summary>
+    public void SetBaseUrl(string baseUrl)
+    {
+        _baseUrl = baseUrl ?? string.Empty;
+    }
+
+    /// <summary>
+    /// 토큰 만료 시 Refresh Token으로 갱신 시도
     /// 401/403 에러 발생 시 Stage 컨트롤러에서 호출
     /// </summary>
     public void HandleTokenExpired()
     {
-        Debug.LogWarning("[AuthManager] Token expired or unauthorized. Logging out...");
+        Debug.LogWarning("[AuthManager] Token expired or unauthorized. Attempting to refresh...");
+        
+        // 이미 갱신 중이면 로그아웃
+        if (_isRefreshing)
+        {
+            Debug.LogWarning("[AuthManager] Already refreshing token. Logging out...");
+            LogoutAndReturnHome();
+            return;
+        }
+
+        // Refresh Token이 없으면 로그아웃
+        if (string.IsNullOrWhiteSpace(_refreshToken))
+        {
+            Debug.LogWarning("[AuthManager] No refresh token available. Logging out...");
+            LogoutAndReturnHome();
+            return;
+        }
+
+        // Refresh Token으로 새 Access Token 발급 시도
+        StartCoroutine(RefreshAccessToken());
+    }
+
+    /// <summary>
+    /// Refresh Token을 사용하여 Access Token 갱신
+    /// </summary>
+    private IEnumerator RefreshAccessToken()
+    {
+        _isRefreshing = true;
+        Debug.Log("[AuthManager] 🔄 Refresh token으로 새로운 access token 발급 시도...");
+
+        // Base URL이 없으면 EnvConfig에서 가져오기
+        string baseUrl = _baseUrl;
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            baseUrl = EnvConfig.ResolveBaseUrl("");
+        }
+
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            Debug.LogError("[AuthManager] ❌ Base URL이 없어 토큰 갱신을 시도할 수 없습니다.");
+            _isRefreshing = false;
+            LogoutAndReturnHome();
+            yield break;
+        }
+
+        string url = $"{baseUrl}/api/user/refresh";
+        var payload = new RefreshTokenRequest { refreshToken = _refreshToken };
+        string json = JsonUtility.ToJson(payload);
+        byte[] bodyRaw = System.Text.Encoding.UTF8.GetBytes(json);
+
+        using (var req = new UnityWebRequest(url, "POST"))
+        {
+            req.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            req.downloadHandler = new DownloadHandlerBuffer();
+            req.SetRequestHeader("Content-Type", "application/json");
+            req.SetRequestHeader("Accept", "application/json");
+
+            yield return req.SendWebRequest();
+
+            if (req.result == UnityWebRequest.Result.Success && req.responseCode >= 200 && req.responseCode < 300)
+            {
+                try
+                {
+                    var response = JsonUtility.FromJson<RefreshTokenResponse>(req.downloadHandler.text);
+                    if (response != null && response.success && response.data != null && !string.IsNullOrWhiteSpace(response.data.accessToken))
+                    {
+                        string newAccessToken = response.data.accessToken;
+                        string newRefreshToken = response.data.refreshToken ?? _refreshToken; // 새 refresh token이 있으면 사용, 없으면 기존 것 유지
+
+                        Debug.Log($"[AuthManager] ✅ 토큰 갱신 성공! (새 access token 길이={newAccessToken.Length})");
+                        
+                        // 새 토큰 저장
+                        UpdateAccessToken(newAccessToken);
+                        if (!string.IsNullOrWhiteSpace(newRefreshToken) && newRefreshToken != _refreshToken)
+                        {
+                            _refreshToken = newRefreshToken;
+                            PlayerPrefs.SetString(KEY_REFRESH_TOKEN, newRefreshToken);
+                            PlayerPrefs.Save();
+                        }
+
+                        _isRefreshing = false;
+                        yield break;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[AuthManager] 토큰 갱신 응답 파싱 실패: {e.Message}\n응답={req.downloadHandler.text}");
+                }
+            }
+
+            // 토큰 갱신 실패
+            Debug.LogError($"[AuthManager] ❌ 토큰 갱신 실패: code={req.responseCode}, error={req.error}\n응답={req.downloadHandler?.text ?? ""}");
+            _isRefreshing = false;
+            LogoutAndReturnHome();
+        }
+    }
+
+    /// <summary>
+    /// 로그아웃하고 Home으로 이동
+    /// </summary>
+    private void LogoutAndReturnHome()
+    {
         Logout();
 
         if (SceneLoader.Instance != null)
@@ -208,5 +322,26 @@ public class AuthManager : MonoBehaviour
         PlayerPrefs.Save();
 
         Debug.Log("[AuthManager] Access token updated.");
+    }
+
+    [Serializable]
+    private class RefreshTokenRequest
+    {
+        public string refreshToken;
+    }
+
+    [Serializable]
+    private class RefreshTokenResponse
+    {
+        public bool success;
+        public string message;
+        public RefreshTokenData data;
+    }
+
+    [Serializable]
+    private class RefreshTokenData
+    {
+        public string accessToken;
+        public string refreshToken;
     }
 }

@@ -78,8 +78,5 @@ public class UICylinderBend : BaseMeshEffect
 
     protected override void OnEnable()  { base.OnEnable();  graphic?.SetVerticesDirty(); }
     protected override void OnDisable() { graphic?.SetVerticesDirty(); base.OnDisable();  }
-private void OnValidate()
-{
-    graphic?.SetVerticesDirty();
-}
+    private void OnValidate() { graphic?.SetVerticesDirty(); }
 }
