@@ -149,10 +149,25 @@ public class Stage20Controller : MonoBehaviour
     private readonly HashSet<string> _feedbackKeys = new HashSet<string>();
     private string _tutorialOptionWordCache = string.Empty;
     private bool _tutorialOptionUseWordLabel;
+    private bool _isInitialized = false;
+    private Coroutine _initializeCoroutine = null;
+    private Coroutine _runStageCoroutine = null;
 
     private void Start()
     {
-        StartCoroutine(InitializeWithAuth());
+        if (_isInitialized)
+        {
+            Debug.LogWarning("[Stage20] 이미 초기화되었습니다. 중복 초기화를 건너뜁니다.");
+            return;
+        }
+
+        if (_initializeCoroutine != null)
+        {
+            Debug.LogWarning("[Stage20] 초기화가 이미 진행 중입니다. 중복 초기화를 건너뜁니다.");
+            return;
+        }
+
+        _initializeCoroutine = StartCoroutine(InitializeWithAuth());
     }
 
     private IEnumerator InitializeWithAuth()
@@ -191,8 +206,14 @@ public class Stage20Controller : MonoBehaviour
 
         Debug.Log("[Stage20] User is logged in!");
 
+        string originalBaseUrl = baseUrl;
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
-        Debug.Log($"[Stage20] ✅ baseUrl 설정 완료: {baseUrl}");
+        Debug.Log($"[Stage20] ✅ baseUrl 설정 완료: 원본={originalBaseUrl}, 최종={baseUrl}");
+        
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            Debug.LogError("[Stage20] ❌ baseUrl이 비어있습니다! 네트워크 요청이 실패할 수 있습니다.");
+        }
 
         if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
         {
@@ -240,7 +261,26 @@ public class Stage20Controller : MonoBehaviour
         ResetStoneUI();
         if (micIndicator)
             micIndicator.SetActive(false);
-        StartCoroutine(RunStage());
+        
+        _isInitialized = true;
+        _initializeCoroutine = null;
+        
+        // RunStage가 이미 실행 중이면 중복 실행 방지
+        if (_runStageCoroutine != null)
+        {
+            Debug.LogWarning("[Stage20] RunStage가 이미 실행 중입니다. 중복 실행을 건너뜁니다.");
+            yield break;
+        }
+        
+        _runStageCoroutine = StartCoroutine(RunStage());
+    }
+
+    private void OnDestroy()
+    {
+        StopAllCoroutines();
+        _initializeCoroutine = null;
+        _runStageCoroutine = null;
+        _isInitialized = false;
     }
 
     private void ConfigureSessionController()
@@ -298,6 +338,8 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator RunStage()
     {
+        // 코루틴이 이미 실행 중인지 확인 (이 체크는 코루틴 시작 전에만 의미가 있음)
+        // 실제로는 StartCoroutine 호출 전에 체크해야 하므로 여기서는 로그만 남김
         ConfigureTutorialController();
         _tutorialController?.ResetAfterStageRestart();
 
@@ -375,6 +417,8 @@ public class Stage20Controller : MonoBehaviour
 
         // 종료 모달 표시
         ShowEndModal();
+        
+        _runStageCoroutine = null;
     }
 
     private void ShowEndModal()
@@ -501,9 +545,20 @@ public class Stage20Controller : MonoBehaviour
     private void RestartStage()
     {
         StopAllCoroutines();
+        _initializeCoroutine = null;
+        _runStageCoroutine = null;
         stageSessionId = string.Empty;
         ResetStoneUI();
-        StartCoroutine(RunStage());
+        
+        // RunStage가 이미 실행 중이면 중복 실행 방지
+        if (_runStageCoroutine == null)
+        {
+            _runStageCoroutine = StartCoroutine(RunStage());
+        }
+        else
+        {
+            Debug.LogWarning("[Stage20] RestartStage: RunStage가 이미 실행 중입니다.");
+        }
     }
 
 

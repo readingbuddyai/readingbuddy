@@ -118,9 +118,60 @@ public class StageSessionController
         if (!string.IsNullOrWhiteSpace(stageSessionId))
             url += $"&stageSessionId={UnityWebRequest.EscapeURL(stageSessionId)}";
 
+        // 네트워크 상태 및 URL 확인 로그
+        Log?.Invoke($"[StageSession] FetchQuestionSet 시작: BaseUrl={BaseUrl}, URL={url}");
+        
+        // URL 유효성 검사
+        if (string.IsNullOrWhiteSpace(BaseUrl))
+        {
+            LogError?.Invoke($"[StageSession] ❌ BaseUrl이 비어있습니다! DNS 해석을 시도할 수 없습니다.");
+            result.ResponseCode = 0;
+            callback?.Invoke(result);
+            yield break;
+        }
+        
+        // BaseUrl에서 호스트 추출 및 검증
+        try
+        {
+            var uri = new System.Uri(BaseUrl);
+            string host = uri.Host;
+            Log?.Invoke($"[StageSession] 호스트 추출: {host} (전체 BaseUrl: {BaseUrl})");
+            
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                LogError?.Invoke($"[StageSession] ❌ BaseUrl에서 호스트를 추출할 수 없습니다: {BaseUrl}");
+                result.ResponseCode = 0;
+                callback?.Invoke(result);
+                yield break;
+            }
+        }
+        catch (Exception ex)
+        {
+            LogError?.Invoke($"[StageSession] ❌ BaseUrl 파싱 실패: {ex.Message}\nBaseUrl={BaseUrl}");
+            result.ResponseCode = 0;
+            callback?.Invoke(result);
+            yield break;
+        }
+        
+        // 네트워크 연결 확인
+        if (Application.internetReachability == NetworkReachability.NotReachable)
+        {
+            LogError?.Invoke($"[StageSession] ⚠️ 네트워크 연결이 없습니다. (NetworkReachability.NotReachable)\nURL={url}");
+            result.ResponseCode = 0;
+            callback?.Invoke(result);
+            yield break;
+        }
+        
+        Log?.Invoke($"[StageSession] 네트워크 상태: {Application.internetReachability}");
+
         using (var req = UnityWebRequest.Get(url))
         {
+            // 타임아웃 설정 (30초)
+            req.timeout = 30;
+            
             ApplyCommonHeaders(req);
+            
+            Log?.Invoke($"[StageSession] 요청 전송 중... URL={url}");
             yield return req.SendWebRequest();
 
             result.ResponseCode = req.responseCode;
@@ -128,7 +179,25 @@ public class StageSessionController
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                LogError?.Invoke($"[StageSession] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={result.RawBody}");
+                string errorDetails = $"[StageSession] 문제 요청 실패: {req.error} (code={req.responseCode})\n" +
+                                    $"URL={url}\n" +
+                                    $"BaseUrl={BaseUrl}\n" +
+                                    $"NetworkReachability={Application.internetReachability}\n" +
+                                    $"Result={req.result}\n" +
+                                    $"Body={result.RawBody}";
+                
+                LogError?.Invoke(errorDetails);
+                
+                // 네트워크 관련 오류인 경우 추가 정보 제공
+                if (req.result == UnityWebRequest.Result.ConnectionError || 
+                    req.result == UnityWebRequest.Result.DataProcessingError)
+                {
+                    LogError?.Invoke($"[StageSession] 네트워크 오류 상세:\n" +
+                                   $"- ConnectionError: {req.result == UnityWebRequest.Result.ConnectionError}\n" +
+                                   $"- DataProcessingError: {req.result == UnityWebRequest.Result.DataProcessingError}\n" +
+                                   $"- Error: {req.error}\n" +
+                                   $"- 네트워크 상태: {Application.internetReachability}");
+                }
                 
                 // 403 또는 401 에러는 토큰 만료로 간주
                 if (req.responseCode == 403 || req.responseCode == 401)
@@ -370,13 +439,19 @@ public class StageSessionController
 
     public string ComposeUrl(string path)
     {
-        if (string.IsNullOrWhiteSpace(BaseUrl)) return path;
+        if (string.IsNullOrWhiteSpace(BaseUrl))
+        {
+            LogWarning?.Invoke($"[StageSession] ⚠️ BaseUrl이 비어있습니다! path만 반환합니다: {path}");
+            return path;
+        }
         if (string.IsNullOrEmpty(path)) return BaseUrl;
         if (path.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return path;
         string baseUrl = BaseUrl;
         if (!baseUrl.EndsWith("/")) baseUrl += "/";
         if (path.StartsWith("/")) path = path.Substring(1);
-        return baseUrl + path;
+        string composed = baseUrl + path;
+        Log?.Invoke($"[StageSession] URL 구성: BaseUrl={BaseUrl}, path={path}, 최종={composed}");
+        return composed;
     }
 
     private static string JsonEscape(string s)
