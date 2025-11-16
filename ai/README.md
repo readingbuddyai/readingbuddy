@@ -178,15 +178,12 @@ LoRA 어댑터: 23MB (전체의 1.9%)
 ## 프로젝트 구조
 
 ```
-S13P31A206/                      # 프로젝트 루트 (ai-dev 브랜치)
+ai/                              # AI 서버 루트
 │
-├── .gitlab-ci.yml               # CI/CD 파이프라인 설정
 ├── .gitignore                   # Git 제외 파일 목록
 ├── README.md                    # 📄 이 파일
 │
-└── ai/                          # AI 서버 루트
-    │
-    ├── app/                     # 애플리케이션 코드
+├── app/                         # 애플리케이션 코드
     │   ├── main.py              # FastAPI 앱 + 로깅 + 메트릭
     │   ├── schemas.py           # Pydantic 응답 모델
     │   │
@@ -215,13 +212,13 @@ S13P31A206/                      # 프로젝트 루트 (ai-dev 브랜치)
     ├── logs/                    # 로그 파일 (gitignore)
     │   └── app.log              # 로테이션 로그 (10MB × 5)
     │
-    ├── Dockerfile               # Docker 이미지 정의
-    ├── docker-compose.yml       # 컨테이너 실행 설정
-    ├── requirements.txt         # Python 의존성
-    ├── pytest.ini               # pytest 설정
-    ├── run.py                   # 서버 실행 스크립트
-    ├── setup-ec2.sh             # EC2 초기 설정 스크립트
-    └── analysis.md              # 코드 분석 보고서
+├── Dockerfile                   # Docker 이미지 정의
+├── docker-compose.yml           # 컨테이너 실행 설정
+├── requirements.txt             # Python 의존성
+├── pytest.ini                   # pytest 설정
+├── run.py                       # 서버 실행 스크립트
+├── setup-ec2.sh                 # EC2 초기 설정 스크립트
+└── analysis.md                  # 코드 분석 보고서
 ```
 
 ---
@@ -341,9 +338,7 @@ Local: http://localhost:8000
 1. **저장소 클론**
 ```bash
 git clone https://lab.ssafy.com/s13-final/S13P31A206.git
-cd S13P31A206
-git checkout ai-dev
-cd ai
+cd S13P31A206/ai
 ```
 
 2. **가상환경 생성**
@@ -371,7 +366,7 @@ mkdir -p models/base
 # LoRA 어댑터는 별도 제공
 
 # 또는 서버에서 복사
-scp -r ubuntu@3.36.239.57:/home/ubuntu/S13P31A206/ai/models ./
+scp -r ubuntu@3.36.239.57:/home/ubuntu/ai/models ./
 ```
 
 6. **서버 실행**
@@ -394,7 +389,6 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 **개발 환경**
 ```bash
-cd ai
 docker-compose up -d
 ```
 
@@ -417,9 +411,8 @@ chmod +x setup-ec2.sh
 
 2. **코드 업데이트**
 ```bash
-cd /home/ubuntu/S13P31A206
-git pull origin ai-dev
-cd ai
+cd /home/ubuntu/ai
+git pull origin master
 ```
 
 3. **Docker 재배포**
@@ -443,7 +436,7 @@ docker-compose up -d
 
 **배포 과정**
 ```bash
-1. git pull origin ai-dev
+1. git pull origin master
 2. docker build
 3. docker-compose down
 4. docker-compose up -d
@@ -479,7 +472,7 @@ docker-compose logs -f
 
 **애플리케이션 로그**
 ```bash
-tail -f ai/logs/app.log
+tail -f logs/app.log
 ```
 
 **로그 포맷**
@@ -536,7 +529,6 @@ Docker 컨테이너가 30초마다 자동으로 헬스체크를 수행합니다.
 
 **전체 테스트**
 ```bash
-cd ai
 pytest tests/ -v
 ```
 
@@ -609,7 +601,7 @@ MAX_FILE_SIZE_MB=10
 - **주요 강점**: 아키텍처 설계, LoRA 통합, 오디오 처리
 - **개선 영역**: 문서화, 환경 검증
 
-자세한 분석은 [`ai/analysis.md`](ai/analysis.md)를 참조하세요.
+자세한 분석은 [`analysis.md`](analysis.md)를 참조하세요.
 
 ---
 
