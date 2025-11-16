@@ -20,7 +20,7 @@ ENV/
 env.bak/
 venv.bak/
 
-# Environment variables (중요!)
+# Environment variables
 .env
 .env.local
 .env.*.local
@@ -59,7 +59,7 @@ tmp/
 temp/
 *.log
 
-# Audio files (테스트용은 tests/ 폴더에 별도 관리)
+# Audio files
 *.wav
 *.mp3
 *.ogg
@@ -70,6 +70,7 @@ temp/
 
 # AI Model files (large)
 models/
+final_model/
 */models/
 *.bin
 *.pt
@@ -114,3 +115,12 @@ save_model_local.py
 
 # Claude Code
 .claude
+
+# Deployment
+*.pem
+*.key
+
+benchmark_*.py
+compare_*.py
+*_GUIDE.md
+benchmark_analysis.md
