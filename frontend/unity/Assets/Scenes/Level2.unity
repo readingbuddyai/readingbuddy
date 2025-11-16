@@ -2854,7 +2854,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
     - target: {fileID: 992510693253336452, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: authToken
-      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyNzQ3OTM2LCJleHAiOjE3NjI4MzQzMzZ9.cePEt4vpdy3yWZw0q5cQsbR80dPCh1JWV3ne8eBWs71eZMl-7LogqjFD9gMIfxQz
+      value: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMyIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYzMjU3MTE0LCJleHAiOjE3NjMzNDM1MTR9.whInu31A-QiptHnQfksVThF3ZNhJmRNbOP6SrA_DC_tdxOPWOG3NTUJmJv0r1UGR
       objectReference: {fileID: 0}
     - target: {fileID: 992510693253336452, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: optionLabelMode
@@ -3575,6 +3575,7 @@ MonoBehaviour:
   tutorialTriggerThreshold: 0.6
   tutorialFallbackKey: 32
   tutorialClipGapSeconds: 0.9
+  micIndicator: {fileID: 0}
   audioSource: {fileID: 5767446016827288513}
   sfxStart: {fileID: 8300000, guid: 3b37cea90cc807b4a8d4cba2a56e0eff, type: 3}
   sfxNext: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}

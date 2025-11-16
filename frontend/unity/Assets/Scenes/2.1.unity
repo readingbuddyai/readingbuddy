@@ -768,12 +768,13 @@ MonoBehaviour:
   stage: 1.2.1
   stageTwoPart: 2.1
   count: 3
-  authToken: eyJhbGciOiJIUzM4NCJ9.eyJ1c2VyX2lkIjoiMiIsInVzZXJfZW1haWwiOiJqaW5AZXhhbXBsZS5jb20iLCJ1c2VyX25pY2tuYW1lIjoi7LCM64uIIiwiaWF0IjoxNzYyODQyMjU5LCJleHAiOjE3NjI5Mjg2NTl9.8uWZeR5EpQKWyuWSG0vbfr0cXcsy4k65KmBM_lHAC6eCAizHTo7w9w5rkHNe8i3s
+  authToken: 
   stageSessionId: 
   optionLabelMode: 1
   uiFont: {fileID: 12800000, guid: c48dbc540c72bbc4dbb7718efd38aa3f, type: 3}
   tmpFont: {fileID: 11400000, guid: e214e1c2fc6d04d48ae00f74353f7245, type: 2}
   progressText: {fileID: 0}
+  showProgressUI: 0
   progressBarFill: {fileID: 0}
   progressBarBackgroundColor: {r: 1, g: 1, b: 1, a: 0.25}
   progressBarFillColor: {r: 1, g: 1, b: 1, a: 0.9}

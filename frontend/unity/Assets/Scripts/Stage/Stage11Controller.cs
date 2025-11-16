@@ -302,19 +302,46 @@ using OptionDto = StageQuestionModels.OptionDto;
 
         // baseUrl 자동 해석 (ENV > Resources > Inspector)
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
+        Debug.Log($"[Stage11] ✅ baseUrl 설정 완료: {baseUrl}");
 
         // AuthManager에서 토큰 가져오기 (우선순위)
         // EnvConfig는 fallback으로만 사용
         if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
         {
+            Debug.Log("[Stage11] 🔑 AuthManager에서 토큰 가져오기 시작...");
             authToken = AuthManager.Instance.GetAccessToken();
-            Debug.Log("[Stage11] ✓ Access token retrieved from AuthManager");
+            
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogError("[Stage11] ❌ AuthManager에서 토큰을 가져왔지만 토큰이 비어있습니다. 403 에러가 발생할 수 있습니다.");
+                Debug.LogError($"[Stage11] 디버깅: authToken == null = {authToken == null}, empty = {string.IsNullOrEmpty(authToken)}, whitespace = {string.IsNullOrWhiteSpace(authToken)}");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage11] ✅ Access token retrieved from AuthManager (len={authToken.Length}, preview={preview})");
+            }
         }
         else
         {
+            Debug.LogWarning($"[Stage11] ⚠️ AuthManager 없음 또는 로그인 안 됨: Instance={AuthManager.Instance != null}, IsLoggedIn={AuthManager.Instance?.IsLoggedIn() ?? false}");
             authToken = EnvConfig.ResolveAuthToken(authToken);
-            Debug.Log("[Stage11] Using authToken from EnvConfig (fallback)");
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogWarning("[Stage11] ❌ EnvConfig에서도 토큰을 찾지 못했습니다. 403 에러가 발생할 수 있습니다.");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage11] ✅ Using authToken from EnvConfig (fallback, len={authToken.Length}, preview={preview})");
+            }
         }
+        
+        Debug.Log($"[Stage11] 🔍 GetSessionController 호출 시 사용될 authToken: null={authToken == null}, empty={string.IsNullOrEmpty(authToken)}, len={authToken?.Length ?? 0}");
 
         if (applyAutoLayout)
             TryApplyAutoLayout();
