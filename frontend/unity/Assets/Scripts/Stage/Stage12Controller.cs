@@ -941,7 +941,7 @@ using OptionDto = StageQuestionModels.OptionDto;
 
         // 4) [1.1.6] 선택 유도 대사 → 옵션 선택
         yield return PlayClip(clipChoose);
-        yield return ShowOptionsUntilCorrect(q);
+        yield return EvaluateOptionsSequentially(q);
     }
 
     private IEnumerator LoadAndShowImage(string imageUrl)
@@ -1211,9 +1211,8 @@ using OptionDto = StageQuestionModels.OptionDto;
         return clip;
     }
 
-    private IEnumerator ShowOptionsUntilCorrect(QuestionDto q)
+    private IEnumerator EvaluateOptionsSequentially(QuestionDto q)
     {
-        // 옵션 UI 구성
         if (optionsContainer == null)
         {
             Debug.LogError("[Stage12] optionsContainer가 연결되지 않았습니다.");
@@ -1221,158 +1220,88 @@ using OptionDto = StageQuestionModels.OptionDto;
         }
         if (optionButtonPrefab == null)
         {
-            // Resources에서 기본 프리팹 시도 로드
             var loaded = Resources.Load<Button>("UI/OptionButton");
             if (loaded != null)
-            {
                 optionButtonPrefab = loaded;
-            }
             else
             {
                 Debug.LogError("[Stage12] optionButtonPrefab이 연결되지 않았고, Resources/UI/OptionButton.prefab 로드 실패.");
                 yield break;
             }
         }
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
-        // Show options container only during selection phase
-        optionsContainer.gameObject.SetActive(true);
-        optionsContainer.SetAsLastSibling();
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
-        optionsContainer.SetAsLastSibling();
 
-        bool answered = false;
-        bool correct = false;
-        int wrongCount = 0;
-        int attemptCount = 0;
-        OptionDto lastSelected = null;
-
-        // 정답 값(표시/로깅용): phonemeId와 일치하는 옵션의 value를 우선 사용, 없으면 q.value
-        string correctPhonemeValue = null;
-        if (q != null && q.options != null)
+        if (q?.options == null || q.options.Count == 0)
         {
-            var match = q.options.FirstOrDefault(o => o.id == q.phonemeId);
-            if (match != null) correctPhonemeValue = NormalizeField(match.value);
-        }
-        if (string.IsNullOrEmpty(correctPhonemeValue)) correctPhonemeValue = NormalizeField(q.value);
-
-        var sessionController = GetSessionController();
-
-        void SetupOne(OptionDto opt)
-        {
-            var btn = Instantiate(optionButtonPrefab, optionsContainer);
-            var text = btn.GetComponentInChildren<Text>();
-            var tmp  = btn.GetComponentInChildren<TMP_Text>();
-            string label = ComposeOptionLabel(opt);
-            if (text)
-            {
-                text.text = label;
-                if (uiFont) text.font = uiFont;
-            }
-            else if (tmp)
-            {
-                tmp.text = label;
-                if (tmpFont) tmp.font = tmpFont;
-                try { tmp.fontStyle &= ~FontStyles.Underline; } catch { }
-            }
-            // 버튼 크기 강제 설정 (LayoutElement와 RectTransform 동시 적용)
-            var rt = btn.GetComponent<RectTransform>();
-            if (rt) rt.sizeDelta = optionButtonPreferredSize;
-            var le = btn.GetComponent<UnityEngine.UI.LayoutElement>();
-            if (le)
-            {
-                le.preferredWidth  = optionButtonPreferredSize.x;
-                le.preferredHeight = optionButtonPreferredSize.y;
-                le.layoutPriority = Mathf.Max(le.layoutPriority, 1);
-            }
-            btn.gameObject.SetActive(true);
-            btn.onClick.AddListener(() =>
-            {
-                answered = true;
-                attemptCount++;
-                lastSelected = opt;
-                // 1) 우선순위: phonemeId와 옵션 id 일치 여부로 정답 판정
-                if (q.phonemeId != 0)
-                {
-                    correct = (opt.id == q.phonemeId);
-                    Debug.Log($"[Stage12] 선택: opt.id={opt.id}, phonemeId={q.phonemeId}, match={correct}");
-                }
-                // 2) 폴백: 값/유니코드 문자열 비교
-                if (!correct && q.phonemeId == 0)
-                {
-                    var chosenCandidates = new List<string>();
-                    if (!string.IsNullOrEmpty(opt.value)) chosenCandidates.Add(NormalizeForCompare(opt.value));
-                    if (!string.IsNullOrEmpty(opt.unicode)) chosenCandidates.Add(NormalizeForCompare(opt.unicode));
-                    var answerCandidates = new List<string>();
-                    if (!string.IsNullOrEmpty(q.value)) answerCandidates.Add(NormalizeForCompare(q.value));
-                    if (!string.IsNullOrEmpty(q.unicode)) answerCandidates.Add(NormalizeForCompare(q.unicode));
-                    correct = chosenCandidates.Any(cc => answerCandidates.Any(ac => string.Equals(cc, ac, System.StringComparison.Ordinal)));
-                    if (!correct)
-                    {
-                        Debug.Log($"[Stage12] 비교 불일치 chosen=[{string.Join(",", chosenCandidates)}] answer=[{string.Join(",", answerCandidates)}]");
-                    }
-                }
-            });
-        }
-
-        if (q.options == null || q.options.Count == 0)
-        {
-            Debug.LogError("[Stage12] 옵션이 비어 있습니다. 버튼을 표시할 수 없습니다.");
-            optionsContainer.gameObject.SetActive(false);
+            Debug.LogError("[Stage12] 옵션이 비어 있습니다.");
             yield break;
         }
-        Debug.Log($"[Stage12] 옵션 표시: {q.options.Count}개");
-        foreach (var opt in q.options) SetupOne(opt);
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
 
-        // 선택 대기 → 피드백 → 정답일 때까지 반복
-        while (true)
+        var sessionController = GetSessionController();
+        optionsContainer.gameObject.SetActive(true);
+        optionsContainer.SetAsLastSibling();
+
+        foreach (var opt in q.options)
         {
+            ApplyOptionWordText(opt.word, true);
+
+            bool answered = false;
+            bool isCorrectChoice = false;
+            string selectedLabel = string.Empty;
+
+            void ConfigureLetterButton(string label, bool labelValue)
+            {
+                var btn = Instantiate(optionButtonPrefab, optionsContainer);
+                var text = btn.GetComponentInChildren<Text>();
+                var tmp = btn.GetComponentInChildren<TMP_Text>();
+                if (text)
+                {
+                    text.text = label;
+                    if (uiFont) text.font = uiFont;
+                }
+                else if (tmp)
+                {
+                    tmp.text = label;
+                    if (tmpFont) tmp.font = tmpFont;
+                    try { tmp.fontStyle &= ~FontStyles.Underline; } catch { }
+                }
+
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() =>
+                {
+                    answered = true;
+                    isCorrectChoice = opt.answer == labelValue;
+                    selectedLabel = label;
+                });
+            }
+
+            foreach (Transform child in optionsContainer)
+                Destroy(child.gameObject);
+
+            ConfigureLetterButton("O", true);
+            ConfigureLetterButton("X", false);
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
+
             yield return new WaitUntil(() => answered);
 
-            // 선택 시도 로깅: /api/train/attempt
-            if (lastSelected != null)
-            {
-                string selectedVal = NormalizeField(lastSelected.value);
-                int attemptNumber = attemptCount; // 1부터 증가
-                bool includeReplyResult = attemptNumber > 1;
-                yield return sessionController.LogAttempt(
-                    stageSessionId,
-                    stage,
-                    _currentProblemNumber,
-                    attemptNumber,
-                    selectedVal,
-                    correct,
-                    q != null ? q.problemWord : null,
-                    correctPhonemeValue,
-                    includeReplyResult,
-                    null);
-            }
+            yield return sessionController.LogAttempt(
+                stageSessionId,
+                stage,
+                _currentProblemNumber,
+                1,
+                NormalizeField(selectedLabel),
+                isCorrectChoice,
+                q != null ? q.problemWord : null,
+                NormalizeField(opt.value),
+                false,
+                null);
 
-            if (correct)
-            {
-                yield return PlayClip(sfxCorrectClip);
-                break; // 다음 문제로
-            }
-            else
-            {
-                yield return PlayClip(sfxWrongClip);
-                wrongCount++;
-                if (wrongCount >= maxWrongAttempts)
-                {
-                    // 오답 허용 횟수 초과 → 다음 문제로 진행
-                    break;
-                }
-                answered = false; // 다시 선택 대기
-            }
+            yield return PlayClip(isCorrectChoice ? sfxCorrectClip : sfxWrongClip);
         }
 
-        // 옵션 정리(선택사항)
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
         optionsContainer.gameObject.SetActive(false);
+        ApplyOptionWordText(string.Empty, false);
     }
 
     private string ResolveAnswerValue(QuestionDto q)
