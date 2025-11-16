@@ -432,9 +432,10 @@ public class DeviceLoginManager : MonoBehaviour
 
         UpdateStatus("로그인 성공!", Color.green);
 
-        // AuthManager에 토큰 저장
+        // AuthManager에 토큰 저장 및 Base URL 설정
         if (AuthManager.Instance != null)
         {
+            AuthManager.Instance.SetBaseUrl(baseUrl); // 토큰 갱신 시 사용할 baseUrl 설정
             AuthManager.Instance.SaveTokens(accessToken, refreshToken);
         }
         else

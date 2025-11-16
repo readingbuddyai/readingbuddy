@@ -48,6 +48,13 @@ public class StageSessionController
         string payloadJson = JsonUtility.ToJson(payload);
         byte[] payloadBytes = Encoding.UTF8.GetBytes(string.IsNullOrEmpty(payloadJson) ? "{}" : payloadJson);
 
+        // 디버깅: 요청 전 토큰 상태 확인
+        bool hasToken = !string.IsNullOrWhiteSpace(AuthToken);
+        string tokenPreview = hasToken && AuthToken.Length > 20
+            ? $"{AuthToken.Substring(0, 10)}...{AuthToken.Substring(AuthToken.Length - 10)}"
+            : (hasToken ? AuthToken : "EMPTY");
+        Log?.Invoke($"[StageSession] StartStageSession 준비: URL={url}, AuthToken 있음={hasToken}, 길이={AuthToken?.Length ?? 0}, 미리보기={tokenPreview}");
+
         using (var req = new UnityWebRequest(url, UnityWebRequest.kHttpVerbPOST))
         {
             ApplyCommonHeaders(req);
@@ -62,6 +69,21 @@ public class StageSessionController
             if (req.result != UnityWebRequest.Result.Success)
             {
                 LogError?.Invoke($"[StageSession] stage/start 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={result.RawBody}");
+                
+                // 403 또는 401 에러는 토큰 만료로 간주
+                if (req.responseCode == 403 || req.responseCode == 401)
+                {
+                    LogWarning?.Invoke($"[StageSession] ⚠️ 토큰 만료 감지 (code={req.responseCode}). AuthManager에 알림.");
+                    if (AuthManager.Instance != null)
+                    {
+                        AuthManager.Instance.HandleTokenExpired();
+                    }
+                    else
+                    {
+                        LogError?.Invoke("[StageSession] ❌ AuthManager.Instance가 null입니다!");
+                    }
+                }
+                
                 callback?.Invoke(result);
                 yield break;
             }
@@ -107,6 +129,15 @@ public class StageSessionController
             if (req.result != UnityWebRequest.Result.Success)
             {
                 LogError?.Invoke($"[StageSession] 문제 요청 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={result.RawBody}");
+                
+                // 403 또는 401 에러는 토큰 만료로 간주
+                if (req.responseCode == 403 || req.responseCode == 401)
+                {
+                    LogWarning?.Invoke($"[StageSession] ⚠️ 토큰 만료 감지 (code={req.responseCode}). AuthManager에 알림.");
+                    if (AuthManager.Instance != null)
+                        AuthManager.Instance.HandleTokenExpired();
+                }
+                
                 callback?.Invoke(result);
                 yield break;
             }
@@ -143,6 +174,15 @@ public class StageSessionController
             if (req.result != UnityWebRequest.Result.Success)
             {
                 LogWarning?.Invoke($"[StageSession] 음성 업로드 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={result.RawBody}");
+                
+                // 403 또는 401 에러는 토큰 만료로 간주
+                if (req.responseCode == 403 || req.responseCode == 401)
+                {
+                    LogWarning?.Invoke($"[StageSession] ⚠️ 토큰 만료 감지 (code={req.responseCode}). AuthManager에 알림.");
+                    if (AuthManager.Instance != null)
+                        AuthManager.Instance.HandleTokenExpired();
+                }
+                
                 callback?.Invoke(result);
                 yield break;
             }
@@ -182,6 +222,15 @@ public class StageSessionController
             if (req.result != UnityWebRequest.Result.Success)
             {
                 LogWarning?.Invoke($"[StageSession] stage/complete 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={result.RawBody}");
+                
+                // 403 또는 401 에러는 토큰 만료로 간주
+                if (req.responseCode == 403 || req.responseCode == 401)
+                {
+                    LogWarning?.Invoke($"[StageSession] ⚠️ 토큰 만료 감지 (code={req.responseCode}). AuthManager에 알림.");
+                    if (AuthManager.Instance != null)
+                        AuthManager.Instance.HandleTokenExpired();
+                }
+                
                 callback?.Invoke(result);
                 yield break;
             }
@@ -278,6 +327,15 @@ public class StageSessionController
             if (req.result != UnityWebRequest.Result.Success)
             {
                 LogWarning?.Invoke($"[StageSession] attempt 로깅 실패: {req.error} (code={req.responseCode})\nURL={url}\nBody={json}\nResp={result.RawBody}");
+                
+                // 403 또는 401 에러는 토큰 만료로 간주
+                if (req.responseCode == 403 || req.responseCode == 401)
+                {
+                    LogWarning?.Invoke($"[StageSession] ⚠️ 토큰 만료 감지 (code={req.responseCode}). AuthManager에 알림.");
+                    if (AuthManager.Instance != null)
+                        AuthManager.Instance.HandleTokenExpired();
+                }
+                
                 callback?.Invoke(result);
                 yield break;
             }
@@ -297,7 +355,15 @@ public class StageSessionController
             if (tokenTrim.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 tokenTrim = tokenTrim.Substring(7).Trim();
             req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
-            Log?.Invoke($"[StageSession] Auth header attached (len={tokenTrim.Length})");
+            string preview = tokenTrim.Length > 20
+                ? $"{tokenTrim.Substring(0, 10)}...{tokenTrim.Substring(tokenTrim.Length - 10)}"
+                : tokenTrim;
+            Log?.Invoke($"[StageSession] Auth header attached: Bearer {preview} (len={tokenTrim.Length})");
+        }
+        else
+        {
+            LogWarning?.Invoke("[StageSession] ⚠️ AuthToken이 비어있어 Authorization 헤더를 추가하지 않습니다. 403 에러가 발생할 수 있습니다.");
+            Log?.Invoke($"[StageSession] 디버깅: BaseUrl={BaseUrl}, AuthToken null={AuthToken == null}, empty={string.IsNullOrEmpty(AuthToken)}");
         }
         req.SetRequestHeader("Accept", "application/json");
     }

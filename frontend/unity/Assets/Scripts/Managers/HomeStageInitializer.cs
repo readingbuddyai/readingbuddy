@@ -144,8 +144,20 @@ public class HomeStageInitializer : MonoBehaviour
 
         // 1) 토큰 확보: 홈에서 방금 발급됐을 수 있으니 AuthManager 우선
         string token = (AuthManager.Instance != null) ? AuthManager.Instance.GetAccessToken() : "";
+        bool fromAuthManager = !string.IsNullOrWhiteSpace(token);
+        
         if (string.IsNullOrWhiteSpace(token))
+        {
             token = PlayerPrefs.GetString(tokenPlayerPrefsKey, "");
+            Debug.Log($"[HomeStage] AuthManager에서 토큰 못 찾음, PlayerPrefs에서 시도 (있음={!string.IsNullOrWhiteSpace(token)})");
+        }
+        else
+        {
+            string preview = token.Length > 20
+                ? $"{token.Substring(0, 10)}...{token.Substring(token.Length - 10)}"
+                : token;
+            Debug.Log($"[HomeStage] 토큰 확보: AuthManager에서 (len={token.Length}, preview={preview})");
+        }
 
         if (string.IsNullOrWhiteSpace(token))
         {
@@ -153,16 +165,43 @@ public class HomeStageInitializer : MonoBehaviour
             yield break;
         }
 
+        // 토큰 정리 (Bearer 접두사 제거)
+        string tokenTrim = token.Trim();
+        if (tokenTrim.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            tokenTrim = tokenTrim.Substring(7).Trim();
+
         // 2) 요청
         string url = BuildUrl(apiBaseUrl, lastStageEndpoint);
+        Debug.Log($"[HomeStage] GET 요청 준비: URL={url}, Token 있음={!string.IsNullOrWhiteSpace(tokenTrim)}, Token 길이={tokenTrim?.Length ?? 0}");
+        
         using (var req = UnityWebRequest.Get(url))
         {
-            req.SetRequestHeader("Authorization", $"Bearer {token}");
+            req.SetRequestHeader("Authorization", $"Bearer {tokenTrim}");
+            req.SetRequestHeader("Accept", "application/json");
             yield return req.SendWebRequest();
 
             if (req.result != UnityWebRequest.Result.Success)
             {
-                Debug.LogWarning($"[HomeStage] GET 실패: {req.responseCode} {req.error}");
+                string body = req.downloadHandler != null ? req.downloadHandler.text : string.Empty;
+                Debug.LogWarning($"[HomeStage] GET 실패: {req.responseCode} {req.error}\nURL={url}\nBody={body}");
+                
+                // 403 또는 401 에러는 토큰 만료로 간주
+                if (req.responseCode == 403 || req.responseCode == 401)
+                {
+                    Debug.LogWarning($"[HomeStage] ⚠️ 토큰 만료 감지 (code={req.responseCode}). AuthManager에 알림.");
+                    Debug.LogError($"[HomeStage] 403 에러 상세: Token 길이={tokenTrim?.Length ?? 0}, Token null={tokenTrim == null}, empty={string.IsNullOrEmpty(tokenTrim)}");
+                    Debug.LogError($"[HomeStage] AuthManager.Instance={AuthManager.Instance}, IsLoggedIn={AuthManager.Instance?.IsLoggedIn() ?? false}");
+                    
+                    if (AuthManager.Instance != null)
+                    {
+                        AuthManager.Instance.HandleTokenExpired();
+                    }
+                    else
+                    {
+                        Debug.LogError("[HomeStage] ❌ AuthManager.Instance가 null입니다!");
+                    }
+                }
+                
                 yield break;
             }
 
