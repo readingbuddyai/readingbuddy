@@ -60,6 +60,8 @@ using OptionDto = StageQuestionModels.OptionDto;
     public Image mainImage;              // 중앙 큰 이미지
     public RectTransform optionsContainer; // 하단 옵션 버튼 부모
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
+    public Button oOptionPrefab;
+    public Button xOptionPrefab;
     [Tooltip("튜토리얼 등에서 노출할 단어 텍스트(TMP)")]
     public TMP_Text optionWordText;
 
@@ -86,6 +88,10 @@ using OptionDto = StageQuestionModels.OptionDto;
     [Tooltip("튜토리얼 클립 사이 대기 시간(초)")]
     [Min(0f)]
     public float tutorialClipGapSeconds = 0.9f;
+
+    [Header("Tutorial Video (local)")]
+    public UnityEngine.Video.VideoClip tutorialClip;
+    public bool playTutorialVideo = true;
 
     [Header("Guide Character (Level 1)")]
     [Tooltip("패널이 꺼져 있을 때 표시할 3D 캐릭터 오브젝트")]
@@ -177,6 +183,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         private StageSupplementController _supplementController;
         private StageSupplementDependencies _supplementDependencies;
         private int _currentProblemNumber;
+        private Button _initialOptionPrefab;
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
         public bool applyAutoLayout = true;
@@ -321,6 +328,10 @@ using OptionDto = StageQuestionModels.OptionDto;
         {
             micIndicator.SetActive(false);
         }
+        if (_initialOptionPrefab == null)
+        {
+            _initialOptionPrefab = optionButtonPrefab;
+        }
         StartCoroutine(RunStage());
     }
     private StageSessionController GetSessionController()
@@ -374,6 +385,8 @@ using OptionDto = StageQuestionModels.OptionDto;
                 CorrectSfx = sfxCorrectClip,
                 MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve),
                 PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops),
+                PlayTutorialVideo = PlayLocalTutorialVideo,
+                OnCursorActiveChanged = active => { if (!active) StopVideoIfAny(); },
                 ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId),
                 Log = message => Debug.Log(message),
                 LogWarning = message => Debug.LogWarning(message),
@@ -397,6 +410,8 @@ using OptionDto = StageQuestionModels.OptionDto;
             _tutorialDependencies.CorrectSfx = sfxCorrectClip;
             _tutorialDependencies.MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve);
             _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops);
+            _tutorialDependencies.PlayTutorialVideo = PlayLocalTutorialVideo;
+            _tutorialDependencies.OnCursorActiveChanged = active => { if (!active) StopVideoIfAny(); };
             _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
             _tutorialDependencies.Log = message => Debug.Log(message);
             _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
@@ -472,6 +487,19 @@ using OptionDto = StageQuestionModels.OptionDto;
             }
         }
 
+        if (actionId.StartsWith("SetOptionPrefab", StringComparison.OrdinalIgnoreCase))
+        {
+            string value = string.Empty;
+            int separator = actionId.IndexOf(':');
+            if (separator >= 0 && separator < actionId.Length - 1)
+                value = actionId.Substring(separator + 1);
+            SetOptionPrefabByKey(value);
+        }
+        else if (string.Equals(actionId, "ResetOptionPrefab", StringComparison.OrdinalIgnoreCase))
+        {
+            ResetOptionPrefab();
+        }
+
         yield break;
     }
 
@@ -488,6 +516,41 @@ using OptionDto = StageQuestionModels.OptionDto;
             var rect = optionWordText.rectTransform;
             LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
         }
+    }
+
+    private void SetOptionPrefabByKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        string normalized = key.Trim();
+        if (string.Equals(normalized, "o", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyOptionPrefab(oOptionPrefab);
+        }
+        else if (string.Equals(normalized, "x", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyOptionPrefab(xOptionPrefab);
+        }
+        else if (string.Equals(normalized, "default", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(normalized, "reset", StringComparison.OrdinalIgnoreCase))
+        {
+            ResetOptionPrefab();
+        }
+    }
+
+    private void ApplyOptionPrefab(Button prefab)
+    {
+        if (prefab == null)
+            return;
+
+        optionButtonPrefab = prefab;
+    }
+
+    private void ResetOptionPrefab()
+    {
+        if (_initialOptionPrefab != null)
+            optionButtonPrefab = _initialOptionPrefab;
     }
 
     private void ConfigureSupplementController()
@@ -593,6 +656,7 @@ using OptionDto = StageQuestionModels.OptionDto;
     {
         ConfigureTutorialController();
         _tutorialController?.ResetAfterStageRestart();
+        StopVideoIfAny();
 
         // 새 실행 시작 시 상태 초기화
         _guideMoved = false;
@@ -614,6 +678,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         {
             yield return _tutorialController.RunIntroSequence();
             yield return _tutorialController.RunIntroTutorial();
+            StopVideoIfAny();
         }
         else
         {
@@ -982,6 +1047,41 @@ using OptionDto = StageQuestionModels.OptionDto;
             Destroy(_videoRT);
             _videoRT = null;
         }
+    }
+
+    private IEnumerator PlayLocalTutorialVideo()
+    {
+        if (!playTutorialVideo || tutorialClip == null || videoPlayer == null || videoSurface == null)
+            yield break;
+
+        if (mainImage) { mainImage.enabled = false; mainImage.sprite = null; }
+        videoSurface.gameObject.SetActive(true);
+
+        if (_videoRT == null)
+        {
+            _videoRT = new RenderTexture(1280, 720, 0, RenderTextureFormat.ARGB32);
+            _videoRT.Create();
+        }
+
+        videoPlayer.targetTexture = _videoRT;
+        videoSurface.texture = _videoRT;
+
+        videoPlayer.source = UnityEngine.Video.VideoSource.VideoClip;
+        videoPlayer.clip = tutorialClip;
+        videoPlayer.isLooping = videoLoop;
+        videoPlayer.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.AudioSource;
+        if (audioSource) videoPlayer.SetTargetAudioSource(0, audioSource);
+
+        bool prepared = false;
+        videoPlayer.errorReceived += (vp, msg) => Debug.LogError($"[Stage12] Tutorial video error: {msg}");
+        videoPlayer.prepareCompleted += _ => prepared = true;
+
+        videoPlayer.Prepare();
+        while (!prepared)
+            yield return null;
+
+        videoPlayer.Play();
+        if (audioSource) audioSource.Play();
     }
     private IEnumerator PlayClip(AudioClip clip)
     {
