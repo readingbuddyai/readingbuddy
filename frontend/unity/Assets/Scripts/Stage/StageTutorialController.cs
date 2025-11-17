@@ -831,6 +831,9 @@ public class StageTutorialController
                 guide3DCharacter.SetActive(true);
             }
         }
+
+        if (introOptionCursor?.handCursor != null)
+            introOptionCursor.handCursor.SetActive(false);
     }
 
     private IEnumerator Co_ShowPanelWithGuideHide(bool immediate)
