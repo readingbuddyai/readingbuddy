@@ -36,17 +36,17 @@ public class PhonemesKcMapSeederConfig {
         // ALVEOLAR 계열
         put("ㄴ", Arrays.asList(3L, 27L));  // ALVEOLAR_1, ALVEOLAR_2
         put("ㄷ", Arrays.asList(3L, 27L));
-        put("ㄸ", Arrays.asList(3L, 27L));
+//        put("ㄸ", Arrays.asList(3L, 27L));
         put("ㅌ", Arrays.asList(3L, 27L));
 
         // PALATAL 계열
         put("ㅈ", Arrays.asList(4L, 28L));  // PALATAL_1, PALATAL_2
-        put("ㅉ", Arrays.asList(4L, 28L));
+//        put("ㅉ", Arrays.asList(4L, 28L));
         put("ㅊ", Arrays.asList(4L, 28L));
 
         // ALVEOLAR_FRICATIVE 계열
         put("ㅅ", Arrays.asList(5L, 29L));  // ALVEOLAR_FRICATIVE_1, ALVEOLAR_FRICATIVE_2
-        put("ㅆ", Arrays.asList(5L, 29L));
+//        put("ㅆ", Arrays.asList(5L, 29L));
 
         // GLOTTAL_AND_ALVEOLAR 계열
         put("ㅎ", Arrays.asList(6L, 30L));  // GLOTTAL_AND_ALVEOLAR_1, GLOTTAL_AND_ALVEOLAR_2
