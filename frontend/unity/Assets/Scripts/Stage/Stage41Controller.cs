@@ -473,25 +473,20 @@ public partial class Stage41Controller : MonoBehaviour
     private void ShowEndModal()
     {
         var canvas = FindObjectOfType<Canvas>();
-        if (!canvas)
-        {
-            Debug.LogWarning("[Stage41] Canvas를 찾을 수 없습니다.");
-            return;
-        }
+        if (!canvas) return;
 
+        // 배경 오버레이
         var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
         overlay.layer = canvas.gameObject.layer;
         var rt = overlay.GetComponent<RectTransform>();
         rt.SetParent(canvas.transform, false);
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = Vector2.zero;
-        rt.sizeDelta = Vector2.zero;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero; rt.sizeDelta = Vector2.zero;
         var bg = overlay.GetComponent<Image>();
         bg.color = new Color(0f, 0f, 0f, 0.6f);
         bg.raycastTarget = true;
 
+        // 패널
         var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
         panel.layer = canvas.gameObject.layer;
         var prt = panel.GetComponent<RectTransform>();
@@ -499,10 +494,11 @@ public partial class Stage41Controller : MonoBehaviour
         prt.anchorMin = new Vector2(0.5f, 0.5f);
         prt.anchorMax = new Vector2(0.5f, 0.5f);
         prt.pivot = new Vector2(0.5f, 0.5f);
-        prt.sizeDelta = new Vector2(2200f, 1500f);
+        prt.sizeDelta = new Vector2(2200, 1500);
         var pbg = panel.GetComponent<Image>();
         pbg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
 
+        // 타이틀 텍스트
         var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
         title.layer = canvas.gameObject.layer;
         var trt = title.GetComponent<RectTransform>();
@@ -511,20 +507,22 @@ public partial class Stage41Controller : MonoBehaviour
         trt.anchorMax = new Vector2(0.5f, 1f);
         trt.pivot = new Vector2(0.5f, 1f);
         trt.anchoredPosition = new Vector2(0f, -80f);
-        trt.sizeDelta = new Vector2(1000f, 150f);
-        var titleText = title.GetComponent<Text>();
-        titleText.text = "마법 학습을 마쳤어요!";
-        titleText.alignment = TextAnchor.MiddleCenter;
-        titleText.fontSize = 100;
-        titleText.fontStyle = FontStyle.Bold;
-        titleText.color = Color.white;
-        titleText.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+        trt.sizeDelta = new Vector2(1000, 150);
+        var t = title.GetComponent<Text>();
+        t.text = "학습이 끝났어요!";
+        t.alignment = TextAnchor.MiddleCenter;
+        t.fontSize = 100;
+        t.fontStyle = FontStyle.Bold;
+        t.color = Color.white;
+        t.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
 
+        // 버튼들
         Vector2 btnSize = (endModalButtonSize.sqrMagnitude > 0f) ? endModalButtonSize : optionButtonPreferredSize;
         float gap = 40f;
 
         Button ResolveButton(Button preferred, string[] resourcePaths, out bool isCustom)
         {
+            // custom: inspector or resources provided
             if (preferred)
             {
                 isCustom = true;
@@ -553,53 +551,39 @@ public partial class Stage41Controller : MonoBehaviour
             return optionButtonPrefab;
         }
 
+        // 다시 학습하기
         bool againCustom;
-        var btn1 = Instantiate(ResolveButton(againButtonPrefab, new[] { "againbutton", "UI/againbutton", "Images/againbutton" }, out againCustom), panel.transform as RectTransform);
+        var btn1 = Instantiate(ResolveButton(againButtonPrefab, new[]{"againbutton","UI/againbutton","Images/againbutton"}, out againCustom), panel.transform as RectTransform);
         var btn1rt = btn1.GetComponent<RectTransform>();
         btn1rt.anchorMin = new Vector2(0.5f, 0.5f);
         btn1rt.anchorMax = new Vector2(0.5f, 0.5f);
         btn1rt.pivot = new Vector2(1f, 0.5f);
         btn1rt.sizeDelta = btnSize;
-        btn1rt.anchoredPosition = new Vector2(-gap * 0.5f, -100f);
+        btn1rt.anchoredPosition = new Vector2(-gap*0.5f, -100f);
         if (!againCustom)
         {
             var txt1 = btn1.GetComponentInChildren<Text>();
             var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
-            if (txt1)
-            {
-                txt1.text = "다시 학습하기";
-                if (uiFont) txt1.font = uiFont;
-            }
-            else if (tmp1)
-            {
-                tmp1.text = "다시 학습하기";
-                if (tmpFont) tmp1.font = tmpFont;
-            }
+            if (txt1) { txt1.text = "다시 학습하기"; if (uiFont) txt1.font = uiFont; }
+            else if (tmp1) { tmp1.text = "다시 학습하기"; if (tmpFont) tmp1.font = tmpFont; }
         }
         btn1.onClick.AddListener(() => { Destroy(overlay); RestartStage(); });
 
+        // 로비로 나가기
         bool lobbyCustom;
-        var btn2 = Instantiate(ResolveButton(lobbyButtonPrefab, new[] { "lobbybutton", "UI/lobbybutton", "Images/lobbybutton" }, out lobbyCustom), panel.transform as RectTransform);
+        var btn2 = Instantiate(ResolveButton(lobbyButtonPrefab, new[]{"lobbybutton","UI/lobbybutton","Images/lobbybutton"}, out lobbyCustom), panel.transform as RectTransform);
         var btn2rt = btn2.GetComponent<RectTransform>();
         btn2rt.anchorMin = new Vector2(0.5f, 0.5f);
         btn2rt.anchorMax = new Vector2(0.5f, 0.5f);
         btn2rt.pivot = new Vector2(0f, 0.5f);
         btn2rt.sizeDelta = btnSize;
-        btn2rt.anchoredPosition = new Vector2(gap * 0.5f, -100f);
+        btn2rt.anchoredPosition = new Vector2(gap*0.5f, -100f);
         if (!lobbyCustom)
         {
             var txt2 = btn2.GetComponentInChildren<Text>();
             var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
-            if (txt2)
-            {
-                txt2.text = "로비로 나가기";
-                if (uiFont) txt2.font = uiFont;
-            }
-            else if (tmp2)
-            {
-                tmp2.text = "로비로 나가기";
-                if (tmpFont) tmp2.font = tmpFont;
-            }
+            if (txt2) { txt2.text = "로비로 나가기"; if (uiFont) txt2.font = uiFont; }
+            else if (tmp2) { tmp2.text = "로비로 나가기"; if (tmpFont) tmp2.font = tmpFont; }
         }
         btn2.onClick.AddListener(() => { Destroy(overlay); GoToLobby(); });
     }
