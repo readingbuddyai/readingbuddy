@@ -116,7 +116,7 @@ public class VowelTrainService {
                     continue;
                 }
                 // 3) 정답을 못 찾았고 포함하지 않는 단어이며, 2개 미만일 때: 추가
-                if (!isContain && selectedWords.size() < 2) {
+                if (selectedWords.size() < 2) {
                     selectedWords.add(word);
                 }
                 // 이 구간 오는 단어 : 정답 찾았을 때 포함하는 단어인 경우
