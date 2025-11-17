@@ -7390,6 +7390,7 @@ MonoBehaviour:
   clipNeedMorePower: {fileID: 8300000, guid: ac2c10568c04e39428c18ca83f2165e5, type: 3}
   clipFindCorrect: {fileID: 8300000, guid: b4785e92b78f22e4a925a57718114c0e, type: 3}
   clipGoodThatsIt: {fileID: 8300000, guid: 6dd21759551265049b06febc034bdd9a, type: 3}
+  clipAlmostThere: {fileID: 8300000, guid: 3b95eb7449ed8674aad4e52ffcb346e2, type: 3}
   clipTryAgain: {fileID: 8300000, guid: 43ca22544455b0d43af82a71385c3c83, type: 3}
   clipFinalizeSpell: {fileID: 8300000, guid: 03e58870993dcc14b982e7d26e3adc8e, type: 3}
   recordSeconds: 3

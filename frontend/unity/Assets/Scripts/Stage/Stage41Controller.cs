@@ -109,6 +109,7 @@ public partial class Stage41Controller : MonoBehaviour
     public AudioClip clipNeedMorePower;          // [4.1.9]
     public AudioClip clipFindCorrect;            // [4.1.10]
     public AudioClip clipGoodThatsIt;            // [4.1.11]
+    public AudioClip clipAlmostThere;             // 재녹음 피드백 (비정확)
     public AudioClip clipTryAgain;               // [4.1.12]
     public AudioClip clipFinalizeSpell;          // [4.1.13]
 
@@ -144,6 +145,8 @@ public partial class Stage41Controller : MonoBehaviour
     private GameObject _focusedBox;
     private string _currentWordVoiceUrl;
     private bool[] _finalizedSlots = new bool[3]; // 각 슬롯(초/중/종) 최종 확정 여부
+    private readonly bool[] _segmentVoiceReplyReady = new bool[3];
+    private readonly bool[] _segmentVoiceReplyCorrect = new bool[3];
 
     #region DTOs
     [Serializable]
@@ -371,13 +374,17 @@ public partial class Stage41Controller : MonoBehaviour
             // 초성
             FocusBox(choseongBox);
             yield return PlayClip(clipPromptFirstPiece); // [4.1.4]
+            PrepareSegmentVoiceFeedback(0);
             // fire-and-forget voice upload for 초성
             _pendingVoiceUploads++;
             _isRecording = true; // ensure wait condition blocks until recording finishes
             StartCoroutine(Co_WrapRecordUpload(0));
             // 녹음(3초) 종료를 보장한 뒤 칭찬 재생
             yield return new WaitForSeconds(recordSeconds + 0.15f);
-            yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+            yield return WaitForSegmentVoiceFeedback(0);
+            var clipForSegment0 = GetSegmentFeedbackClip(IsSegmentVoiceReplyCorrect(0));
+            if (clipForSegment0)
+                yield return PlayClip(clipForSegment0);  // [4.1.11]
             // proceed immediately without waiting response
 
             // 중성
@@ -385,12 +392,16 @@ public partial class Stage41Controller : MonoBehaviour
             {
                 FocusBox(jungseongBox);
                 yield return PlayClip(clipPromptSecondPiece); // [4.1.6]
+                PrepareSegmentVoiceFeedback(1);
                 // fire-and-forget voice upload for 중성
                 _pendingVoiceUploads++;
                 _isRecording = true;
                 StartCoroutine(Co_WrapRecordUpload(1));
                 yield return new WaitForSeconds(recordSeconds + 0.15f);
-                yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+                yield return WaitForSegmentVoiceFeedback(1);
+                var clipForSegment1 = GetSegmentFeedbackClip(IsSegmentVoiceReplyCorrect(1));
+                if (clipForSegment1)
+                    yield return PlayClip(clipForSegment1);  // [4.1.11]
                 // proceed immediately without waiting response
             }
 
@@ -399,12 +410,16 @@ public partial class Stage41Controller : MonoBehaviour
             {
                 FocusBox(jongseongBox);
                 yield return PlayClip(clipPromptFinalPiece); // [4.1.7]
+                PrepareSegmentVoiceFeedback(2);
                 // fire-and-forget voice upload for 종성
                 _pendingVoiceUploads++;
                 _isRecording = true;
                 StartCoroutine(Co_WrapRecordUpload(2));
                 yield return new WaitForSeconds(recordSeconds + 0.15f);
-                yield return PlayClip(clipGoodThatsIt);  // [4.1.11]
+                yield return WaitForSegmentVoiceFeedback(2);
+                var clipForSegment2 = GetSegmentFeedbackClip(IsSegmentVoiceReplyCorrect(2));
+                if (clipForSegment2)
+                    yield return PlayClip(clipForSegment2);  // [4.1.11]
                 // proceed immediately without waiting response
             }
 
@@ -1233,8 +1248,44 @@ public partial class Stage41Controller : MonoBehaviour
     // Wrapper: runs the upload coroutine and ensures pending counter is decreased
     private IEnumerator Co_WrapRecordUpload(int segmentIndex)
     {
-        yield return RecordAndUploadPhonemeSegment(segmentIndex, (ok, reply) => { });
+        yield return RecordAndUploadPhonemeSegment(segmentIndex, (ok, reply) => RecordSegmentVoiceFeedback(segmentIndex, ok));
         _pendingVoiceUploads = Mathf.Max(0, _pendingVoiceUploads - 1);
+    }
+
+    private void PrepareSegmentVoiceFeedback(int segmentIndex)
+    {
+        if (segmentIndex < 0 || segmentIndex >= _segmentVoiceReplyReady.Length)
+            return;
+        _segmentVoiceReplyReady[segmentIndex] = false;
+        _segmentVoiceReplyCorrect[segmentIndex] = false;
+    }
+
+    private void RecordSegmentVoiceFeedback(int segmentIndex, bool isCorrect)
+    {
+        if (segmentIndex < 0 || segmentIndex >= _segmentVoiceReplyReady.Length)
+            return;
+        _segmentVoiceReplyReady[segmentIndex] = true;
+        _segmentVoiceReplyCorrect[segmentIndex] = isCorrect;
+    }
+
+    private IEnumerator WaitForSegmentVoiceFeedback(int segmentIndex)
+    {
+        if (segmentIndex < 0 || segmentIndex >= _segmentVoiceReplyReady.Length)
+            yield break;
+        while (!_segmentVoiceReplyReady[segmentIndex])
+            yield return null;
+    }
+
+    private bool IsSegmentVoiceReplyCorrect(int segmentIndex)
+    {
+        return segmentIndex >= 0 && segmentIndex < _segmentVoiceReplyCorrect.Length && _segmentVoiceReplyCorrect[segmentIndex];
+    }
+
+    private AudioClip GetSegmentFeedbackClip(bool isReplyCorrect)
+    {
+        if (!isReplyCorrect)
+            return clipAlmostThere ?? clipGoodThatsIt;
+        return clipGoodThatsIt ?? clipAlmostThere;
     }
 
     // '+'가 경로에 포함될 때 안전하게 인코딩
@@ -1522,38 +1573,42 @@ public partial class Stage41Controller : MonoBehaviour
             }
 
             var respText = req.downloadHandler.text;
-        if (logVerbose) Debug.Log($"[Stage41] check/voice 응답: {respText}");
-        try
-        {
-            var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
-            bool ok = parsed?.data?.isReplyCorrect ?? false;
-
-            // 우리가 보낸 정답 phoneme
-            string correctPhoneme = GetTargetPhonemeAnswer(segmentIndex);
-
-            // 리스트 크기 보정
-            while (_segmentReplies.Count <= segmentIndex) _segmentReplies.Add(string.Empty);
-            while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
-
-            // reply는 절대 사용하지 않음. isReplyCorrect true면 우리가 보낸 targetAns로 채움
-            _segmentReplies[segmentIndex] = ok ? correctPhoneme : string.Empty;
-            _segmentCorrects[segmentIndex] = ok;
-
-            // 정답이면 즉시 UI에 표시
-            if (ok)
+            if (logVerbose) Debug.Log($"[Stage41] check/voice 응답: {respText}");
+            try
             {
-                string normalized = NormalizePhoneme(correctPhoneme);
-                SetSlotText(segmentIndex, normalized);
-                SetSlotAlpha(segmentIndex, 1f);
-                _finalizedSlots[segmentIndex] = true;
-                // Debug.Log($"[Stage41] segment {segmentIndex} 정답 '{normalized}' → 슬롯 표시 완료");
+                var parsed = JsonUtility.FromJson<VoiceReplyResp>(respText);
+                bool ok = parsed?.data?.isReplyCorrect ?? false;
+
+                // 우리가 보낸 정답 phoneme
+                string correctPhoneme = GetTargetPhonemeAnswer(segmentIndex);
+
+                // 리스트 크기 보정
+                while (_segmentReplies.Count <= segmentIndex) _segmentReplies.Add(string.Empty);
+                while (_segmentCorrects.Count <= segmentIndex) _segmentCorrects.Add(false);
+
+                // reply는 절대 사용하지 않음. isReplyCorrect true면 우리가 보낸 targetAns로 채움
+                _segmentReplies[segmentIndex] = ok ? correctPhoneme : string.Empty;
+                _segmentCorrects[segmentIndex] = ok;
+
+                // 정답이면 즉시 UI에 표시
+                if (ok)
+                {
+                    string normalized = NormalizePhoneme(correctPhoneme);
+                    SetSlotText(segmentIndex, normalized);
+                    SetSlotAlpha(segmentIndex, 1f);
+                    _finalizedSlots[segmentIndex] = true;
+                    // Debug.Log($"[Stage41] segment {segmentIndex} 정답 '{normalized}' → 슬롯 표시 완료");
+                }
+
+                if (logVerbose)
+                    Debug.Log($"[Stage41] segment {segmentIndex} isReplyCorrect={ok}, target='{correctPhoneme}'");
+                onDone?.Invoke(ok, parsed?.data?.reply ?? string.Empty);
             }
-
-            if (logVerbose)
-                Debug.Log($"[Stage41] segment {segmentIndex} isReplyCorrect={ok}, target='{correctPhoneme}'");
-        }
-        catch { }
-
+            catch (Exception e)
+            {
+                if (logVerbose) Debug.LogWarning($"[Stage41] check/voice 응답 파싱 실패: {e.Message}");
+                onDone?.Invoke(false, string.Empty);
+            }
         }
     }
 
