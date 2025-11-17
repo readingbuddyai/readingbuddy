@@ -86,9 +86,9 @@ public class ConsonantTrainService {
         List<ProblemResult> problemList = new ArrayList<>();
         List<PhonemeWithKcIdAndCandidate> phonemeWithKcs = getBasedUserMasteryPhonemes(userId,count,stage);
         List<Words> allWords = wordsRepository.findAll();
-        Collections.shuffle(allWords);
 
         for (PhonemeWithKcIdAndCandidate phonemeWithKcIdAndCandidate : phonemeWithKcs){
+            Collections.shuffle(allWords);
             Phonemes targetPhoneme = phonemeWithKcIdAndCandidate.getPhonemes();
 
             List<Words> selectedWords = new ArrayList<>();
@@ -96,21 +96,28 @@ public class ConsonantTrainService {
             char targetConsonant = targetPhoneme.getValue().charAt(0);
 
             for (Words word : allWords) {
-                if (foundCorrect && selectedWords.size() == 3) {
+                if (selectedWords.size() == 3) {
                     break;
                 }
 
-                if (selectedWords.size() < 2) {
-                    if (!checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
-                        selectedWords.add(word);
-                    }
-                }
+                boolean isContain = checkWordContainsPhoneme(word.getWord(), targetConsonant);
 
-                // 정답을 아직 못 찾았으면 계속 찾기, 찾으면 추가
-                else if(!foundCorrect && checkWordContainsPhoneme(word.getWord(), targetConsonant)) {
+                // 1) 아직 정답 단어를 찾지 못한 경우: 포함하는 단어를 정답으로 추가
+                if (!foundCorrect && isContain) {
+                    selectedWords.add(word);
                     foundCorrect = true;
+                    continue;
+                }
+                // 2) 정답 단어를 찾은 후: 포함하지 않는 단어만 추가
+                if (foundCorrect && !isContain) {
+                    selectedWords.add(word);
+                    continue;
+                }
+                // 3) 정답을 못 찾았고 포함하지 않는 단어이며, 2개 미만일 때: 추가
+                if (!isContain && selectedWords.size() < 2) {
                     selectedWords.add(word);
                 }
+                // 이 구간 오는 단어 : 정답 찾았을 때 포함하는 단어인 경우
             }
 
             // 각 단어마다 isAnswer 플래그 설정
