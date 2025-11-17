@@ -16,6 +16,8 @@ public partial class Stage41Controller
     public StageTutorialController.IntroOptionCursor introOptionCursor;
     public PanelAnimator introTutorialPanelAnimator;
     public GameObject introTutorialPanel;
+    public Button tutorialSkipButton;
+    public Vector2 tutorialSkipButtonOffset = new Vector2(-40f, 0f);
     [Tooltip("튜토리얼 이후 사용자의 입력을 기다릴지 여부")] public bool requireTriggerAfterTutorial = false;
     [Range(0.05f, 1f)] public float tutorialTriggerThreshold = 0.6f;
     public KeyCode tutorialFallbackKey = KeyCode.Space;
@@ -32,6 +34,7 @@ public partial class Stage41Controller
     private readonly StageQuestionController<QuestionDto> _questionController = new StageQuestionController<QuestionDto>();
     private readonly StageQuestionController<StageQuestionModels.QuestionDto> _supplementQuestionController = new StageQuestionController<StageQuestionModels.QuestionDto>();
     private readonly Dictionary<RectTransform, TutorialChoicePlacement> _tutorialChoicePlacements = new Dictionary<RectTransform, TutorialChoicePlacement>();
+    private Button _generatedTutorialSkipButton;
 
     private class TutorialChoicePlacement
     {
@@ -121,6 +124,7 @@ public partial class Stage41Controller
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = logVerbose;
         _tutorialDependencies.ClearSlotContents = ClearTutorialSlotContents;
+        _tutorialDependencies.TutorialSkipButton = ResolveOrCreateTutorialSkipButton();
 
         if (tutorialProfile != null)
         {
@@ -144,6 +148,58 @@ public partial class Stage41Controller
         _tutorialController.guide3DCharacter = guide3DCharacter;
 
         _tutorialController.Initialize(_tutorialDependencies);
+    }
+
+    private Button ResolveOrCreateTutorialSkipButton()
+    {
+        if (tutorialSkipButton != null)
+            return tutorialSkipButton;
+        if (_generatedTutorialSkipButton != null)
+            return _generatedTutorialSkipButton;
+        if (introTutorialPanel == null)
+            return null;
+
+        var parentRect = introTutorialPanel.GetComponent<RectTransform>();
+        if (parentRect == null)
+            return null;
+
+        var go = new GameObject("TutorialSkipButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        go.layer = introTutorialPanel.layer;
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parentRect, false);
+        rt.SetAsLastSibling();
+        rt.anchorMin = new Vector2(1f, 0.5f);
+        rt.anchorMax = new Vector2(1f, 0.5f);
+        rt.pivot = new Vector2(1f, 0.5f);
+        rt.sizeDelta = new Vector2(320f, 100f);
+        rt.anchoredPosition = tutorialSkipButtonOffset;
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0.12f, 0.12f, 0.13f, 0.9f);
+
+        var button = go.GetComponent<Button>();
+        button.transition = Selectable.Transition.ColorTint;
+
+        var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        label.layer = go.layer;
+        label.transform.SetParent(go.transform, false);
+        var labelRt = label.GetComponent<RectTransform>();
+        labelRt.anchorMin = Vector2.zero;
+        labelRt.anchorMax = Vector2.one;
+        labelRt.offsetMin = new Vector2(10f, 10f);
+        labelRt.offsetMax = new Vector2(-10f, -10f);
+        var tmpText = label.GetComponent<TextMeshProUGUI>();
+        tmpText.text = "튜토리얼 건너뛰기";
+        tmpText.alignment = TextAlignmentOptions.Center;
+        tmpText.fontSize = 32;
+        tmpText.color = Color.white;
+        if (tmpFont)
+            tmpText.font = tmpFont;
+
+        button.targetGraphic = img;
+        go.SetActive(false);
+        _generatedTutorialSkipButton = button;
+        return button;
     }
 
     private void StoreTutorialChoicePlacement(RectTransform tile, Transform parent, int siblingIndex, Vector3 localScale)

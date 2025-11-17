@@ -33,7 +33,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
     [Tooltip("If true, spawns a World Space canvas locked in front of the active camera (recommended for VR).")]
     public bool useWorldSpaceForXR = true;
     [Tooltip("Distance in meters in front of the camera for the world-space modal")]
-    public float worldSpaceDistance = 1.25f;
+    public float worldSpaceDistance = 1.4f;
     [Tooltip("Panel size in meters for the world-space modal (scaled from 1000px = 1m)")]
     public Vector2 worldSpaceSizeMeters = new Vector2(1.6f, 0.9f);
     [Tooltip("If true, parent the modal to the camera so it follows head movement")]
@@ -357,6 +357,11 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         _exitButton = exitBtn;
         _exitButton.onClick.RemoveAllListeners();
         _exitButton.onClick.AddListener(ShowExitConfirmPanel);
+        
+        AddButtonHoverGlow(_audioButton);
+        AddButtonHoverGlow(_homeButton);
+        AddButtonHoverGlow(_exitButton);
+
         if (exitButtonSprite != null)
         {
             var img = _exitButton.GetComponent<Image>();
@@ -428,15 +433,15 @@ public class GlobalLeftTriggerModal : MonoBehaviour
 #endif
         return btn;
     }
-
-    private void AddButtonHoverFeedback(Button btn)
+    private void AddButtonHoverGlow(Button btn)
     {
-        if (btn == null)
-            return;
-        var feedback = btn.gameObject.GetComponent<ButtonHoverFeedback>();
-        if (feedback == null)
-            feedback = btn.gameObject.AddComponent<ButtonHoverFeedback>();
-        feedback.scaleMultiplier = 1.15f;
+        if (btn == null) return;
+        
+        var glow = btn.gameObject.GetComponent<ButtonHoverGlow>();
+        if (glow == null)
+            glow = btn.gameObject.AddComponent<ButtonHoverGlow>();
+
+        glow.scaleMultiplier = 1.15f; // 필요하면 조정
     }
 
     private static bool _isMutedCached = false;
@@ -584,7 +589,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
             HideExitConfirmPanel();
             QuitApplication();
         });
-        AddButtonHoverFeedback(_exitConfirmYes);
+        AddButtonHoverGlow(_exitConfirmYes);
 
         var noBtn = CreateButton("ExitConfirmNo", panel.transform, btnSize, new Vector2(+110f, yOffset + 20f), "", out _);
         if (exitConfirmNoSprite != null)
@@ -592,7 +597,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         _exitConfirmNo = noBtn;
         _exitConfirmNo.onClick.RemoveAllListeners();
         _exitConfirmNo.onClick.AddListener(HideExitConfirmPanel);
-        AddButtonHoverFeedback(_exitConfirmNo);
+        AddButtonHoverGlow(_exitConfirmNo);
 
         panel.SetActive(false);
         _exitConfirmPanel = panel;
@@ -722,48 +727,83 @@ public class GlobalLeftTriggerModal : MonoBehaviour
     }
 }
 
-public class ButtonHoverFeedback : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+public class ButtonHoverGlow : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
-    public float scaleMultiplier = 1.1f;
+    public float scaleMultiplier = 1.12f;
     public float transitionDuration = 0.08f;
 
+    public Color glowColor = new Color(1f, 1f, 1f, 0.6f);
+    public float glowIntensity = 1.5f;
+
     private Vector3 _originalScale;
-    private Coroutine _current;
+
+    private Image _image;
+    private Color _originalColor;
+
+    private Outline _outline;
+    private float _outlineOriginalAlpha;
 
     private void Awake()
     {
         _originalScale = transform.localScale;
+
+        _image = GetComponent<Image>();
+        if (_image != null)
+            _originalColor = _image.color;
+
+        _outline = gameObject.GetComponent<Outline>();
+        if (_outline == null)
+            _outline = gameObject.AddComponent<Outline>();
+
+        _outline.effectColor = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
+        _outlineOriginalAlpha = _outline.effectColor.a;
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        StartScaling(_originalScale * scaleMultiplier);
+        StopAllCoroutines();
+        StartCoroutine(AnimateHover(true));
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        StartScaling(_originalScale);
+        StopAllCoroutines();
+        StartCoroutine(AnimateHover(false));
     }
 
-    private void StartScaling(Vector3 target)
+    private IEnumerator AnimateHover(bool entering)
     {
-        if (_current != null)
-            StopCoroutine(_current);
-        _current = StartCoroutine(LerpScale(target));
-    }
+        float t = 0;
+        Vector3 startScale = transform.localScale;
+        Vector3 endScale = entering ? _originalScale * scaleMultiplier : _originalScale;
 
-    private IEnumerator LerpScale(Vector3 target)
-    {
-        Vector3 start = transform.localScale;
-        float elapsed = 0f;
-        while (elapsed < transitionDuration)
+        Color startColor = (_image != null) ? _image.color : Color.white;
+        Color endColor = entering ?
+            _originalColor * glowIntensity :
+            _originalColor;
+
+        Color startOutline = _outline.effectColor;
+        Color endOutline = entering ?
+            new Color(glowColor.r, glowColor.g, glowColor.b, glowColor.a) :
+            new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
+
+        while (t < transitionDuration)
         {
-            elapsed += Time.unscaledDeltaTime;
-            float t = Mathf.Clamp01(elapsed / transitionDuration);
-            transform.localScale = Vector3.Lerp(start, target, t);
+            t += Time.deltaTime;
+            float lerp = t / transitionDuration;
+
+            transform.localScale = Vector3.Lerp(startScale, endScale, lerp);
+
+            if (_image != null)
+                _image.color = Color.Lerp(startColor, endColor, lerp);
+
+            _outline.effectColor = Color.Lerp(startOutline, endOutline, lerp);
+
             yield return null;
         }
-        transform.localScale = target;
-        _current = null;
+
+        transform.localScale = endScale;
+        if (_image != null) _image.color = endColor;
+        _outline.effectColor = endOutline;
     }
 }

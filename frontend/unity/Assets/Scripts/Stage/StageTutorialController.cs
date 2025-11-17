@@ -56,6 +56,10 @@ public class StageTutorialController
 #endif
     private readonly List<UnityEngine.XR.InputDevice> _rightHandDevices = new List<UnityEngine.XR.InputDevice>();
     private Coroutine _guideShowCoroutine;
+    private bool _skipRequested;
+    private bool _skipButtonListenerAttached;
+
+    public event Action TutorialSkipped;
     private readonly List<StageTutorialStep> _profileSteps = new List<StageTutorialStep>();
     private float _defaultClipGapSeconds = 0.9f;
 
@@ -110,6 +114,8 @@ public class StageTutorialController
     {
         if (deps == null) throw new ArgumentNullException(nameof(deps));
         _deps = deps;
+        AttachSkipButton();
+        ResetSkipRequest();
     }
 
     public void PrepareForStageStart()
@@ -117,6 +123,7 @@ public class StageTutorialController
         EnsureInitialized();
         HidePanel(true);
         StopPendingPanelCoroutine();
+        ResetSkipRequest();
         if (guide3DCharacter)
             guide3DCharacter.SetActive(true);
     }
@@ -127,25 +134,49 @@ public class StageTutorialController
         HidePanel(true);
         StopPendingPanelCoroutine();
         ClearIntroOptionButtons();
+        ResetSkipRequest();
+    }
+
+    public void RequestSkipTutorial()
+    {
+        if (_skipRequested)
+            return;
+        _skipRequested = true;
+        StopPendingPanelCoroutine();
+        HidePanel(true);
+        ClearIntroOptionButtons();
+        SetSkipButtonVisibility(false);
+        TutorialSkipped?.Invoke();
+        if (_deps?.StartCoroutine != null)
+            _deps.StartCoroutine(Co_ShowPanelAfterSkip());
     }
 
     public IEnumerator RunIntroSequence()
     {
         EnsureInitialized();
+        if (ShouldSkipTutorial())
+            yield break;
+
         if (HasProfileSteps(StageTutorialStepPhase.Intro))
         {
             yield return RunSteps(StageTutorialStepPhase.Intro);
             yield break;
         }
 
+        if (ShouldSkipTutorial()) yield break;
         yield return PlayClipSafe(introClip1);
+        if (ShouldSkipTutorial()) yield break;
         yield return PlayClipSafe(introClip2);
+        if (ShouldSkipTutorial()) yield break;
         yield return PlayClipSafe(introClip3);
     }
 
     public IEnumerator RunIntroTutorial()
     {
         EnsureInitialized();
+
+        if (ShouldSkipTutorial())
+            yield break;
 
         if (HasProfileSteps(StageTutorialStepPhase.Tutorial))
         {
@@ -156,8 +187,12 @@ public class StageTutorialController
         bool usedImage = false;
 
         SetProgressText(string.Empty);
+        if (ShouldSkipTutorial())
+            yield break;
         yield return ShowPanel(false);
         LogVerbose("[StageTutorial] Tutorial panel ON (1.1.2.1)");
+        if (ShouldSkipTutorial())
+            yield break;
 
         if (introTutorialImage != null && _deps.MainImage != null)
         {
@@ -166,11 +201,18 @@ public class StageTutorialController
             usedImage = true;
         }
 
+        if (ShouldSkipTutorial())
+            yield break;
+
         yield return PlayIntroClip(introClip4, "[StageTutorial] Play clip 1.1.2.2");
         yield return PlayIntroClip(introClip5, "[StageTutorial] Play clip 1.1.2.3");
         yield return PlayDemoClip(introDemoClip1, "[StageTutorial] Play clip 1.1.2.4 (demo)");
+        if (ShouldSkipTutorial())
+            yield break;
         yield return PlayIntroClip(introClip6, "[StageTutorial] Play clip 1.1.2.5");
         yield return PlayDemoClip(introDemoClip2, "[StageTutorial] Play clip 1.1.2.6 (demo)");
+        if (ShouldSkipTutorial())
+            yield break;
         yield return PlayIntroClip(introClip7, "[StageTutorial] Play clip 1.1.2.7");
 
         if (_deps.OptionsContainer != null)
@@ -230,6 +272,9 @@ public class StageTutorialController
             ClearIntroOptionButtons();
         }
 
+        if (ShouldSkipTutorial())
+            yield break;
+
         if (usedImage && _deps.MainImage != null)
         {
             _deps.MainImage.enabled = false;
@@ -243,10 +288,14 @@ public class StageTutorialController
 
         if (requireTriggerAfterTutorial)
         {
+            if (ShouldSkipTutorial())
+                yield break;
             LogVerbose("[StageTutorial] Waiting for right trigger input to continue");
             yield return WaitForRightTriggerPress(true);
         }
 
+        if (ShouldSkipTutorial())
+            yield break;
         yield return PreparePanelForReopen();
         yield return ShowPanel(false);
         LogVerbose("[StageTutorial] Tutorial panel ON (after trigger)");
@@ -274,6 +323,8 @@ public class StageTutorialController
     {
         if (_profileSteps == null || _profileSteps.Count == 0)
             yield break;
+        if (ShouldSkipTutorial())
+            yield break;
 
         for (int i = 0; i < _profileSteps.Count; i++)
         {
@@ -282,11 +333,15 @@ public class StageTutorialController
                 continue;
 
             yield return ExecuteStep(step);
+            if (ShouldSkipTutorial())
+                yield break;
         }
     }
 
     private IEnumerator ExecuteStep(StageTutorialStep step)
     {
+        if (ShouldSkipTutorial())
+            yield break;
         switch (step.action)
         {
             case StageTutorialActionType.PlayClip:
@@ -816,6 +871,7 @@ public class StageTutorialController
             introTutorialPanel.SetActive(false);
             LogVerbose($"[StageTutorial] HidePanel via SetActive (immediate={immediate})");
         }
+        SetSkipButtonVisibility(false);
 
         if (guide3DCharacter && showGuideWhenPanelOff)
         {
@@ -863,36 +919,43 @@ public class StageTutorialController
         {
             LogVerbose($"[StageTutorial] ShowPanel via PanelAnimator (immediate={immediate})");
             introTutorialPanelAnimator.Show(immediate);
+            SetSkipButtonVisibility(true);
         }
         else if (introTutorialPanel != null)
         {
             introTutorialPanel.SetActive(true);
             LogVerbose($"[StageTutorial] ShowPanel via SetActive (immediate={immediate})");
+            SetSkipButtonVisibility(true);
         }
         else
         {
             LogWarning("[StageTutorial] ShowPanel called but no panel assigned");
+            SetSkipButtonVisibility(false);
         }
     }
 
     private IEnumerator PlayIntroClip(AudioClip clip, string logLabel)
     {
-        if (clip == null)
+        if (clip == null || ShouldSkipTutorial())
             yield break;
 
         LogVerbose(logLabel);
         yield return PlayClipSafe(clip);
+        if (ShouldSkipTutorial())
+            yield break;
         if (tutorialClipGapSeconds > 0f)
             yield return new WaitForSeconds(tutorialClipGapSeconds);
     }
 
     private IEnumerator PlayDemoClip(AudioClip clip, string logLabel)
     {
-        if (clip == null)
+        if (clip == null || ShouldSkipTutorial())
             yield break;
 
         LogVerbose(logLabel);
         yield return PlayClipSafe(clip);
+        if (ShouldSkipTutorial())
+            yield break;
         if (tutorialClipGapSeconds > 0f)
             yield return new WaitForSeconds(tutorialClipGapSeconds);
     }
@@ -1090,6 +1153,42 @@ public class StageTutorialController
             throw new InvalidOperationException("StageTutorialController is not initialized. Call Initialize() first.");
     }
 
+    private void ResetSkipRequest()
+    {
+        _skipRequested = false;
+        SetSkipButtonVisibility(false);
+    }
+
+    private void AttachSkipButton()
+    {
+        DetachSkipButton();
+        if (_deps?.TutorialSkipButton == null)
+            return;
+        _deps.TutorialSkipButton.onClick.AddListener(RequestSkipTutorial);
+        _skipButtonListenerAttached = true;
+        SetSkipButtonVisibility(false);
+    }
+
+    private void DetachSkipButton()
+    {
+        if (!_skipButtonListenerAttached || _deps?.TutorialSkipButton == null)
+            return;
+        _deps.TutorialSkipButton.onClick.RemoveListener(RequestSkipTutorial);
+        _skipButtonListenerAttached = false;
+    }
+
+    private void SetSkipButtonVisibility(bool visible)
+    {
+        if (_deps?.TutorialSkipButton == null)
+            return;
+        _deps.TutorialSkipButton.gameObject.SetActive(visible && !_skipRequested);
+    }
+
+    private bool ShouldSkipTutorial()
+    {
+        return _skipRequested;
+    }
+
     private IEnumerator PreparePanelForReopen()
     {
         HideIntroOptions();
@@ -1120,6 +1219,14 @@ public class StageTutorialController
         SetProgressText(string.Empty);
 
         yield break;
+    }
+
+    private IEnumerator Co_ShowPanelAfterSkip()
+    {
+        yield return PreparePanelForReopen();
+        yield return ShowPanel(false);
+        SetProgressText(string.Empty);
+        LogVerbose("[StageTutorial] Tutorial panel ON (skip)");
     }
 
     [Serializable]
@@ -1186,5 +1293,6 @@ public class StageTutorialDependencies
     public bool VerboseLogging;
     public bool ManageOptionsContainerContents = true;
     public Action ClearSlotContents;
+    public Button TutorialSkipButton;
 }
 
