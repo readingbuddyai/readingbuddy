@@ -264,7 +264,32 @@ LoRA r32 fine-tuning이 아동 음성 인식에 매우 효과적임을 확인했
 
 ## 팀 구성
 
-> 팀원 정보는 추후 업데이트 예정입니다.
+###  Backend
+
+|  | 이름 | 역할 | 주요 담당 업무 | GitHub |
+|:-:|:---:|:---:|:---|:---:|
+| <img src="https://github.com/TaegyunB.png" width="60" height="60" /> | **백태균** | 백엔드 |  | [@TaegyunB](https://github.com/TaegyunB) |
+| <img src="https://github.com/cheesecrust.png" width="60" height="60" /> | **정연수** | 백엔드 |  | [@cheesecrust](https://github.com/cheesecrust) |
+| <img src="https://github.com/MegaZizon.png" width="60" height="60" /> | **지준오** | 백엔드 |  | [@MegaZizon](https://github.com/MegaZizon) |
+
+
+###  Frontend
+
+|  | 이름 | 역할 | 주요 담당 업무 | GitHub |
+|:-:|:---:|:---:|:---|:---:|
+| <img src="https://github.com/amy010510.png" width="60" height="60" /> | **이채연** | 프론트엔드 |  | [@amy010510](https://github.com/amy010510) |
+| <img src="https://github.com/SonDongHyeon.png" width="60" height="60" /> | **최유진** | 프론트엔드 |  | [@jinnyujinchoi](https://github.com/jinnyujinchoi) |
+
+
+### AI
+
+|  | 이름 | 역할 | 주요 담당 업무 | GitHub |
+|:-:|:---:|:---:|:---|:---:|
+| <img src="https://github.com/kimgwang-hyeon.png" width="60" height="60" /> | **김광현** | 백엔드 |  | [@kimgwang-hyeon](https://github.com/kimgwang-hyeon) |
+
+
+
+---
 
 ---
 
