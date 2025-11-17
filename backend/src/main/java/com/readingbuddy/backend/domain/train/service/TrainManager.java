@@ -15,6 +15,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,7 @@ public class TrainManager {
                 .isProblemCorrect(new HashMap<>())
                 .kcCandidateList(new HashMap<>())
                 .trainedStageHistoriesId(id)
+                .expiredAt(LocalDateTime.now().plusHours(1))
                 .build();
 
         this.stageSessions.put(stageSessionId, stageSessionInfo);
@@ -136,5 +138,10 @@ public class TrainManager {
                     .isReplyCorrect(false)
                     .build();
         }
+    }
+
+    public void clearExpiredSessions() {
+        stageSessions.entrySet().removeIf(entry ->
+                    entry.getValue().getExpiredAt().isBefore(LocalDateTime.now()));
     }
 }
