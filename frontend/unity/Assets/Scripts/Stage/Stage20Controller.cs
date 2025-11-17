@@ -59,6 +59,8 @@ public class Stage20Controller : MonoBehaviour
     public PanelAnimator introTutorialPanelAnimator;
     public GameObject introTutorialPanel;
     public GameObject guide3DCharacter;
+    public Button tutorialSkipButton;
+    public Vector2 tutorialSkipButtonOffset = new Vector2(-40f, 0f);
     [Header("Intro Tutorial Controls")]
     public bool requireTriggerAfterTutorial = false;
     [Range(0.05f, 1f)] public float tutorialTriggerThreshold = 0.6f;
@@ -138,6 +140,8 @@ public class Stage20Controller : MonoBehaviour
     private StageAudioDependencies _audioDependencies;
     private readonly StageQuestionController<Problem> _questionController = new StageQuestionController<Problem>();
     private StageTutorialController _tutorialController;
+    private bool _tutorialSkipped;
+    private Button _generatedTutorialSkipButton;
     private StageTutorialDependencies _tutorialDependencies;
     private Coroutine _stoneCountdownCoroutine;
 
@@ -147,6 +151,7 @@ public class Stage20Controller : MonoBehaviour
 
     private readonly List<PronunciationFeedback> _accumulatedFeedback = new List<PronunciationFeedback>();
     private readonly HashSet<string> _feedbackKeys = new HashSet<string>();
+    private bool _greatJobPlayed;
     private string _tutorialOptionWordCache = string.Empty;
     private bool _tutorialOptionUseWordLabel;
     private bool _isInitialized = false;
@@ -365,15 +370,23 @@ public class Stage20Controller : MonoBehaviour
         }
 
         if (sfxStart) yield return PlayClip(sfxStart);
+        _greatJobPlayed = false;
         if (_tutorialController != null)
         {
             yield return _tutorialController.RunIntroSequence();
             yield return _tutorialController.RunIntroTutorial();
+            if (_tutorialSkipped)
+            {
+                _tutorialSkipped = false;
+                yield return RunIntroSequence();
+            }
         }
         else
         {
             yield return RunIntroSequence();
         }
+
+        ClearTutorialWordDisplay();
 
         List<Problem> problems = null;
         yield return FetchProblems(sessionController, result => problems = result);
@@ -869,8 +882,14 @@ public class Stage20Controller : MonoBehaviour
     {
         if (_accumulatedFeedback.Count == 0)
         {
-            if (clipGreatJob1) yield return PlayClip(clipGreatJob1);
-            if (clipGreatJob2) yield return PlayClip(clipGreatJob2);
+            if (!_greatJobPlayed)
+            {
+                if (clipGreatJob1) yield return PlayClip(clipGreatJob1);
+                if (clipGreatJob2) yield return PlayClip(clipGreatJob2);
+                _greatJobPlayed = true;
+            }
+            _accumulatedFeedback.Clear();
+            _feedbackKeys.Clear();
             yield break;
         }
 
@@ -1086,6 +1105,7 @@ public class Stage20Controller : MonoBehaviour
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = verboseLogging;
         _tutorialDependencies.ManageOptionsContainerContents = tutorialOptionsContainer == null;
+        _tutorialDependencies.TutorialSkipButton = ResolveOrCreateTutorialSkipButton();
 
         if (tutorialProfile != null)
         {
@@ -1118,7 +1138,68 @@ public class Stage20Controller : MonoBehaviour
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
         _tutorialController.guide3DCharacter = guide3DCharacter;
+        _tutorialController.TutorialSkipped -= OnTutorialSkipped;
+        _tutorialController.TutorialSkipped += OnTutorialSkipped;
         _tutorialController.Initialize(_tutorialDependencies);
+    }
+
+    private void OnTutorialSkipped()
+    {
+        _tutorialSkipped = true;
+        ClearTutorialWordDisplay();
+    }
+
+    private Button ResolveOrCreateTutorialSkipButton()
+    {
+        if (tutorialSkipButton != null)
+            return tutorialSkipButton;
+        if (_generatedTutorialSkipButton != null)
+            return _generatedTutorialSkipButton;
+        if (introTutorialPanel == null)
+            return null;
+
+        var parentRect = introTutorialPanel.GetComponent<RectTransform>();
+        if (parentRect == null)
+            return null;
+
+        var go = new GameObject("TutorialSkipButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        go.layer = introTutorialPanel.layer;
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parentRect, false);
+        rt.SetAsLastSibling();
+        rt.anchorMin = new Vector2(1f, 0.5f);
+        rt.anchorMax = new Vector2(1f, 0.5f);
+        rt.pivot = new Vector2(1f, 0.5f);
+        rt.sizeDelta = new Vector2(320f, 100f);
+        rt.anchoredPosition = tutorialSkipButtonOffset;
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0.12f, 0.12f, 0.13f, 0.9f);
+
+        var button = go.GetComponent<Button>();
+        button.transition = Selectable.Transition.ColorTint;
+        button.targetGraphic = img;
+
+        var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        label.layer = go.layer;
+        label.transform.SetParent(go.transform, false);
+        var labelRt = label.GetComponent<RectTransform>();
+        labelRt.anchorMin = Vector2.zero;
+        labelRt.anchorMax = Vector2.one;
+        labelRt.offsetMin = new Vector2(10f, 10f);
+        labelRt.offsetMax = new Vector2(-10f, -10f);
+        var tmp = label.GetComponent<TextMeshProUGUI>();
+        tmp.text = "튜토리얼 건너뛰기";
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontSize = 32;
+        tmp.color = Color.white;
+        if (tmpFont)
+            tmp.font = tmpFont;
+
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        go.SetActive(false);
+        _generatedTutorialSkipButton = button;
+        return button;
     }
 
     private Text EnsureProgressText()
@@ -1237,6 +1318,18 @@ public class Stage20Controller : MonoBehaviour
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(target.rectTransform);
         }
+
+        _accumulatedFeedback.Clear();
+        _feedbackKeys.Clear();
+    }
+
+    private void ClearTutorialWordDisplay()
+    {
+        SetTutorialOptionWord(string.Empty, false, false);
+        if (tutorialOptionWordText != null)
+            tutorialOptionWordText.gameObject.SetActive(false);
+        if (wordLabel != null)
+            wordLabel.gameObject.SetActive(false);
     }
 
     private IEnumerator MoveStoneForTutorial(string parameter)

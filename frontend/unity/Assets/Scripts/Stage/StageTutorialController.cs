@@ -147,6 +147,8 @@ public class StageTutorialController
         ClearIntroOptionButtons();
         SetSkipButtonVisibility(false);
         TutorialSkipped?.Invoke();
+        if (_deps?.StartCoroutine != null)
+            _deps.StartCoroutine(Co_ShowPanelAfterSkip());
     }
 
     public IEnumerator RunIntroSequence()
@@ -1217,6 +1219,14 @@ public class StageTutorialController
         SetProgressText(string.Empty);
 
         yield break;
+    }
+
+    private IEnumerator Co_ShowPanelAfterSkip()
+    {
+        yield return PreparePanelForReopen();
+        yield return ShowPanel(false);
+        SetProgressText(string.Empty);
+        LogVerbose("[StageTutorial] Tutorial panel ON (skip)");
     }
 
     [Serializable]
