@@ -58,10 +58,17 @@ using OptionDto = StageQuestionModels.OptionDto;
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
     public Image mainImage;              // 중앙 큰 이미지
-    public RectTransform optionsContainer; // 하단 옵션 버튼 부모
-    public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
+    public RectTransform optionsContainer; // option container for choice buttons
+    public Button optionButtonPrefab;    // prototype option button
     public Button oOptionPrefab;
     public Button xOptionPrefab;
+    public Sprite oOptionSprite;
+    public Sprite xOptionSprite;
+    [Header("Option Layout")]
+    [Tooltip("Spacing between auto-generated option buttons (requires a HorizontalLayoutGroup).")]
+    public float optionButtonSpacing = 500f;
+    [Tooltip("Hide the text label inside each option button and rely on sprites only.")]
+    public bool hideOptionLabelText = true;
     [Tooltip("튜토리얼 등에서 노출할 단어 텍스트(TMP)")]
     public TMP_Text optionWordText;
 
@@ -178,12 +185,15 @@ using OptionDto = StageQuestionModels.OptionDto;
         private readonly StageQuestionController<QuestionDto> _questionController = new StageQuestionController<QuestionDto>();
         private StageTutorialController _tutorialController;
         private StageTutorialDependencies _tutorialDependencies;
+        private GameObject _tutorialHandCursorFallback;
         private StageAudioController _audioController;
         private StageAudioDependencies _audioDependencies;
         private StageSupplementController _supplementController;
         private StageSupplementDependencies _supplementDependencies;
         private int _currentProblemNumber;
         private Button _initialOptionPrefab;
+        private HorizontalLayoutGroup _optionsLayoutGroup;
+        private Coroutine _optionLayoutSpacingRoutine;
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
         public bool applyAutoLayout = true;
@@ -198,7 +208,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         [Tooltip("메인 이미지 고정 크기(px)")]
         public Vector2 imageFixedSize = new Vector2(1500f, 1500f);
         [Tooltip("옵션 버튼 권장 크기(px)")]
-        public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
+        public Vector2 optionButtonPreferredSize = new Vector2(700f, 700f);
 
         [Header("End Modal Buttons")]
         [Tooltip("끝 모달 '다시 학습하기' 버튼 프리팹")]
@@ -206,7 +216,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         [Tooltip("끝 모달 '로비로 나가기' 버튼 프리팹")]
         public Button lobbyButtonPrefab;
         [Tooltip("끝 모달 버튼 크기(px). 0이면 옵션 버튼 크기 사용")]
-        public Vector2 endModalButtonSize = new Vector2(600f, 300f);
+        public Vector2 endModalButtonSize = new Vector2(600f, 600f);
 
         [Header("Options Layout")]
         [Tooltip("옵션 버튼 간 간격(px)")]
@@ -308,6 +318,7 @@ using OptionDto = StageQuestionModels.OptionDto;
             guideImage.sizeDelta = guideStartSize;
         if (mainImage)
         {
+            mainImage.gameObject.SetActive(true);
             mainImage.enabled = false;
             mainImage.sprite = null;
         }
@@ -452,6 +463,44 @@ using OptionDto = StageQuestionModels.OptionDto;
         }
 
         _tutorialController.introOptionCursor = introOptionCursor;
+        if (introOptionCursor != null)
+        {
+            // Allow dynamically spawned intro option buttons to become cursor targets instead of referencing stale prefab transforms.
+            introOptionCursor.correctOptionTransform = null;
+            introOptionCursor.wrongOptionTransform = null;
+        }
+        if (_tutorialController.introOptionCursor == null)
+            _tutorialController.introOptionCursor = new StageTutorialController.IntroOptionCursor();
+
+        if (_tutorialController.introOptionCursor.handCursor == null)
+        {
+            var existingCursor = GameObject.Find("HandCursor");
+            if (existingCursor != null)
+            {
+                _tutorialController.introOptionCursor.handCursor = existingCursor;
+            }
+            else if (_tutorialHandCursorFallback == null)
+            {
+                var cursorPrefab = Resources.Load<GameObject>("Prefabs/HandCursor");
+                GameObject fallback;
+                if (cursorPrefab != null)
+                {
+                    fallback = Instantiate(cursorPrefab, optionsContainer ? optionsContainer.parent : transform);
+                }
+                else
+                {
+                    fallback = new GameObject("HandCursor");
+                    fallback.transform.SetParent(optionsContainer ? optionsContainer.parent : transform, false);
+                    fallback.AddComponent<RectTransform>();
+                    var img = fallback.AddComponent<Image>();
+                    img.raycastTarget = false;
+                }
+                fallback.SetActive(false);
+                _tutorialHandCursorFallback = fallback;
+                _tutorialController.introOptionCursor.handCursor = fallback;
+            }
+        }
+
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
         _tutorialController.guide3DCharacter = guide3DCharacter;
@@ -475,7 +524,8 @@ using OptionDto = StageQuestionModels.OptionDto;
                 int separator = actionId.IndexOf(':');
                 if (separator >= 0 && separator < actionId.Length - 1)
                     value = actionId.Substring(separator + 1);
-                ApplyOptionWordText(value, true);
+                bool showValue = !string.IsNullOrWhiteSpace(value);
+                ApplyOptionWordText(value, showValue);
             }
             else if (string.Equals(actionId, "ShowOptionWord", StringComparison.OrdinalIgnoreCase))
             {
@@ -552,6 +602,43 @@ using OptionDto = StageQuestionModels.OptionDto;
         if (_initialOptionPrefab != null)
             optionButtonPrefab = _initialOptionPrefab;
     }
+
+        private void ApplyOptionLayoutSpacing()
+        {
+            if (optionsContainer == null)
+                return;
+            var grid = optionsContainer.GetComponent<GridLayoutGroup>();
+            if (grid != null)
+            {
+                UnityEngine.Object.Destroy(grid);
+                if (_optionLayoutSpacingRoutine == null)
+                    _optionLayoutSpacingRoutine = StartCoroutine(ApplyOptionLayoutSpacingNextFrame());
+                return;
+            }
+            _optionLayoutSpacingRoutine = null;
+
+            if (_optionsLayoutGroup == null)
+                _optionsLayoutGroup = optionsContainer.GetComponent<HorizontalLayoutGroup>();
+            if (_optionsLayoutGroup == null)
+                _optionsLayoutGroup = optionsContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
+            if (_optionsLayoutGroup == null)
+            {
+                Debug.LogWarning("[Stage12] HorizontalLayoutGroup을 찾을 수 없어 옵션간 간격을 적용하지 못했습니다.");
+                return;
+            }
+
+            _optionsLayoutGroup.spacing = optionButtonSpacing;
+            _optionsLayoutGroup.childForceExpandWidth = false;
+            _optionsLayoutGroup.childForceExpandHeight = false;
+            _optionsLayoutGroup.childAlignment = TextAnchor.MiddleCenter;
+        }
+
+        private IEnumerator ApplyOptionLayoutSpacingNextFrame()
+        {
+            yield return null;
+            _optionLayoutSpacingRoutine = null;
+            ApplyOptionLayoutSpacing();
+        }
 
     private void ConfigureSupplementController()
     {
@@ -1023,6 +1110,7 @@ using OptionDto = StageQuestionModels.OptionDto;
 
             var tex = DownloadHandlerTexture.GetContent(req);
             var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            mainImage.gameObject.SetActive(true);
             mainImage.sprite = sprite;
             mainImage.preserveAspect = true;
             mainImage.enabled = true;
@@ -1239,6 +1327,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         var sessionController = GetSessionController();
         optionsContainer.gameObject.SetActive(true);
         optionsContainer.SetAsLastSibling();
+            ApplyOptionLayoutSpacing();
 
         foreach (var opt in q.options)
         {
@@ -1255,14 +1344,24 @@ using OptionDto = StageQuestionModels.OptionDto;
                 var tmp = btn.GetComponentInChildren<TMP_Text>();
                 if (text)
                 {
-                    text.text = label;
-                    if (uiFont) text.font = uiFont;
+                    if (hideOptionLabelText)
+                        text.enabled = false;
+                    else
+                    {
+                        text.text = label;
+                        if (uiFont) text.font = uiFont;
+                    }
                 }
-                else if (tmp)
+                if (tmp)
                 {
-                    tmp.text = label;
-                    if (tmpFont) tmp.font = tmpFont;
-                    try { tmp.fontStyle &= ~FontStyles.Underline; } catch { }
+                    if (hideOptionLabelText)
+                        tmp.enabled = false;
+                    else
+                    {
+                        tmp.text = label;
+                        if (tmpFont) tmp.font = tmpFont;
+                        try { tmp.fontStyle &= ~FontStyles.Underline; } catch { }
+                    }
                 }
 
                 btn.onClick.RemoveAllListeners();
@@ -1272,6 +1371,17 @@ using OptionDto = StageQuestionModels.OptionDto;
                     isCorrectChoice = opt.answer == labelValue;
                     selectedLabel = label;
                 });
+                var image = btn.GetComponent<Image>();
+                if (image != null)
+                {
+                    if (label.Equals("O", StringComparison.OrdinalIgnoreCase) && oOptionSprite != null)
+                        image.sprite = oOptionSprite;
+                    else if (label.Equals("X", StringComparison.OrdinalIgnoreCase) && xOptionSprite != null)
+                        image.sprite = xOptionSprite;
+                    image.raycastTarget = true;
+                    btn.targetGraphic = image;
+                    image.SetNativeSize();
+                }
             }
 
             foreach (Transform child in optionsContainer)
@@ -1279,6 +1389,8 @@ using OptionDto = StageQuestionModels.OptionDto;
 
             ConfigureLetterButton("O", true);
             ConfigureLetterButton("X", false);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
+            yield return null;
 
             Canvas.ForceUpdateCanvases();
             LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);

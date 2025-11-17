@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   introTutorialImage: {fileID: 0}
   introOptions:
-  - label: o
+  - label: O
     isCorrect: 1
-  - label: x
+  - label: X
     isCorrect: 0
   guideHideLeadSeconds: 0.5
   showGuideWhenPanelOff: 1

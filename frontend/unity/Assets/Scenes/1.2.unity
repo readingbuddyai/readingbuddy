@@ -258,7 +258,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   axis: 0
-  totalAngle: 80
+  totalAngle: 90
   radius: 0
   invertDepth: 0
   useReferenceRect: 1
@@ -798,7 +798,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54023810785e1384088bf19eeb3724d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalAngle: 80
+  totalAngle: 90
   radius: 0
   axis: 0
   invertDepth: 0
@@ -841,7 +841,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 528}
-  m_SizeDelta: {x: 2000, y: 1800}
+  m_SizeDelta: {x: 1900, y: 1800}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!328 &1809317568
 VideoPlayer:
@@ -1056,7 +1056,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54023810785e1384088bf19eeb3724d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalAngle: 80
+  totalAngle: 90
   radius: 0
   axis: 0
   invertDepth: 0
@@ -1075,7 +1075,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   axis: 0
-  totalAngle: 80
+  totalAngle: 90
   radius: 0
   invertDepth: 0
   useReferenceRect: 1
@@ -1093,7 +1093,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54023810785e1384088bf19eeb3724d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalAngle: 80
+  totalAngle: 90
   radius: 0
   axis: 0
   invertDepth: 0
@@ -1356,9 +1356,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1318565868}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: oOptionSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 5011fa279f6ed464b8e898236bded616, type: 3}
+    - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: xOptionPrefab
       value: 
       objectReference: {fileID: 1104853362}
+    - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: xOptionSprite
+      value: 
+      objectReference: {fileID: 21300000, guid: 66b60ccaf3bb74243879ff3a4380c7da, type: 3}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: sfxCorrectClip
       value: 
@@ -1416,6 +1424,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8300000, guid: 37b1849475249324097970721cb00f1c, type: 3}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: optionButtonSpacing
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: endModalButtonSize.y
       value: 600
       objectReference: {fileID: 0}
@@ -1448,16 +1460,20 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 8300000, guid: 795e177611e65654b990b15868cd5fad, type: 3}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
+      propertyPath: requireTriggerAfterTutorial
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: introOptionCursor.handCursor
       value: 
       objectReference: {fileID: 1752337856}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: introOptions.Array.data[0].label
-      value: o
+      value: O
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: introOptions.Array.data[1].label
-      value: x
+      value: X
       objectReference: {fileID: 0}
     - target: {fileID: 8988492928812290268, guid: dfebb5ca79cf2c9408cda0089d32c5e7, type: 3}
       propertyPath: introOptions.Array.data[0].isCorrect
@@ -1624,7 +1640,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 0.11764706, g: 0.11764706, b: 0.11764706, a: 0.74509805}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -1654,7 +1670,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54023810785e1384088bf19eeb3724d9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  totalAngle: 80
+  totalAngle: 90
   radius: 0
   axis: 0
   invertDepth: 0
@@ -1673,7 +1689,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   axis: 0
-  totalAngle: 80
+  totalAngle: 90
   radius: 0
   invertDepth: 0
   includeInactive: 1
@@ -1697,6 +1713,30 @@ PrefabInstance:
     - target: {fileID: 1950995402461066119, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
       propertyPath: m_Name
       value: OptionContainer
+      objectReference: {fileID: 0}
+    - target: {fileID: 2040446893898259052, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2040446893898259052, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2040446893898259052, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2040446893898259052, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2040446893898259052, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2040446893898259052, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4677367843132243452, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
       propertyPath: m_Pivot.x
@@ -1776,6 +1816,30 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4677367843132243452, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5832921060546600218, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5832921060546600218, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5832921060546600218, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5832921060546600218, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5832921060546600218, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5832921060546600218, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
+      propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7595939951370362066, guid: 74d08197fe48cf44f8c4a3c719a447a4, type: 3}
