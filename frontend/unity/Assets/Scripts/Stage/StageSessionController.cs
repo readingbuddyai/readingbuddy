@@ -214,6 +214,7 @@ public class StageSessionController
 
         result.Success = true;
         Log?.Invoke($"[StageSession] 문제 수신 성공 (len={result.RawBody?.Length ?? 0})");
+        Log?.Invoke($"[StageSession] /api/train/set 응답: stage={stage}, count={count}, stageSessionId={stageSessionId ?? string.Empty}, body={result.RawBody}");
         callback?.Invoke(result);
     }
 
