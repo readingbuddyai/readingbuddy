@@ -77,7 +77,7 @@ AI 음성 인식 기술을 활용하여 자음과 모음 발음을 정확하게 
 |----------|-------------|
 | **Frontend (VR)** | ![Unity](https://img.shields.io/badge/-Unity-000000?logo=unity) ![C#](https://img.shields.io/badge/-C%23-239120?logo=c-sharp&logoColor=white) ![Meta Quest](https://img.shields.io/badge/-Meta_Quest-0467DF?logo=oculus) |
 | **Frontend (Mobile)** | ![Flutter](https://img.shields.io/badge/-Flutter-02569B?logo=flutter) ![Dart](https://img.shields.io/badge/-Dart-0175C2?logo=dart&logoColor=white) ![Riverpod](https://img.shields.io/badge/-Riverpod-00D9FF) |
-| **Backend** | ![Spring Boot](https://img.shields.io/badge/-Spring_Boot-6DB33F?logo=spring-boot&logoColor=white) ![Java](https://img.shields.io/badge/-Java-ED8B00?logo=openjdk&logoColor=white) ![Spring Security](https://img.shields.io/badge/-Spring_Security-6DB33F?logo=Spring-Security&logoColor=white) ![MySQL](https://img.shields.io/badge/-MySQL-005C84?logo=mysql&logoColor=white) ![Redis](https://img.shields.io/badge/-Redis-DC382D?logo=redis&logoColor=white) |
+| **Backend** | ![Spring Boot](https://img.shields.io/badge/-Spring_Boot-6DB33F?logo=spring-boot&logoColor=white) ![Java](https://img.shields.io/badge/-Java-ED8B00?logo=openjdk&logoColor=white) ![Spring Security](https://img.shields.io/badge/-Spring_Security-6DB33F?logo=Spring-Security&logoColor=white) ![PostgreSQL](https://img.shields.io/badge/-PostgreSQL-316192?logo=postgresql&logoColor=white) |
 | **AI** | ![PyTorch](https://img.shields.io/badge/-PyTorch-EE4C2C?logo=pytorch&logoColor=white) ![Wav2Vec2](https://img.shields.io/badge/-Wav2Vec2-FF6F00) ![LoRA](https://img.shields.io/badge/-LoRA-9C27B0) ![FastAPI](https://img.shields.io/badge/-FastAPI-009688?logo=FastAPI&logoColor=white) |
 | **DevOps** | ![Docker](https://img.shields.io/badge/-Docker-2496ED?logo=docker&logoColor=white) ![Jenkins](https://img.shields.io/badge/-Jenkins-D24939?logo=Jenkins&logoColor=white) ![Kubernetes](https://img.shields.io/badge/-Kubernetes-326CE5?logo=kubernetes&logoColor=white) ![Traefik](https://img.shields.io/badge/-Traefik_Proxy-24A1C1?logo=traefikproxy&logoColor=white) |
 | **Monitoring** | ![Prometheus](https://img.shields.io/badge/-Prometheus-E6522C?logo=prometheus&logoColor=white) ![Grafana](https://img.shields.io/badge/-Grafana-F46800?logo=grafana&logoColor=white) |
@@ -103,11 +103,6 @@ AI 음성 인식 기술을 활용하여 자음과 모음 발음을 정확하게 
               │                │                │
               └────────────────┼────────────────┘
                                │
-                    ┌──────────▼──────────┐
-                    │  API Gateway        │
-                    │  (Traefik)          │
-                    └──────────┬──────────┘
-                               │
               ┌────────────────┼────────────────┐
               │                │                │
     ┌─────────▼─────────┐      │      ┌────────▼─────────┐
@@ -117,19 +112,16 @@ AI 음성 인식 기술을 활용하여 자음과 모음 발음을 정확하게 
     │  - Data Mgmt      │      │      │  - LoRA          │
     │  - Statistics     │      │      │  - Inference     │
     │  - KC Tracking    │      │      │  - Phoneme Check │
-    └─────────┬─────────┘      │      └────────┬─────────┘
-              │                │                │
-              └────────────────┼────────────────┘
-                               │
-              ┌────────────────┼────────────────┐
-              │                │                │
-    ┌─────────▼─────────┐      │      ┌────────▼─────────┐
-    │  MySQL            │      │      │  Redis           │
-    │  - User Data      │      │      │  - Session       │
-    │  - Learning Log   │      │      │  - VR Code       │
-    │  - KC Data        │      │      │  - Cache         │
-    └───────────────────┘      │      └──────────────────┘
-                               │
+    └─────────┬─────────┘      │      └──────────────────┘
+              │                │
+              │                │
+    ┌─────────▼─────────┐      │
+    │  PostgreSQL       │      │
+    │  - User Data      │      │
+    │  - Learning Log   │      │
+    │  - KC Data        │      │
+    │  - VR Login Code  │      │
+    └───────────────────┘      │
 ```
 
 ---
@@ -251,8 +243,7 @@ docker-compose up -d
 - **실질적 의미**: 베이스 모델 대비 2.5배 정확도 향상
 
 #### 2. 목표 달성 여부
-- **LoRA r32 Final 모델**: 목표 달성 (PER < 15%) ✅
-- **Base 모델**: 목표 미달성 (PER > 18%) ❌
+- **LoRA r32 Final 모델**: 목표 달성 (PER < 15%)
 
 #### 3. 학습 방법 및 최적화
 - **학습 방법**: 3단계 Curriculum Learning (30h → 90h → 148h)
