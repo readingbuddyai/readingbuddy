@@ -71,13 +71,13 @@ public class PhonemesKcMapSeederConfig {
         put("ㅑ", Arrays.asList(20L, 32L));  // DIPHTHONG_1, DIPHTHONG_2
         put("ㅕ", Arrays.asList(20L, 32L));
         put("ㅠ", Arrays.asList(20L, 32L));
-        put("ㅒ", Arrays.asList(20L, 32L));
+//        put("ㅒ", Arrays.asList(20L, 32L));
         put("ㅛ", Arrays.asList(20L, 32L));
         put("ㅖ", Arrays.asList(20L, 32L));
         put("ㅘ", Arrays.asList(20L, 32L));
-        put("ㅙ", Arrays.asList(20L, 32L));
+//        put("ㅙ", Arrays.asList(20L, 32L));
         put("ㅝ", Arrays.asList(20L, 32L));
-        put("ㅞ", Arrays.asList(20L, 32L));
+//        put("ㅞ", Arrays.asList(20L, 32L));
         put("ㅢ", Arrays.asList(20L, 32L));
     }};
 
