@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Getter
@@ -15,4 +16,5 @@ public class StageSessionInfo {
     private Long trainedStageHistoriesId;
     private Map<Long, String> kcCandidateList;  // KC ID -> candidateList 비트마스크 (BigInteger String)
     private Map<Integer, Long> problemKcMap;      // 문제 번호 -> KC ID
+    private LocalDateTime expiredAt;
 }
