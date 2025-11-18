@@ -793,7 +793,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 1659.0001, y: 1661.0001}
+  m_AnchoredPosition: {x: 1659.0001, y: 1378}
   m_SizeDelta: {x: 500, y: 500}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &430597668
@@ -3304,7 +3304,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4423923863823259097, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4423923863823259097, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_LocalRotation.w
@@ -3468,7 +3468,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6461446869985768180, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 1500
+      value: 1246
       objectReference: {fileID: 0}
     - target: {fileID: 6520598252298826021, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3575,6 +3575,10 @@ PrefabInstance:
       value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: recordSeconds
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 7719424390896368382, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: tutorialProfile
       value: 
       objectReference: {fileID: 11400000, guid: 063bbf172965dfb418ce6a764da67ee2, type: 2}
@@ -3632,11 +3636,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8161379662550019334, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 8000
+      value: 7000
+      objectReference: {fileID: 0}
+    - target: {fileID: 8161379662550019334, guid: 905794e6247728045af85a33f2e0da17, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 3500
       objectReference: {fileID: 0}
     - target: {fileID: 8161379662550019334, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 4.5
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 8161379662550019334, guid: 905794e6247728045af85a33f2e0da17, type: 3}
       propertyPath: m_AnchoredPosition.y
