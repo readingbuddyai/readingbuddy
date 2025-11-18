@@ -5787,7 +5787,7 @@ MonoBehaviour:
   enableSfx: 1
   audioSource: {fileID: 388209129}
   triggerClip: {fileID: 8300000, guid: d501d55d83e50ce498255d14a777315a, type: 3}
-  thumbstickClip: {fileID: 8300000, guid: 079a13e7c625e2846904e5f95a49fa15, type: 3}
+  thumbstickClip: {fileID: 8300000, guid: c400e497bbe3e3a42afd0eabb32a7c9a, type: 3}
   enableTriggerHaptics: 1
   triggerHapticsAmplitude: 0.6
   triggerHapticsDuration: 0.15
@@ -21761,7 +21761,7 @@ MonoBehaviour:
   enableSfx: 1
   audioSource: {fileID: 1315545391}
   triggerClip: {fileID: 8300000, guid: d501d55d83e50ce498255d14a777315a, type: 3}
-  thumbstickClip: {fileID: 8300000, guid: 079a13e7c625e2846904e5f95a49fa15, type: 3}
+  thumbstickClip: {fileID: 8300000, guid: c400e497bbe3e3a42afd0eabb32a7c9a, type: 3}
   enableTriggerHaptics: 1
   triggerHapticsAmplitude: 0.545
   triggerHapticsDuration: 0.15
