@@ -183,7 +183,7 @@ public class TrainedStageService {
 
         return StageCompleteResponse.builder()
                 .stageSessionId(stageSessionId)
-                .voiceResult(voiceResult)
+                .voiceResult(new HashSet<>())
                 .build();
     }
 
