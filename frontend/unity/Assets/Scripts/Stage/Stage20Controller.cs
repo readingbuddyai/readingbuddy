@@ -454,6 +454,7 @@ public class Stage20Controller : MonoBehaviour
         rt.sizeDelta = Vector2.zero;
         var bg = overlay.GetComponent<Image>();
         bg.color = new Color(0f, 0f, 0f, 0.6f);
+        rt.localPosition = new Vector3(0, 0, 3.0f);
         bg.raycastTarget = true;
 
         var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
@@ -613,10 +614,12 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator RunIntroSequence()
     {
-        if (clipHello) yield return PlayClip(clipHello);
-        if (clipLesson) yield return PlayClip(clipLesson);
-        if (clipExplain) yield return PlayClip(clipExplain);
-        if (clipStoneIntro) yield return PlayClip(clipStoneIntro);
+        // if (clipHello) yield return PlayClip(clipHello);
+        // if (clipLesson) yield return PlayClip(clipLesson);
+        // if (clipExplain) yield return PlayClip(clipExplain);
+        // if (clipStoneIntro) yield return PlayClip(clipStoneIntro);
+        Debug.LogWarning("[Stage20] 튜토리얼 건너뛰기면 도입대사도 건너뜀");
+        yield break;
     }
 
     private IEnumerator RunOneProblem(int index, int total, Problem problem)
@@ -631,7 +634,7 @@ public class Stage20Controller : MonoBehaviour
             wordLabel.text = problem?.problemWord ?? string.Empty;
             wordLabel.gameObject.SetActive(true);
         }
-
+        yield return new WaitForSeconds(1f); 
         if (clipTeacherLead) yield return PlayClip(clipTeacherLead);
         if (clipListenCue) yield return PlayClip(clipListenCue);
         if (!string.IsNullOrEmpty(problem?.wordVoiceUrl))

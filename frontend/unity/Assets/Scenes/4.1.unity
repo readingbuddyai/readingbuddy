@@ -7516,7 +7516,7 @@ MonoBehaviour:
   clipRemedialPracticeIntro: {fileID: 8300000, guid: cd6e8d5abde36ab499a1c4258000482e, type: 3}
   clipRemedialFirstEncourage: {fileID: 8300000, guid: 365c28e7ecd3d7a4286f8da9eaae7e52, type: 3}
   clipRemedialSecondEncourage: {fileID: 8300000, guid: 6d343e2f82b44c947ad2ad9d301c6441, type: 3}
-  clipRemedialPerfect: {fileID: 8300000, guid: 40a38173ec36f674f9303d062b06bf30, type: 3}
+  clipRemedialPerfect: {fileID: 0}
   clipRemedialNextLesson: {fileID: 8300000, guid: 3223a4899e7e9654584ea331e1ec64c5, type: 3}
   remedialEncouragePauseSeconds: 3
   remedialImage: {fileID: 0}
@@ -7550,7 +7550,7 @@ MonoBehaviour:
   clipAlmostThere: {fileID: 8300000, guid: 3b95eb7449ed8674aad4e52ffcb346e2, type: 3}
   clipTryAgain: {fileID: 8300000, guid: 43ca22544455b0d43af82a71385c3c83, type: 3}
   clipFinalizeSpell: {fileID: 8300000, guid: 03e58870993dcc14b982e7d26e3adc8e, type: 3}
-  recordSeconds: 3
+  recordSeconds: 2
   recordSampleRate: 44100
   dimAlpha: 0.4
   blinkAlphaMin: 0.4
@@ -8751,8 +8751,8 @@ MonoBehaviour:
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_PressedColor: {r: 0.19607843, g: 0.3137255, b: 0.78431374, a: 0.9882353}
+    m_SelectedColor: {r: 0.19607843, g: 0.3137255, b: 0.78431374, a: 0.9843137}
     m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1

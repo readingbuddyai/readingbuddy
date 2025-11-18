@@ -307,7 +307,7 @@ public partial class Stage41Controller : MonoBehaviour
                 $"jungseongBoxActive={jungseongBoxActive}, jongseongBoxActive={jongseongBoxActive}");
         }
 
-        yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
+        // yield return PlayClip(clipIntroListenPhonemes);  // [4.1.2]
 
         // 본 훈련 시작 시 패널 표시
         if (_tutorialController != null)
@@ -495,10 +495,14 @@ public partial class Stage41Controller : MonoBehaviour
         overlay.layer = canvas.gameObject.layer;
         var rt = overlay.GetComponent<RectTransform>();
         rt.SetParent(canvas.transform, false);
-        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.pivot = new Vector2(0.5f, 0.5f);
-        rt.anchoredPosition = Vector2.zero; rt.sizeDelta = Vector2.zero;
+        rt.anchorMin = Vector2.zero; 
+        rt.anchorMax = Vector2.one; 
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero; 
+        rt.sizeDelta = Vector2.zero;
         var bg = overlay.GetComponent<Image>();
         bg.color = new Color(0f, 0f, 0f, 0.6f);
+        rt.localPosition = new Vector3(0, 0, 3.0f);
         bg.raycastTarget = true;
 
         // 패널
