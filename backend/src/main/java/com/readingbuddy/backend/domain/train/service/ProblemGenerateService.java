@@ -298,8 +298,9 @@ public class ProblemGenerateService {
      * @return Stage4Problem 리스트
      */
     private List<ProblemResult> generateStage4_1(Long userId, Integer cnt) {
+        cnt = 1;
         // 4.1에서 사용할 특정 단어 목록 (갈, 간, 남, 널, 달, 곰, 밤, 번, 살, 선, 잘, 전)
-        String[] allowedWords = {"갈", "간", "남", "널", "달", "곰", "밤", "번", "살", "선", "잘", "전"};
+        String[] allowedWords = {"달"};
         List<Integer> unicodePoints = new ArrayList<>();
 
         for (String word : allowedWords) {
@@ -357,8 +358,9 @@ public class ProblemGenerateService {
         List<ProblemResult> results = new ArrayList<>();
 
         List<Integer> wordsList = random.ints(0, 100)
+                .filter(i -> i == 12)
                 .distinct()  // 중복 제거
-                .limit(cnt)
+                .limit(1)
                 .boxed()
                 .toList();
 
