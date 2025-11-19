@@ -21,17 +21,15 @@ test-ai:
     - pip install --no-cache-dir -r requirements.txt
   script:
     - echo "Running tests..."
-    - pytest tests/ -v --tb=short --junitxml=../test-results.xml -s || echo "Tests failed but continuing..."
+    - pytest tests/ -v --tb=short --junitxml=test-results.xml -s || echo "Tests failed but continuing..."
     - echo "Tests completed!"
     - echo "Checking if test-results.xml exists..."
-    - ls -la ../test-results.xml || echo "test-results.xml not found!"
-    - pwd
-    - ls -la ..
+    - ls -la test-results.xml || echo "test-results.xml not found!"
   artifacts:
     paths:
-      - test-results.xml
+      - ai/test-results.xml
     reports:
-      junit: test-results.xml
+      junit: ai/test-results.xml
     when: always
     expire_in: 1 week
   cache:
