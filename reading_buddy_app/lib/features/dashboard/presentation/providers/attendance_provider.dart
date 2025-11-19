@@ -115,6 +115,11 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
 
   /// 특정 날짜의 출석 여부 확인
   bool isAttended(DateTime date) {
+    // [시연용] 17일, 20일도 출석한 것처럼 표시
+    if (date.day == 17 || date.day == 20) {
+      return true;
+    }
+
     return state.attendedDates.any((d) =>
         d.year == date.year && d.month == date.month && d.day == date.day);
   }
@@ -149,13 +154,27 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
     );
 
     try {
-      // 날짜 형식 변환 (yyMMdd)
-      final dateStr = DateFormatter.toYyMMdd(date);
+      // [시연용 날짜 매핑] 17일 클릭 시 20일 데이터 가져오기
+      DateTime apiDate = date;
+      if (date.day == 17) {
+        apiDate = DateTime(date.year, date.month, 20);
+      }
 
-      final practiceDataResult = await dashboardRepository.getPracticeList(dateStr);
+      // [시연용 더미 데이터] 20일 선택 시 하드코딩된 데이터 사용
+      PracticeListResponse? practiceData;
+      if (apiDate.day == 20) {
+        practiceData = _createDummyData(apiDate);
+      } else {
+        // 날짜 형식 변환 (yyMMdd)
+        // final dateStr = DateFormatter.toYyMMdd(date); // [시연용] 원본 날짜 사용
+        final dateStr = DateFormatter.toYyMMdd(apiDate); // [시연용] 매핑된 날짜로 API 호출
+
+        final practiceDataResult = await dashboardRepository.getPracticeList(dateStr);
+        practiceData = practiceDataResult.dataOrNull;
+      }
 
       state = state.copyWith(
-        practiceData: practiceDataResult.dataOrNull,
+        practiceData: practiceData,
         isLoadingDetail: false,
       );
     } catch (e) {
@@ -169,6 +188,61 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
   /// 새로고침
   Future<void> refresh() async {
     await _loadAttendanceData();
+  }
+
+  /// [시연용] 더미 데이터 생성
+  PracticeListResponse _createDummyData(DateTime date) {
+    final baseTime = DateTime(date.year, date.month, date.day, 14, 30);
+
+    return PracticeListResponse(
+      date: DateFormatter.toYyMMdd(date),
+      session: [
+        // 세션 1: 자음 기초 (2)
+        SessionInfo(
+          trainedStageHistoryId: 99901,
+          stage: '2',
+          startedAt: baseTime,
+          totalCount: 1,
+          correctCount: 1,
+          wrongCount: 0,
+          problems: [
+            ProblemInfo(
+              problemId: 10001,
+              problemNumber: 1,
+              problem: '사자',
+              answer: '사자',
+              isCorrect: true,
+              isReplyCorrect: true,
+              attemptNumber: 1,
+              audioUrl: null,
+              solvedAt: baseTime.add(const Duration(seconds: 30)),
+            ),
+          ],
+        ),
+        // 세션 2: 자음 기초 (4.1)
+        SessionInfo(
+          trainedStageHistoryId: 99902,
+          stage: '4.1',
+          startedAt: baseTime.add(const Duration(minutes: 2)),
+          totalCount: 1,
+          correctCount: 1,
+          wrongCount: 0,
+          problems: [
+            ProblemInfo(
+              problemId: 10002,
+              problemNumber: 1,
+              problem: '달',
+              answer: '달',
+              isCorrect: true,
+              isReplyCorrect: false, // 발음 부정확
+              attemptNumber: 2, // 2회 시도
+              audioUrl: null,
+              solvedAt: baseTime.add(const Duration(minutes: 3)),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }
 
