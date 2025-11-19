@@ -18,7 +18,7 @@ test-ai:
   before_script:
     - cd ai
     - apt-get update && apt-get install -y ffmpeg libsndfile1
-    - pip install --no-cache-dir -r requirements.txt
+    - pip install -r requirements.txt
   script:
     - echo "Running tests..."
     - pytest tests/ -v --tb=short --junitxml=test-results.xml -s || echo "Tests failed but continuing..."
@@ -33,8 +33,10 @@ test-ai:
     when: always
     expire_in: 1 week
   cache:
+    key: "${CI_COMMIT_REF_SLUG}-ai"
     paths:
-      - .pytest_cache/
+      - ai/.pytest_cache/
+      - .cache/pip/
 
 # 서버에서 직접 빌드 및 배포
 deploy-ai:
