@@ -603,9 +603,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       final duration = lastTime.difference(firstTime);
       final minutes = duration.inMinutes;
       if (minutes > 0) {
-        // [시연용] 60분 이상이면 42분으로 표시
-        final displayMinutes = minutes > 60 ? 42 : minutes;
-        studyTime = '약 ${displayMinutes}분';
+        studyTime = '약 ${minutes}분';
       } else {
         studyTime = '짧은 시간';
       }

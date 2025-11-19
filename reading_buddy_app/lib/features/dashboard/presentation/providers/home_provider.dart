@@ -277,11 +277,10 @@ class HomeNotifier extends StateNotifier<HomeState> {
       final todayPlaytime = todayData?.dailyData?.playtime ?? '00:00';
 
       // 주간 데이터
-      // [시연용 하드코딩] 이번 주 출석 4일, 이번 주 학습 125분
-      final weeklyAttendDays = 4; // weekData?.periodData?.totalAttendDays ?? 0;
-      final weeklyPlaytime = '2시간 5분'; // DateFormatter.sumPlaytimes(
-        // weekData?.periodData?.attendDates.map((e) => e.playtime).toList() ?? [],
-      // );
+      final weeklyAttendDays = weekData?.periodData?.totalAttendDays ?? 0;
+      final weeklyPlaytime = DateFormatter.sumPlaytimes(
+        weekData?.periodData?.attendDates.map((e) => e.playtime).toList() ?? [],
+      );
 
       // 연속 출석 계산 (최근 30일 데이터 사용)
       final consecutiveDays = DateFormatter.calculateConsecutiveDays(
