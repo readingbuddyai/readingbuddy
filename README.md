@@ -146,7 +146,7 @@ S13P31A206/
 ├── backend/               # Spring Boot API 서버
 │   ├── src/               # Java 소스 코드
 │   ├── build.gradle       # Gradle 빌드 설정
-│   └── ...
+│   └── README.md          # 백엔드 상세 문서
 │
 ├── ai/                    # AI 음성 인식 서버
 │   ├── app/               # FastAPI 애플리케이션
@@ -188,6 +188,7 @@ S13P31A206/
 |-----|------|----------|
 | **VR Frontend** | Unity 기반 VR 한글 학습 게임 | [frontend/README.md](frontend/README.md) |
 | **Mobile App** | Flutter 기반 학습 현황 대시보드 앱 | [reading_buddy_app/README.md](reading_buddy_app/README.md) |
+| **Backend** | Spring Boot 기반 RESTful API 서버 | [backend/README.md](backend/README.md) |
 | **AI Server** | Wav2Vec2 + LoRA 기반 한국어 발음 분석 API | [ai/README.md](ai/README.md) |
 | **Fine-tuning** | 어린이 음성 특화 AI 모델 학습 파이프라인 | [Fine-tuning/README.md](Fine-tuning/README.md) |
 | **Scripts** | 학습용 음성 데이터 생성 유틸리티 (gTTS + S3) | [dummy-scripts/README.md](dummy-scripts/README.md) |
