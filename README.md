@@ -131,9 +131,10 @@ AI 음성 인식 기술을 활용하여 자음과 모음 발음을 정확하게 
 ```
 S13P31A206/
 ├── frontend/              # VR Unity 프로젝트
-│   └── unity/             # Unity 프로젝트 루트
-│       ├── Assets/        # 게임 에셋, 스크립트
-│       └── ...
+│   ├── unity/             # Unity 프로젝트 루트
+│   │   ├── Assets/        # 게임 에셋, 스크립트
+│   │   └── ...
+│   └── README.md          # VR 프론트엔드 상세 문서
 │
 ├── reading_buddy_app/     # Flutter 모바일 앱
 │   ├── lib/               # Dart 소스 코드
@@ -185,6 +186,7 @@ S13P31A206/
 
 | 모듈 | 설명 | 문서 링크 |
 |-----|------|----------|
+| **VR Frontend** | Unity 기반 VR 한글 학습 게임 | [frontend/README.md](frontend/README.md) |
 | **Mobile App** | Flutter 기반 학습 현황 대시보드 앱 | [reading_buddy_app/README.md](reading_buddy_app/README.md) |
 | **AI Server** | Wav2Vec2 + LoRA 기반 한국어 발음 분석 API | [ai/README.md](ai/README.md) |
 | **Fine-tuning** | 어린이 음성 특화 AI 모델 학습 파이프라인 | [Fine-tuning/README.md](Fine-tuning/README.md) |
