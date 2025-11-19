@@ -167,19 +167,19 @@ public class TrainController {
             // AI 서버로 음성 전송하고 응답 받기 (동기)
             VoiceCheckResponse aiResponse = trainManager.sendVoiceToAI(stageSessionId, audioFile, stage, problemNumber, target);
 
-//            if (target.equals("ㄹ")) {
-//                aiResponse = VoiceCheckResponse.builder()
-//                        .reply(List.of("ㄴ"))
-//                        .isReplyCorrect(false)
-//                        .build();
-//            }
-//
-//            else {
-//                aiResponse = VoiceCheckResponse.builder()
-//                        .reply(List.of(target))
-//                        .isReplyCorrect(true)
-//                        .build();
-//            }
+           if (target.equals("ㄹ")) {
+               aiResponse = VoiceCheckResponse.builder()
+                       .reply(List.of("ㄴ"))
+                       .isReplyCorrect(false)
+                       .build();
+           }
+
+           else {
+               aiResponse = VoiceCheckResponse.builder()
+                       .reply(List.of(target))
+                       .isReplyCorrect(true)
+                       .build();
+           }
 
             return ResponseEntity.ok(ApiResponse.success("음성 인식이 완료되었습니다.", aiResponse));
 
