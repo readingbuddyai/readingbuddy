@@ -297,6 +297,13 @@ class DashboardRepositoryImpl implements DashboardRepository {
         _logger.d('Session count: ${response.data!.session.length}');
         for (var session in response.data!.session) {
           _logger.d('Session - Stage: ${session.stage}');
+          _logger.d('  API correctCount: ${session.correctCount}, wrongCount: ${session.wrongCount}, totalCount: ${session.totalCount}');
+
+          // 실제 problems 배열에서 카운트
+          int actualCorrect = session.problems.where((p) => p.isCorrect).length;
+          int actualWrong = session.problems.where((p) => !p.isCorrect).length;
+          _logger.d('  Actual from problems: correct: $actualCorrect, wrong: $actualWrong, total: ${session.problems.length}');
+
           for (var problem in session.problems) {
             _logger.d('  Problem ${problem.problemNumber}: "${problem.problem}" (isCorrect: ${problem.isCorrect})');
           }

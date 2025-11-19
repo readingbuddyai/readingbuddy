@@ -309,31 +309,41 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             child: Column(
               children: [
                 // 통계 요약
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatItem(
-                      context,
-                      Icons.check_circle,
-                      '정답',
-                      '${session.correctCount}개',
-                      AppTheme.successColor,
-                    ),
-                    _buildStatItem(
-                      context,
-                      Icons.cancel,
-                      '오답',
-                      '${session.wrongCount}개',
-                      AppTheme.errorColor,
-                    ),
-                    _buildStatItem(
-                      context,
-                      Icons.percent,
-                      '정답률',
-                      '${session.correctRate.toStringAsFixed(1)}%',
-                      AppTheme.getScoreColor(session.correctRate),
-                    ),
-                  ],
+                Builder(
+                  builder: (context) {
+                    // problems 배열에서 직접 카운트 (API correctCount/wrongCount 대신)
+                    final actualCorrect = session.problems.where((p) => p.isCorrect).length;
+                    final actualWrong = session.problems.where((p) => !p.isCorrect).length;
+                    final actualTotal = session.problems.length;
+                    final actualRate = actualTotal > 0 ? (actualCorrect / actualTotal * 100) : 0.0;
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatItem(
+                          context,
+                          Icons.check_circle,
+                          '정답',
+                          '$actualCorrect개',
+                          AppTheme.successColor,
+                        ),
+                        _buildStatItem(
+                          context,
+                          Icons.cancel,
+                          '오답',
+                          '$actualWrong개',
+                          AppTheme.errorColor,
+                        ),
+                        _buildStatItem(
+                          context,
+                          Icons.percent,
+                          '정답률',
+                          '${actualRate.toStringAsFixed(1)}%',
+                          AppTheme.getScoreColor(actualRate),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 const Divider(),
@@ -566,10 +576,14 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     for (var i = 0; i < validSessions.length; i++) {
       final session = validSessions[i];
 
-      // 각 세션의 통계를 단순 합산
-      totalProblems += session.totalCount as int;
-      totalCorrect += session.correctCount as int;
-      totalWrong += session.wrongCount as int;
+      // problems 배열에서 직접 카운트 (API의 correctCount/wrongCount 대신)
+      int sessionCorrect = session.problems.where((p) => p.isCorrect).length;
+      int sessionWrong = session.problems.where((p) => !p.isCorrect).length;
+      int sessionTotal = session.problems.length;
+
+      totalProblems += sessionTotal;
+      totalCorrect += sessionCorrect;
+      totalWrong += sessionWrong;
 
       // 시간 계산
       if (firstTime == null || session.startedAt.isBefore(firstTime)) {
@@ -609,13 +623,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
     }
 
-    // 시도 횟수 기준 정답률 계산
-    final totalAttempts = totalCorrect + totalWrong;
-    final overallCorrectRate = totalAttempts > 0
-        ? ((totalCorrect / totalAttempts) * 100).toStringAsFixed(1)
+    // 정답률 계산 (문제 개수 기준)
+    final overallCorrectRate = totalProblems > 0
+        ? ((totalCorrect / totalProblems) * 100).toStringAsFixed(1)
         : '0.0';
 
-    debugPrint('📊 최종 계산 결과: 총 문제=$totalProblems, 정답=$totalCorrect, 오답=$totalWrong, 총 시도=$totalAttempts, 정답률=$overallCorrectRate%');
+    debugPrint('📊 최종 계산 결과: 총 문제=$totalProblems, 정답=$totalCorrect, 오답=$totalWrong, 정답률=$overallCorrectRate%');
 
     return Card(
       elevation: 4,
