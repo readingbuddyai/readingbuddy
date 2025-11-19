@@ -9,7 +9,10 @@ public class SceneLoader : MonoBehaviour
 
     [SerializeField] private CanvasGroup fadeCanvasGroup;
     [SerializeField] private GameObject kaleidoscopeEffect;
-    [SerializeField] private float fadeDuration = 0.35f;
+    [SerializeField] private float fadeDuration = 0.25f;
+    [SerializeField] private float transitionHold = 0.5f;
+
+    private ParticleSystem[] kaleidoscopeParticles;
 
     private void Awake()
     {
@@ -27,7 +30,10 @@ public class SceneLoader : MonoBehaviour
             fadeCanvasGroup.alpha = 0f;
 
         if (kaleidoscopeEffect != null)
+        {
             kaleidoscopeEffect.SetActive(false);
+            kaleidoscopeParticles = kaleidoscopeEffect.GetComponentsInChildren<ParticleSystem>(true);
+        }
     }
 
     // 씬 전환 함수
@@ -85,14 +91,19 @@ public class SceneLoader : MonoBehaviour
         SceneManager.SetActiveScene(loadedScene);
         Debug.Log($"[SceneLoader] 새 씬 로드/활성화 완료 → {sceneName}");
 
+        // 로딩 직후 잠깐 기다려서 이펙트가 더 잘 보이도록 유지
+        yield return new WaitForSecondsRealtime(transitionHold);
+
+        // fade out 전에 이펙트를 끄면 fade in 구간에서만 보임
+        SetKaleidoscopeActive(false);
+
         yield return PlayTransitionOut();
         Debug.Log($"[SceneLoader] Transition out 완료 (새 씬) → {sceneName}");
     }
 
     private IEnumerator PlayTransitionIn()
     {
-        if (kaleidoscopeEffect != null)
-            kaleidoscopeEffect.SetActive(true);
+        SetKaleidoscopeActive(true);
 
         Debug.Log("[SceneLoader] PlayTransitionIn start");
         yield return CoFade(1f);
@@ -104,8 +115,7 @@ public class SceneLoader : MonoBehaviour
         yield return CoFade(0f);
 
         Debug.Log("[SceneLoader] PlayTransitionOut done");
-        if (kaleidoscopeEffect != null)
-            kaleidoscopeEffect.SetActive(false);
+        SetKaleidoscopeActive(false);
     }
 
     private IEnumerator CoFade(float target)
@@ -113,6 +123,7 @@ public class SceneLoader : MonoBehaviour
         if (fadeCanvasGroup == null)
             yield break;
 
+        Debug.Log($"[SceneLoader] CoFade start ({fadeCanvasGroup.alpha} -> {target})");
         float start = fadeCanvasGroup.alpha;
         float t = 0f;
         while (t < fadeDuration)
@@ -122,5 +133,32 @@ public class SceneLoader : MonoBehaviour
             yield return null;
         }
         fadeCanvasGroup.alpha = target;
+        Debug.Log($"[SceneLoader] CoFade end ({fadeCanvasGroup.alpha})");
+    }
+
+    private void SetKaleidoscopeActive(bool active)
+    {
+        if (kaleidoscopeEffect == null)
+            return;
+
+        kaleidoscopeEffect.SetActive(active);
+        if (kaleidoscopeParticles == null || kaleidoscopeParticles.Length == 0)
+            return;
+
+        if (active)
+        {
+            foreach (var ps in kaleidoscopeParticles)
+            {
+                ps.Clear();
+                ps.Play(true);
+            }
+        }
+        else
+        {
+            foreach (var ps in kaleidoscopeParticles)
+            {
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+        }
     }
 }
