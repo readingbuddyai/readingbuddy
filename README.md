@@ -271,24 +271,24 @@ LoRA r32 fine-tuning이 아동 음성 인식에 매우 효과적임을 확인했
 
 |  | 이름 | 역할 | 주요 담당 업무 | GitHub |
 |:-:|:---:|:---:|:---|:---:|
-| <img src="https://github.com/TaegyunB.png" width="60" height="60" /> | **백태균** | 백엔드 |  | [@TaegyunB](https://github.com/TaegyunB) |
-| <img src="https://github.com/cheesecrust.png" width="60" height="60" /> | **정연수** | 백엔드 |  | [@cheesecrust](https://github.com/cheesecrust) |
-| <img src="https://github.com/MegaZizon.png" width="60" height="60" /> | **지준오** | 백엔드 |  | [@MegaZizon](https://github.com/MegaZizon) |
+| <img src="https://github.com/TaegyunB.png" width="60" height="60" /> | **백태균** | 백엔드 | API 설계, Spring Security 인증/인가, 데이터베이스 설계, JWT 토큰 관리, DevOps | [@TaegyunB](https://github.com/TaegyunB) |
+| <img src="https://github.com/cheesecrust.png" width="60" height="60" /> | **정연수** | 백엔드 | 학습 세션 관리, 대시보드 API, 출석/통계 기능, 데이터 분석 | [@cheesecrust](https://github.com/cheesecrust) |
+| <img src="https://github.com/MegaZizon.png" width="60" height="60" /> | **지준오** | 백엔드 | BKT 알고리즘 구현, KC 숙련도 추적, 개인 맞춤형 학습 로직, 음소 분석 | [@MegaZizon](https://github.com/MegaZizon) |
 
 
 ###  Frontend
 
 |  | 이름 | 역할 | 주요 담당 업무 | GitHub |
 |:-:|:---:|:---:|:---|:---:|
-| <img src="https://github.com/amy010510.png" width="60" height="60" /> | **이채연** | 프론트엔드 |  | [@amy010510](https://github.com/amy010510) |
-| <img src="https://github.com/jinnyujinchoi.png" width="60" height="60" /> | **최유진** | 프론트엔드 |  | [@jinnyujinchoi](https://github.com/jinnyujinchoi) |
+| <img src="https://github.com/amy010510.png" width="60" height="60" /> | **이채연** | 프론트엔드 | VR 게임 로직, 스테이지 시스템 설계, AI 음성 인식 연동, 학습 세션 관리, VR UI/UX | [@amy010510](https://github.com/amy010510) |
+| <img src="https://github.com/jinnyujinchoi.png" width="60" height="60" /> | **최유진** | 프론트엔드 | Flutter 모바일 앱 개발, 대시보드 UI, 학습 통계 시각화, VR 디바이스 로그인, 상태 관리 | [@jinnyujinchoi](https://github.com/jinnyujinchoi) |
 
 
 ### AI
 
 |  | 이름 | 역할 | 주요 담당 업무 | GitHub |
 |:-:|:---:|:---:|:---|:---:|
-| <img src="https://github.com/kimgwang-hyeon.png" width="60" height="60" /> | **김광현** | 백엔드 |  | [@kimgwang-hyeon](https://github.com/kimgwang-hyeon) |
+| <img src="https://github.com/kimgwang-hyeon.png" width="60" height="60" /> | **김광현** | AI | Wav2Vec2 모델 파인튜닝, LoRA 학습 파이프라인, FastAPI 추론 서버, 음소 유사도 분석 | [@kimgwang-hyeon](https://github.com/kimgwang-hyeon) |
 
 
 
