@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   introTutorialImage: {fileID: 0}
   introOptions:
-  - label: o
+  - label: O
     isCorrect: 1
-  - label: x
+  - label: X
     isCorrect: 0
   guideHideLeadSeconds: 0.5
   showGuideWhenPanelOff: 1
@@ -463,7 +463,7 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uB2E8\uC5B4 ON"
     phase: 1
-    action: 13
+    action: 19
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -485,11 +485,11 @@ MonoBehaviour:
     choiceTileKey: 
     choiceReturnToOrigin: 1
     progressText: 
-    customActionId: 
+    customActionId: "SetOptionWord:\uD3B8\uC9C0"
     awaitRelease: 1
   - name: "\uB2E8\uC5B4 \uD6A8\uACFC\uC74C"
     phase: 1
-    action: 13
+    action: 0
     audioClip: {fileID: 8300000, guid: 079a13e7c625e2846904e5f95a49fa15, type: 3}
     image: {fileID: 0}
     waitSeconds: 0
@@ -593,12 +593,12 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uCEE4\uC11C ON"
     phase: 1
-    action: 8
+    action: 12
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
-    boolValue: 0
+    boolValue: 1
     cursorTarget: 0
     cursorMoveSeconds: 0
     cursorMoveCurve:
@@ -645,7 +645,7 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uCEE4\uC11C \uC774\uB3D9"
     phase: 1
-    action: 9
+    action: 13
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0
@@ -735,6 +735,94 @@ MonoBehaviour:
     phase: 1
     action: 0
     audioClip: {fileID: 8300000, guid: f69cbf30d53995049ae0bf9193c3559e, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 
+    awaitRelease: 1
+  - name: "\uCD08\uAE30\uD654"
+    phase: 1
+    action: 19
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
+    image: {fileID: 0}
+    waitSeconds: 0
+    panelImmediate: 0
+    boolValue: 0
+    cursorTarget: 0
+    cursorMoveSeconds: 0
+    cursorMoveCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 34
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    enablePulse: 0
+    pulseScale: 0
+    pulseDuration: 0
+    pulseLoops: 0
+    slotTarget: 0
+    choiceTileKey: 
+    choiceReturnToOrigin: 1
+    progressText: 
+    customActionId: 'SetOptionWord:'
+    awaitRelease: 1
+  - name: "\uC635\uC158OFF"
+    phase: 1
+    action: 7
+    audioClip: {fileID: 8300000, guid: 02846dc4814a8d546a96888376438882, type: 3}
     image: {fileID: 0}
     waitSeconds: 0
     panelImmediate: 0
@@ -997,7 +1085,7 @@ MonoBehaviour:
     awaitRelease: 1
   - name: "\uD2B8\uB9AC\uAC70 wait"
     phase: 1
-    action: 11
+    action: 17
     audioClip: {fileID: 0}
     image: {fileID: 0}
     waitSeconds: 0

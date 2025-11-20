@@ -3,8 +3,14 @@ using UnityEngine.UI;
 using UnityEngine.XR;
 using UnityEngine.SceneManagement;
 using System.Collections;
+using UnityEngine.EventSystems;
 using UnityEngine.XR.Interaction.Toolkit.UI;
 using Utils;
+using TMPro;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 /// <summary>
 /// 왼손 트리거로 토글하는 글로벌 모달 오버레이
@@ -18,7 +24,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
     public Color overlayColor = new Color(0f, 0f, 0f, 0.6f);
 
     [Tooltip("Optional hint text shown at the bottom")]
-    public string hintText = "왼손 트리거를 다시 눌러 닫기";
+    public string hintText = "";
 
     [Tooltip("TMP가 없으면 기본 text 컴포넌트를 사용합니다.")] 
     public Font uiFont;
@@ -27,7 +33,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
     [Tooltip("If true, spawns a World Space canvas locked in front of the active camera (recommended for VR).")]
     public bool useWorldSpaceForXR = true;
     [Tooltip("Distance in meters in front of the camera for the world-space modal")]
-    public float worldSpaceDistance = 1.25f;
+    public float worldSpaceDistance = 1.4f;
     [Tooltip("Panel size in meters for the world-space modal (scaled from 1000px = 1m)")]
     public Vector2 worldSpaceSizeMeters = new Vector2(1.6f, 0.9f);
     [Tooltip("If true, parent the modal to the camera so it follows head movement")]
@@ -48,6 +54,7 @@ public class GlobalLeftTriggerModal : MonoBehaviour
     private Camera _cachedCamera;
     private Button _homeButton;
     private Button _audioButton;
+    private Button _exitButton;
     private System.Action<string> _setAudioLabel;
     [Header("Actions")]
     [Tooltip("Scene name to load when pressing Home button")]
@@ -77,6 +84,29 @@ public class GlobalLeftTriggerModal : MonoBehaviour
     [Tooltip("If false, do not auto-build default UI (expect prefab/refs).")]
     public bool autoBuildUI = true;
 
+    [Header("Exit Confirmation")]
+    [Tooltip("Audio cue that plays when the exit confirmation panel appears.")]
+    public AudioClip exitConfirmClip;
+    [Tooltip("Title shown inside the exit confirmation panel.")]
+    public string exitConfirmTitle = "앱 종료";
+    [Tooltip("Message shown inside the exit confirmation panel.")]
+    public string exitConfirmMessage = "종료하시겠습니까?";
+    [Tooltip("Optional sprite to display instead of the message text.")]
+    public Sprite exitConfirmMessageSprite;
+    [Tooltip("Sprite used for the exit button on the overlay.")]
+    public Sprite exitButtonSprite;
+    [Tooltip("Optional sprite for the yes button.")]
+    public Sprite exitConfirmYesSprite;
+    [Tooltip("Optional sprite for the no button.")]
+    public Sprite exitConfirmNoSprite;
+    [Tooltip("Vertical offset (in pixels) for the confirmation message")]
+    public float exitConfirmMessageYOffset = -40f;
+    [Tooltip("Background color for the exit panel")]
+    public Color exitPanelColor = new Color(0f, 0f, 0f, 0.9f);
+
+    private GameObject _exitConfirmPanel;
+    private Button _exitConfirmYes;
+    private Button _exitConfirmNo;
     private void Awake()
     {
         DontDestroyOnLoad(gameObject);
@@ -118,6 +148,8 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         if (_overlayRoot != null)
             _overlayRoot.SetActive(_visible);
         UpdateHomeButtonState();
+        if (!_visible)
+            HideExitConfirmPanel();
     }
 
     private void EnsureOverlay()
@@ -307,21 +339,42 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         // Buttons (middle center)
         Vector2 btnSize = new Vector2(300f, 300f);
         float spacing = 40f;
-        float xOffset = (btnSize.x * 0.5f) + (spacing * 0.5f);
+        float buttonSpacing = btnSize.x + spacing;
 
-        System.Action<string> _unused;
-        var homeBtn = CreateButton("HomeButton", parent, btnSize, new Vector2(-xOffset, 0f), "Home으로 이동", out _unused);
-        _homeButton = homeBtn;
-
-        System.Action<string> setLabel;
-        var audioBtn = CreateButton("AudioButton", parent, btnSize, new Vector2(+xOffset, 0f), GetAudioLabel(), out setLabel);
+        var audioBtn = CreateButton("AudioButton", parent, btnSize, new Vector2(-buttonSpacing, 0f), GetAudioLabel(), out var setLabel);
         _audioButton = audioBtn;
         _setAudioLabel = setLabel;
+
+        var homeBtn = CreateButton("HomeButton", parent, btnSize, new Vector2(0f, 0f), "", out var _unused);
+        _homeButton = homeBtn;
 
         _homeButton.onClick.RemoveAllListeners();
         _homeButton.onClick.AddListener(OnClickHome);
         _audioButton.onClick.RemoveAllListeners();
         _audioButton.onClick.AddListener(OnClickToggleAudio);
+
+        var exitBtn = CreateButton("ExitButton", parent, btnSize, new Vector2(buttonSpacing, 0f), "", out _);
+        _exitButton = exitBtn;
+        _exitButton.onClick.RemoveAllListeners();
+        _exitButton.onClick.AddListener(ShowExitConfirmPanel);
+        
+        AddButtonHoverGlow(_audioButton);
+        AddButtonHoverGlow(_homeButton);
+        AddButtonHoverGlow(_exitButton);
+
+        if (exitButtonSprite != null)
+        {
+            var img = _exitButton.GetComponent<Image>();
+            img.sprite = exitButtonSprite;
+            img.preserveAspect = true;
+        }
+        else
+        {
+            var exitLabelTmp = _exitButton.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+            if (exitLabelTmp) exitLabelTmp.text = "";
+            var exitLabelTxt = _exitButton.GetComponentInChildren<Text>();
+            if (exitLabelTxt) exitLabelTxt.text = "";
+        }
 
         // Apply initial visuals for default build
         UpdateHomeVisual();
@@ -380,9 +433,19 @@ public class GlobalLeftTriggerModal : MonoBehaviour
 #endif
         return btn;
     }
+    private void AddButtonHoverGlow(Button btn)
+    {
+        if (btn == null) return;
+        
+        var glow = btn.gameObject.GetComponent<ButtonHoverGlow>();
+        if (glow == null)
+            glow = btn.gameObject.AddComponent<ButtonHoverGlow>();
+
+        glow.scaleMultiplier = 1.15f; // 필요하면 조정
+    }
 
     private static bool _isMutedCached = false;
-    private string GetAudioLabel() => _isMutedCached ? "?�리 켜기" : "?�리 ?�기";
+    private string GetAudioLabel() => _isMutedCached ? "" : "";
 
     private void OnClickHome()
     {
@@ -404,6 +467,150 @@ public class GlobalLeftTriggerModal : MonoBehaviour
         _isMutedCached = !_isMutedCached;
         ApplyAudioMuteState(_isMutedCached);
         UpdateAudioVisual();
+    }
+
+    private void ShowExitConfirmPanel()
+    {
+        EnsureOverlay();
+        SetVisible(true);
+
+        var panel = EnsureExitConfirmPanel();
+        if (panel == null)
+            return;
+
+        panel.SetActive(true);
+        panel.transform.SetAsLastSibling();
+
+        if (exitConfirmClip != null)
+            Utils.GlobalSfxManager.Instance?.PlayOneShot(exitConfirmClip);
+    }
+
+    private void HideExitConfirmPanel()
+    {
+        if (_exitConfirmPanel != null)
+            _exitConfirmPanel.SetActive(false);
+    }
+
+    private GameObject EnsureExitConfirmPanel()
+    {
+        if (_exitConfirmPanel != null)
+            return _exitConfirmPanel;
+        if (_overlayRoot == null)
+            return null;
+
+        var panel = new GameObject("ExitConfirmPanel", typeof(RectTransform), typeof(Image));
+        panel.transform.SetParent(_overlayRoot.transform, false);
+
+        var rect = panel.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.sizeDelta = new Vector2(900f, 460f);
+
+        var bg = panel.GetComponent<Image>();
+        bg.color = exitPanelColor;
+
+        const float textPadding = 40f;
+        const float horizontalMargin = 80f;
+
+        var titleGo = new GameObject("ExitTitle", typeof(RectTransform));
+        titleGo.transform.SetParent(panel.transform, false);
+        var titleRect = titleGo.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0.5f, 1f);
+        titleRect.anchorMax = new Vector2(0.5f, 1f);
+        titleRect.pivot = new Vector2(0.5f, 1f);
+        titleRect.anchoredPosition = new Vector2(0f, -textPadding);
+        titleRect.sizeDelta = new Vector2(rect.sizeDelta.x - horizontalMargin * 2f, 100f);
+#if TMP_PRESENT
+        var titleTmp = titleGo.AddComponent<TMPro.TextMeshProUGUI>();
+        titleTmp.text = exitConfirmTitle;
+        titleTmp.alignment = TMPro.TextAlignmentOptions.Center;
+        titleTmp.fontSize = 64f;
+        titleTmp.color = Color.white;
+#else
+        var titleTxt = titleGo.AddComponent<Text>();
+        titleTxt.text = exitConfirmTitle;
+        titleTxt.alignment = TextAnchor.MiddleCenter;
+        titleTxt.fontSize = 48;
+        titleTxt.color = Color.white;
+        if (uiFont != null) titleTxt.font = uiFont;
+#endif
+
+        var messageGo = new GameObject("ExitMessage", typeof(RectTransform));
+        messageGo.transform.SetParent(panel.transform, false);
+        var messageRect = messageGo.GetComponent<RectTransform>();
+        messageRect.anchorMin = new Vector2(0.5f, 0.5f);
+        messageRect.anchorMax = new Vector2(0.5f, 0.5f);
+        messageRect.pivot = new Vector2(0.5f, 0.5f);
+        messageRect.anchoredPosition = new Vector2(0f, exitConfirmMessageYOffset);
+        messageRect.sizeDelta = new Vector2(rect.sizeDelta.x - horizontalMargin * 2f, 120f);
+#if TMP_PRESENT
+        if (exitConfirmMessageSprite != null)
+        {
+            var msgImage = messageGo.AddComponent<Image>();
+            msgImage.sprite = exitConfirmMessageSprite;
+            msgImage.preserveAspect = true;
+        }
+        else
+        {
+            var msgTmp = messageGo.AddComponent<TMPro.TextMeshProUGUI>();
+            msgTmp.text = exitConfirmMessage;
+            msgTmp.alignment = TMPro.TextAlignmentOptions.Center;
+            msgTmp.fontSize = 44f;
+            msgTmp.color = new Color(1f, 1f, 1f, 0.9f);
+        }
+#else
+        if (exitConfirmMessageSprite != null)
+        {
+            var msgImage = messageGo.AddComponent<Image>();
+            msgImage.sprite = exitConfirmMessageSprite;
+            msgImage.preserveAspect = true;
+        }
+        else
+        {
+            var msgTxt = messageGo.AddComponent<Text>();
+            msgTxt.text = exitConfirmMessage;
+            msgTxt.alignment = TextAnchor.MiddleCenter;
+            msgTxt.fontSize = 40;
+            msgTxt.color = new Color(1f, 1f, 1f, 0.9f);
+            if (uiFont != null) msgTxt.font = uiFont;
+        }
+#endif
+
+        var btnSize = new Vector2(180f, 180f);
+        float yOffset = -rect.sizeDelta.y * 0.5f + btnSize.y * 0.5f + 20f;
+        var yesBtn = CreateButton("ExitConfirmYes", panel.transform, btnSize, new Vector2(-110f, yOffset + 20f), "", out _);
+        if (exitConfirmYesSprite != null)
+            yesBtn.GetComponent<Image>().sprite = exitConfirmYesSprite;
+        _exitConfirmYes = yesBtn;
+        _exitConfirmYes.onClick.RemoveAllListeners();
+        _exitConfirmYes.onClick.AddListener(() =>
+        {
+            HideExitConfirmPanel();
+            QuitApplication();
+        });
+        AddButtonHoverGlow(_exitConfirmYes);
+
+        var noBtn = CreateButton("ExitConfirmNo", panel.transform, btnSize, new Vector2(+110f, yOffset + 20f), "", out _);
+        if (exitConfirmNoSprite != null)
+            noBtn.GetComponent<Image>().sprite = exitConfirmNoSprite;
+        _exitConfirmNo = noBtn;
+        _exitConfirmNo.onClick.RemoveAllListeners();
+        _exitConfirmNo.onClick.AddListener(HideExitConfirmPanel);
+        AddButtonHoverGlow(_exitConfirmNo);
+
+        panel.SetActive(false);
+        _exitConfirmPanel = panel;
+        return _exitConfirmPanel;
+    }
+
+    private void QuitApplication()
+    {
+#if UNITY_EDITOR
+        EditorApplication.isPlaying = false;
+#else
+        Application.Quit();
+#endif
     }
 
     private static readonly System.Collections.Generic.Dictionary<AudioSource, bool> _prevMuteStates = new System.Collections.Generic.Dictionary<AudioSource, bool>();
@@ -517,5 +724,86 @@ public class GlobalLeftTriggerModal : MonoBehaviour
             // Ensure fully visible
             var c = target.color; c.a = 1f; target.color = c;
         }
+    }
+}
+
+public class ButtonHoverGlow : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
+{
+    public float scaleMultiplier = 1.12f;
+    public float transitionDuration = 0.08f;
+
+    public Color glowColor = new Color(1f, 1f, 1f, 0.6f);
+    public float glowIntensity = 1.5f;
+
+    private Vector3 _originalScale;
+
+    private Image _image;
+    private Color _originalColor;
+
+    private Outline _outline;
+    private float _outlineOriginalAlpha;
+
+    private void Awake()
+    {
+        _originalScale = transform.localScale;
+
+        _image = GetComponent<Image>();
+        if (_image != null)
+            _originalColor = _image.color;
+
+        _outline = gameObject.GetComponent<Outline>();
+        if (_outline == null)
+            _outline = gameObject.AddComponent<Outline>();
+
+        _outline.effectColor = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
+        _outlineOriginalAlpha = _outline.effectColor.a;
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        StopAllCoroutines();
+        StartCoroutine(AnimateHover(true));
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        StopAllCoroutines();
+        StartCoroutine(AnimateHover(false));
+    }
+
+    private IEnumerator AnimateHover(bool entering)
+    {
+        float t = 0;
+        Vector3 startScale = transform.localScale;
+        Vector3 endScale = entering ? _originalScale * scaleMultiplier : _originalScale;
+
+        Color startColor = (_image != null) ? _image.color : Color.white;
+        Color endColor = entering ?
+            _originalColor * glowIntensity :
+            _originalColor;
+
+        Color startOutline = _outline.effectColor;
+        Color endOutline = entering ?
+            new Color(glowColor.r, glowColor.g, glowColor.b, glowColor.a) :
+            new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
+
+        while (t < transitionDuration)
+        {
+            t += Time.deltaTime;
+            float lerp = t / transitionDuration;
+
+            transform.localScale = Vector3.Lerp(startScale, endScale, lerp);
+
+            if (_image != null)
+                _image.color = Color.Lerp(startColor, endColor, lerp);
+
+            _outline.effectColor = Color.Lerp(startOutline, endOutline, lerp);
+
+            yield return null;
+        }
+
+        transform.localScale = endScale;
+        if (_image != null) _image.color = endColor;
+        _outline.effectColor = endOutline;
     }
 }

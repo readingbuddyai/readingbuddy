@@ -53,7 +53,15 @@ public class LoadSceneOnSelect : MonoBehaviour
         interactable.enabled = false;
         Debug.Log($"[LoadSceneOnSelect] Loading → {targetSceneName}");
         Utils.GlobalSfxManager.Instance?.PlaySceneTransitionSfx();
-        StartCoroutine(LoadRoutine());
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.LoadScene(targetSceneName);
+            StartCoroutine(ResetLoadingState());
+        }
+        else
+        {
+            StartCoroutine(LoadRoutine());
+        }
     }
 
     private IEnumerator LoadRoutine()
@@ -61,6 +69,14 @@ public class LoadSceneOnSelect : MonoBehaviour
         // 1️⃣ SceneRouter.cs 사용 (ActiveScene 전환 포함)
         yield return SceneRouter.LoadContent(targetSceneName);
 
+        _isLoading = false;
+        interactable.enabled = true;
+    }
+
+    private IEnumerator ResetLoadingState()
+    {
+        // give next frame to avoid double activation
+        yield return null;
         _isLoading = false;
         interactable.enabled = true;
     }

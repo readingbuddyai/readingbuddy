@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
@@ -56,6 +57,10 @@ public class Stage30Controller : MonoBehaviour
     public KeyCode tutorialFallbackKey = KeyCode.Space;
     [Min(0f)] public float tutorialClipGapSeconds = 0.9f;
 
+    [Header("Mic Indicator")]
+    [Tooltip("[1.1.4] 종료 직후부터 녹음 3초 동안 표시될 마이크 아이콘 오브젝트")]
+    public GameObject micIndicator;
+
     [Header("오디오 재생")]
     public AudioSource audioSource;
     public AudioClip sfxStart;
@@ -101,6 +106,17 @@ public class Stage30Controller : MonoBehaviour
     public AudioClip clipFeedbackGreatJob;
     public AudioClip clipFinalEncouragement;
 
+    [Header("Fonts")]
+    public Font uiFont;
+    public TMP_FontAsset tmpFont;
+
+    [Header("End Modal (Stage Complete)")]
+    public Button againButtonPrefab;
+    public Button lobbyButtonPrefab;
+    public Button optionButtonPrefab;
+    public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
+    public Vector2 endModalButtonSize = new Vector2(600f, 300f);
+
     [Header("튜토리얼 UI")]
     public RectTransform tutorialOptionsContainer;
     public TMP_Text tutorialOptionWordText;
@@ -130,13 +146,88 @@ public class Stage30Controller : MonoBehaviour
 
     private void Start()
     {
+        StartCoroutine(InitializeWithAuth());
+    }
+
+    private IEnumerator InitializeWithAuth()
+    {
+        Debug.Log("[Stage30] Waiting for AuthManager...");
+
+        float timeout = 5f;
+        float elapsed = 0f;
+        while (AuthManager.Instance == null && elapsed < timeout)
+        {
+            yield return new WaitForSeconds(0.1f);
+            elapsed += 0.1f;
+        }
+
+        if (AuthManager.Instance == null)
+        {
+            Debug.LogError("[Stage30] ⚠️ AuthManager.Instance is null after timeout! Returning to Home.");
+            if (SceneLoader.Instance != null)
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            yield break;
+        }
+
+        Debug.Log("[Stage30] AuthManager found!");
+
+        if (!AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.LogError("[Stage30] ⚠️ User is not logged in! Returning to Home.");
+            if (SceneLoader.Instance != null)
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            yield break;
+        }
+
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
-        authToken = EnvConfig.ResolveAuthToken(authToken);
+        Debug.Log($"[Stage30] ✅ baseUrl 설정 완료: {baseUrl}");
+
+        if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.Log("[Stage30] 🔑 AuthManager에서 토큰 가져오기 시작...");
+            authToken = AuthManager.Instance.GetAccessToken();
+            
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogError("[Stage30] ❌ AuthManager에서 토큰을 가져왔지만 토큰이 비어있습니다. 403 에러가 발생할 수 있습니다.");
+                Debug.LogError($"[Stage30] 디버깅: authToken == null = {authToken == null}, empty = {string.IsNullOrEmpty(authToken)}, whitespace = {string.IsNullOrWhiteSpace(authToken)}");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage30] ✅ Access token retrieved from AuthManager (len={authToken.Length}, preview={preview})");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[Stage30] ⚠️ AuthManager 없음 또는 로그인 안 됨: Instance={AuthManager.Instance != null}, IsLoggedIn={AuthManager.Instance?.IsLoggedIn() ?? false}");
+            authToken = EnvConfig.ResolveAuthToken(authToken);
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogWarning("[Stage30] ❌ EnvConfig에서도 토큰을 찾지 못했습니다. 403 에러가 발생할 수 있습니다.");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage30] ✅ Using authToken from EnvConfig (fallback, len={authToken.Length}, preview={preview})");
+            }
+        }
+
+        // ConfigureSessionController 호출 직전 최종 확인
+        Debug.Log($"[Stage30] 🔍 ConfigureSessionController 호출 직전: authToken null={authToken == null}, empty={string.IsNullOrEmpty(authToken)}, len={authToken?.Length ?? 0}");
         ConfigureSessionController();
+        Debug.Log($"[Stage30] ✅ ConfigureSessionController 완료");
         ConfigureAudioController();
         ConfigureTutorialController();
         _tutorialController?.PrepareForStageStart();
+        EnsureStage30DropZones();
         ResetStoneUI();
+        if (micIndicator)
+            micIndicator.SetActive(false);
         StartCoroutine(RunStage());
     }
 
@@ -154,7 +245,13 @@ public class Stage30Controller : MonoBehaviour
     private StageSessionController GetSessionController()
     {
         if (_sessionController == null)
-            ConfigureSessionController();
+            _sessionController = new StageSessionController();
+
+        // 매번 최신 baseUrl과 authToken으로 업데이트 (Stage11Controller와 동일한 방식)
+        _sessionController.Configure(baseUrl, authToken);
+        _sessionController.Log = verboseLogging ? (Action<string>)Debug.Log : null;
+        _sessionController.LogWarning = Debug.LogWarning;
+        _sessionController.LogError = Debug.LogError;
         return _sessionController;
     }
 
@@ -171,6 +268,37 @@ public class Stage30Controller : MonoBehaviour
         _audioDependencies.LogWarning = Debug.LogWarning;
 
         _audioController.Initialize(_audioDependencies);
+    }
+
+    private void EnsureStage30DropZones()
+    {
+        if (stoneBoard == null)
+            return;
+
+        var legacyZones = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        foreach (var legacy in legacyZones)
+        {
+            if (legacy == null)
+                continue;
+
+            legacy.GetSharedConfiguration(out var slotParentRef, out var slotNumberRef, out var stoneSlotsParentRef);
+
+            var stage30Zone = legacy.gameObject.GetComponent<Stage30StoneDropZone>();
+            if (stage30Zone == null)
+                stage30Zone = legacy.gameObject.AddComponent<Stage30StoneDropZone>();
+
+            stage30Zone.SetSharedConfiguration(slotParentRef, slotNumberRef, stoneSlotsParentRef);
+            stage30Zone.SetStageControllerReference(this);
+
+            Destroy(legacy);
+        }
+
+        var stage30Zones = stoneBoard.GetComponentsInChildren<Stage30StoneDropZone>(true);
+        foreach (var zone in stage30Zones)
+        {
+            if (zone != null)
+                zone.SetStageControllerReference(this);
+        }
     }
 
     private IEnumerator RunStage()
@@ -249,6 +377,195 @@ public class Stage30Controller : MonoBehaviour
 
         if (clipFinalEncouragement)
             yield return PlayClip(clipFinalEncouragement);
+
+        // 종료 모달 표시
+        ShowEndModal();
+    }
+
+    private void ShowEndModal()
+    {
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas)
+        {
+            Debug.LogWarning("[Stage30] Canvas를 찾을 수 없습니다.");
+            return;
+        }
+
+        var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
+        overlay.layer = canvas.gameObject.layer;
+        var overlayRt = overlay.GetComponent<RectTransform>();
+        overlayRt.SetParent(canvas.transform, false);
+        overlayRt.anchorMin = Vector2.zero;
+        overlayRt.anchorMax = Vector2.one;
+        overlayRt.pivot = new Vector2(0.5f, 0.5f);
+        overlayRt.anchoredPosition = Vector2.zero;
+        overlayRt.sizeDelta = Vector2.zero;
+        var overlayImage = overlay.GetComponent<Image>();
+        overlayImage.color = new Color(0f, 0f, 0f, 0.6f);
+        overlayImage.raycastTarget = true;
+
+        var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        panel.layer = canvas.gameObject.layer;
+        var panelRt = panel.GetComponent<RectTransform>();
+        panelRt.SetParent(overlay.transform, false);
+        panelRt.anchorMin = new Vector2(0.5f, 0.5f);
+        panelRt.anchorMax = new Vector2(0.5f, 0.5f);
+        panelRt.pivot = new Vector2(0.5f, 0.5f);
+        panelRt.sizeDelta = new Vector2(2200f, 1500f);
+        var panelImage = panel.GetComponent<Image>();
+        panelImage.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
+
+        var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
+        title.layer = canvas.gameObject.layer;
+        var titleRt = title.GetComponent<RectTransform>();
+        titleRt.SetParent(panel.transform, false);
+        titleRt.anchorMin = new Vector2(0.5f, 1f);
+        titleRt.anchorMax = new Vector2(0.5f, 1f);
+        titleRt.pivot = new Vector2(0.5f, 1f);
+        titleRt.anchoredPosition = new Vector2(0f, -80f);
+        titleRt.sizeDelta = new Vector2(1000f, 150f);
+        var titleText = title.GetComponent<Text>();
+        titleText.text = "학습이 끝났어요!";
+        titleText.alignment = TextAnchor.MiddleCenter;
+        titleText.fontSize = 100;
+        titleText.fontStyle = FontStyle.Bold;
+        titleText.color = Color.white;
+        titleText.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+        Vector2 btnSize = (endModalButtonSize.sqrMagnitude > 0f) ? endModalButtonSize : optionButtonPreferredSize;
+        float gap = 40f;
+
+        Button ResolveButton(Button preferred, string[] resourcePaths, out bool isCustom)
+        {
+            if (preferred)
+            {
+                isCustom = true;
+                return preferred;
+            }
+
+            foreach (var path in resourcePaths)
+            {
+                var loaded = Resources.Load<Button>(path);
+                if (loaded)
+                {
+                    isCustom = true;
+                    return loaded;
+                }
+                var go = Resources.Load<GameObject>(path);
+                if (go)
+                {
+                    var childBtn = go.GetComponentInChildren<Button>(true) ?? go.GetComponent<Button>();
+                    if (childBtn)
+                    {
+                        isCustom = true;
+                        return childBtn;
+                    }
+                }
+            }
+
+            isCustom = false;
+            return optionButtonPrefab;
+        }
+
+        bool againCustom;
+        var resolvedAgain = ResolveButton(againButtonPrefab, new[] {"againbutton", "UI/againbutton", "Images/againbutton"}, out againCustom);
+        if (resolvedAgain == null)
+        {
+            Debug.LogError("[Stage30] 다시 학습하기 버튼을 생성할 수 없습니다.");
+            Destroy(overlay);
+            return;
+        }
+
+        var btn1 = Instantiate(resolvedAgain, panel.transform as RectTransform);
+        var btn1Rt = btn1.GetComponent<RectTransform>();
+        btn1Rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn1Rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn1Rt.pivot = new Vector2(1f, 0.5f);
+        btn1Rt.sizeDelta = btnSize;
+        btn1Rt.anchoredPosition = new Vector2(-gap * 0.5f, -100f);
+        if (!againCustom)
+        {
+            var txt1 = btn1.GetComponentInChildren<Text>();
+            var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
+            if (txt1)
+            {
+                txt1.text = "다시 학습하기";
+                if (uiFont) txt1.font = uiFont;
+            }
+            else if (tmp1)
+            {
+                tmp1.text = "다시 학습하기";
+                if (tmpFont) tmp1.font = tmpFont;
+            }
+        }
+        btn1.onClick.AddListener(() =>
+        {
+            Destroy(overlay);
+            RestartStage();
+        });
+
+        bool lobbyCustom;
+        var resolvedLobby = ResolveButton(lobbyButtonPrefab, new[] {"lobbybutton", "UI/lobbybutton", "Images/lobbybutton"}, out lobbyCustom);
+        if (resolvedLobby == null)
+        {
+            Debug.LogError("[Stage30] 로비로 나가기 버튼을 생성할 수 없습니다.");
+            Destroy(overlay);
+            return;
+        }
+
+        var btn2 = Instantiate(resolvedLobby, panel.transform as RectTransform);
+        var btn2Rt = btn2.GetComponent<RectTransform>();
+        btn2Rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn2Rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn2Rt.pivot = new Vector2(0f, 0.5f);
+        btn2Rt.sizeDelta = btnSize;
+        btn2Rt.anchoredPosition = new Vector2(gap * 0.5f, -100f);
+        if (!lobbyCustom)
+        {
+            var txt2 = btn2.GetComponentInChildren<Text>();
+            var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
+            if (txt2)
+            {
+                txt2.text = "로비로 나가기";
+                if (uiFont) txt2.font = uiFont;
+            }
+            else if (tmp2)
+            {
+                tmp2.text = "로비로 나가기";
+                if (tmpFont) tmp2.font = tmpFont;
+            }
+        }
+        btn2.onClick.AddListener(() =>
+        {
+            Destroy(overlay);
+            GoToLobby();
+        });
+    }
+
+    private void RestartStage()
+    {
+        StopAllCoroutines();
+        _accumulatedFeedback.Clear();
+        _feedbackKeys.Clear();
+        _waitingForStoneCount = false;
+        _pendingStoneCount = null;
+        _currentProblemNumber = 0;
+        ResetStoneUI();
+        stageSessionId = string.Empty;
+        ConfigureTutorialController();
+        _tutorialController?.ResetAfterStageRestart();
+        EnsureStage30DropZones();
+        StartCoroutine(RunStage());
+    }
+
+    private void GoToLobby()
+    {
+        if (SceneLoader.Instance != null)
+        {
+            SceneLoader.Instance.LoadScene(SceneId.Lobby);
+            return;
+        }
+        UnityEngine.SceneManagement.SceneManager.LoadScene(SceneId.Lobby);
     }
 
     private IEnumerator RunIntroSequence()
@@ -271,7 +588,7 @@ public class Stage30Controller : MonoBehaviour
         if (wordLabel)
         {
             wordLabel.enableWordWrapping = false;
-            wordLabel.text = problem?.problemWord ?? string.Empty;
+            wordLabel.text = NormalizeWordLabel(problem?.problemWord);
             wordLabel.gameObject.SetActive(true);
         }
 
@@ -284,11 +601,15 @@ public class Stage30Controller : MonoBehaviour
 
         if (!bypassVoiceUpload)
         {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return RecordAndUpload(problem, index);
+            if (micIndicator) micIndicator.SetActive(false);
         }
         else
         {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return new WaitForSeconds(recordSeconds);
+            if (micIndicator) micIndicator.SetActive(false);
         }
 
         if (clipPraisePrecision) yield return PlayClip(clipPraisePrecision);
@@ -480,16 +801,38 @@ public class Stage30Controller : MonoBehaviour
 
         string stageForUpload = GetStageForVoiceUpload();
         var sessionController = GetSessionController();
+        // Stage41처럼 정답 값(problemWord)을 answer 파라미터로 전달
+        // Stage30은 problemWord가 유니코드 형식일 수 있으므로 NormalizeWordLabel로 변환
+        string rawProblemWord = problem != null ? (problem.problemWord ?? string.Empty) : string.Empty;
+        string answerValue = NormalizeWordLabel(rawProblemWord);
         yield return sessionController.CheckVoice(
             stageSessionId,
             stageForUpload,
             Mathf.Max(1, problemNumber),
-            string.Empty,
+            answerValue,
             wav,
             result =>
             {
                 if (result != null && !string.IsNullOrWhiteSpace(result.RawBody))
+                {
+                    // 응답 파싱하여 reply 추출
+                    try
+                    {
+                        var parsed = JsonUtility.FromJson<VoiceReplyResp>(result.RawBody);
+                        string reply = parsed?.data?.reply ?? string.Empty;
+                        bool isReplyCorrect = parsed?.data?.isReplyCorrect ?? false;
+                        
+                        if (verboseLogging)
+                            Debug.Log($"[Stage30] check/voice 응답 - reply='{reply}', isReplyCorrect={isReplyCorrect}");
+                    }
+                    catch (Exception ex)
+                    {
+                        if (verboseLogging)
+                            Debug.LogWarning($"[Stage30] check/voice 응답 파싱 실패: {ex.Message}");
+                    }
+                    
                     CollectFeedback(result.RawBody);
+                }
             });
     }
 
@@ -836,7 +1179,7 @@ public class Stage30Controller : MonoBehaviour
 
     private void SetTutorialOptionWord(string text, bool showImmediately, bool forceWordLabel)
     {
-        _tutorialOptionWordCache = text ?? string.Empty;
+        _tutorialOptionWordCache = NormalizeWordLabel(text);
         _tutorialOptionUseWordLabel = forceWordLabel;
         ApplyTutorialOptionWord(_tutorialOptionWordCache, showImmediately);
     }
@@ -849,13 +1192,38 @@ public class Stage30Controller : MonoBehaviour
         if (target == null)
             return;
 
-        target.text = text ?? string.Empty;
+        target.text = NormalizeWordLabel(text);
         target.gameObject.SetActive(show);
 
         if (show && target.gameObject.activeInHierarchy)
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(target.rectTransform);
         }
+    }
+
+    private string NormalizeWordLabel(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        return Regex.Replace(
+            text,
+            @"U\+([0-9A-Fa-f]{4,6})",
+            match =>
+            {
+                if (int.TryParse(match.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var codePoint))
+                {
+                    try
+                    {
+                        return char.ConvertFromUtf32(codePoint);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // ignore fall-through
+                    }
+                }
+                return match.Value;
+            });
     }
 
     private IEnumerator MoveStoneForTutorial(string parameter)
@@ -897,7 +1265,7 @@ public class Stage30Controller : MonoBehaviour
         ReportStoneCount(CalculateCurrentStoneCount());
     }
 
-    private IEnumerator AnimateStoneToSlot(StoneDraggable stone, StoneDropZone slot)
+    private IEnumerator AnimateStoneToSlot(StoneDraggable stone, Stage30StoneDropZone slot)
     {
         if (stone == null || slot == null)
             yield break;
@@ -932,12 +1300,12 @@ public class Stage30Controller : MonoBehaviour
         stoneRT.rotation = targetRotation;
     }
 
-    private void AttachStoneToSlot(StoneDraggable stone, StoneDropZone slot)
+    private void AttachStoneToSlot(StoneDraggable stone, Stage30StoneDropZone slot)
     {
         if (stone == null || slot == null)
             return;
 
-        Transform container = slot.slotParent != null ? slot.slotParent : slot.transform;
+        Transform container = slot.SlotParent != null ? slot.SlotParent : slot.transform;
         stone.transform.SetParent(container, false);
         stone.transform.SetAsLastSibling();
 
@@ -981,7 +1349,7 @@ public class Stage30Controller : MonoBehaviour
         if (stoneBoard == null)
             return 0;
 
-        var dropZones = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        var dropZones = stoneBoard.GetComponentsInChildren<Stage30StoneDropZone>(true);
         if (dropZones == null || dropZones.Length == 0)
             return 0;
 
@@ -991,7 +1359,7 @@ public class Stage30Controller : MonoBehaviour
             if (zone == null)
                 continue;
 
-            targetParent = zone.slotParent != null ? zone.slotParent : zone.transform;
+            targetParent = zone.SlotParent != null ? zone.SlotParent : zone.transform;
             if (targetParent != null)
                 break;
         }
@@ -1012,7 +1380,7 @@ public class Stage30Controller : MonoBehaviour
         {
             var child = root.GetChild(i);
 
-            if (child.GetComponent<StoneDraggable>() != null && child.GetComponent<StoneDropZone>() == null)
+            if (child.GetComponent<StoneDraggable>() != null && child.GetComponent<Stage30StoneDropZone>() == null)
                 count++;
 
             if (child.childCount > 0)
@@ -1097,12 +1465,12 @@ public class Stage30Controller : MonoBehaviour
         return stones.FirstOrDefault(s => s != null);
     }
 
-    private StoneDropZone FindSlotForTutorial(string identifier, StoneDraggable stoneFallback)
+    private Stage30StoneDropZone FindSlotForTutorial(string identifier, StoneDraggable stoneFallback)
     {
         if (stoneBoard == null)
             return null;
 
-        var slots = stoneBoard.GetComponentsInChildren<StoneDropZone>(true);
+        var slots = stoneBoard.GetComponentsInChildren<Stage30StoneDropZone>(true);
         if (slots == null || slots.Length == 0)
             return null;
 
@@ -1125,8 +1493,8 @@ public class Stage30Controller : MonoBehaviour
 
             if (targetNumber > 0)
             {
-                int slotNumber = slot.slotNumber != 0 ? slot.slotNumber : ExtractNumberFromName(slot.gameObject.name);
-                if (slotNumber == targetNumber)
+                int slotNumberVal = slot.SlotNumber != 0 ? slot.SlotNumber : ExtractNumberFromName(slot.gameObject.name);
+                if (slotNumberVal == targetNumber)
                     return slot;
             }
         }
@@ -1189,6 +1557,11 @@ public class Stage30Controller : MonoBehaviour
     }
 
     [Serializable]
+    private class VoiceReplyData { public string reply; public bool isReplyCorrect; public float accuracy; public string audioUrl; }
+    [Serializable]
+    private class VoiceReplyResp { public bool success = true; public string message; public VoiceReplyData data; }
+
+    [Serializable]
     private class ProblemListResponse
     {
         public bool success;
@@ -1221,4 +1594,3 @@ public class Stage30Controller : MonoBehaviour
         public string imageUrl;
     }
 }
-

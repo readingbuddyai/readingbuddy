@@ -39,7 +39,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
         public string stage = "1.1.1";
         [Tooltip("stage/start, check/voice 등 2레벨 스테이지 파라미터가 필요한 요청에 사용됩니다. 비워두면 stage 값이 사용됩니다.")]
-        public string stageTwoPart = "1.1";
+        public string stageTwoPart = "1.1.1";
         public int count = 5;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰
@@ -56,9 +56,24 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
+    [Header("Progress Bar")]
+    [Tooltip("ProgressBar/ProgressText을 씬에서 숨기려면 꺼두세요.")]
+    public bool showProgressUI = false;
+    public Image progressBarFill;
+    public Color progressBarBackgroundColor = new Color(1f, 1f, 1f, 0.25f);
+    public Color progressBarFillColor = new Color(1f, 1f, 1f, 0.9f);
+    public Vector2 progressBarSize = new Vector2(1200f, 18f);
+    public Vector2 progressBarOffset = new Vector2(0f, -30f);
     public Image mainImage;              // 중앙 큰 이미지
     public RectTransform optionsContainer; // 하단 옵션 버튼 부모
     public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
+
+    [Header("Video (for mp4 imageUrl)")]
+    public UnityEngine.UI.RawImage videoSurface; // VideoSurface
+    public UnityEngine.Video.VideoPlayer videoPlayer; 
+    public bool videoLoop = true;
+
+    private RenderTexture _videoRT;
 
     [Header("Intro Tutorial")]
     public StageTutorialProfile tutorialProfile;
@@ -78,6 +93,10 @@ using OptionDto = StageQuestionModels.OptionDto;
     [Tooltip("튜토리얼 클립 사이 대기 시간(초)")]
     [Min(0f)]
     public float tutorialClipGapSeconds = 0.9f;
+
+    [Header("Tutorial Video (local)")]
+    public UnityEngine.Video.VideoClip tutorialClip;  // 프로젝트에 있는 튜토리얼 영상
+    public bool playTutorialVideo = true;            // 필요할 때만 켜기
 
     [Header("Guide Character (Level 1)")]
     [Tooltip("패널이 꺼져 있을 때 표시할 3D 캐릭터 오브젝트")]
@@ -168,6 +187,9 @@ using OptionDto = StageQuestionModels.OptionDto;
         private StageSupplementController _supplementController;
         private StageSupplementDependencies _supplementDependencies;
         private int _currentProblemNumber;
+        private RectTransform _progressBarRoot;
+        private RectTransform _progressBarFillRect;
+        private float _progressBarMaxWidth;
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
         public bool applyAutoLayout = true;
@@ -280,19 +302,46 @@ using OptionDto = StageQuestionModels.OptionDto;
 
         // baseUrl 자동 해석 (ENV > Resources > Inspector)
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
+        Debug.Log($"[Stage11] ✅ baseUrl 설정 완료: {baseUrl}");
 
         // AuthManager에서 토큰 가져오기 (우선순위)
         // EnvConfig는 fallback으로만 사용
         if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
         {
+            Debug.Log("[Stage11] 🔑 AuthManager에서 토큰 가져오기 시작...");
             authToken = AuthManager.Instance.GetAccessToken();
-            Debug.Log("[Stage11] ✓ Access token retrieved from AuthManager");
+            
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogError("[Stage11] ❌ AuthManager에서 토큰을 가져왔지만 토큰이 비어있습니다. 403 에러가 발생할 수 있습니다.");
+                Debug.LogError($"[Stage11] 디버깅: authToken == null = {authToken == null}, empty = {string.IsNullOrEmpty(authToken)}, whitespace = {string.IsNullOrWhiteSpace(authToken)}");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage11] ✅ Access token retrieved from AuthManager (len={authToken.Length}, preview={preview})");
+            }
         }
         else
         {
+            Debug.LogWarning($"[Stage11] ⚠️ AuthManager 없음 또는 로그인 안 됨: Instance={AuthManager.Instance != null}, IsLoggedIn={AuthManager.Instance?.IsLoggedIn() ?? false}");
             authToken = EnvConfig.ResolveAuthToken(authToken);
-            Debug.Log("[Stage11] Using authToken from EnvConfig (fallback)");
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogWarning("[Stage11] ❌ EnvConfig에서도 토큰을 찾지 못했습니다. 403 에러가 발생할 수 있습니다.");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage11] ✅ Using authToken from EnvConfig (fallback, len={authToken.Length}, preview={preview})");
+            }
         }
+        
+        Debug.Log($"[Stage11] 🔍 GetSessionController 호출 시 사용될 authToken: null={authToken == null}, empty={string.IsNullOrEmpty(authToken)}, len={authToken?.Length ?? 0}");
 
         if (applyAutoLayout)
             TryApplyAutoLayout();
@@ -371,6 +420,8 @@ using OptionDto = StageQuestionModels.OptionDto;
                 CorrectSfx = sfxCorrectClip,
                 MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve),
                 PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops),
+                PlayTutorialVideo = PlayLocalTutorialVideo,
+                OnCursorActiveChanged = active => { if (!active) StopVideoIfAny(); },
                 Log = message => Debug.Log(message),
                 LogWarning = message => Debug.LogWarning(message),
                 VerboseLogging = verboseLogging
@@ -393,6 +444,8 @@ using OptionDto = StageQuestionModels.OptionDto;
             _tutorialDependencies.CorrectSfx = sfxCorrectClip;
             _tutorialDependencies.MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve);
             _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops);
+            _tutorialDependencies.PlayTutorialVideo = PlayLocalTutorialVideo;
+            _tutorialDependencies.OnCursorActiveChanged = active => { if (!active) StopVideoIfAny(); };
             _tutorialDependencies.Log = message => Debug.Log(message);
             _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
             _tutorialDependencies.VerboseLogging = verboseLogging;
@@ -475,6 +528,8 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private Text EnsureProgressText()
     {
+        if (!showProgressUI)
+            return null;
         if (progressText) return progressText;
         var go = GameObject.Find("ProgressText");
         if (go)
@@ -500,6 +555,98 @@ using OptionDto = StageQuestionModels.OptionDto;
         text.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
         progressText = text;
         return progressText;
+    }
+
+    private void SetProgressDisplay(int index, int total)
+    {
+        if (!showProgressUI)
+            return;
+        if (progressText) progressText.text = $"문제 {index}/{total}";
+        var pt = EnsureProgressText();
+        if (pt != null) pt.text = $"{index} / {total}";
+        UpdateProgressBar(index, total);
+    }
+
+    private void UpdateProgressBar(int index, int total)
+    {
+        if (!showProgressUI)
+            return;
+        var fill = EnsureProgressBarFill();
+        if (fill == null) return;
+
+        total = Mathf.Max(1, total);
+        var ratio = Mathf.Clamp01((float)index / total);
+
+        if (_progressBarFillRect == null)
+            _progressBarFillRect = fill.rectTransform;
+
+        if (_progressBarRoot != null && _progressBarRoot.rect.width > 0f)
+            _progressBarMaxWidth = _progressBarRoot.rect.width;
+
+        if (_progressBarMaxWidth <= 0f)
+            _progressBarMaxWidth = progressBarSize.x;
+
+        _progressBarFillRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, _progressBarMaxWidth * ratio);
+    }
+
+    private Image EnsureProgressBarFill()
+    {
+        if (!showProgressUI)
+            return null;
+
+        if (progressBarFill != null && progressBarFill.rectTransform != null)
+            {
+                _progressBarFillRect = progressBarFill.rectTransform;
+                _progressBarRoot = _progressBarFillRect.parent as RectTransform;
+                return progressBarFill;
+            }
+
+        if (_progressBarFillRect != null)
+            return _progressBarFillRect.GetComponent<Image>();
+
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas) return null;
+
+        if (_progressBarRoot == null)
+        {
+            var container = new GameObject("ProgressBar", typeof(RectTransform), typeof(Image));
+            container.layer = canvas.gameObject.layer;
+            _progressBarRoot = container.GetComponent<RectTransform>();
+            _progressBarRoot.SetParent(canvas.transform, false);
+            _progressBarRoot.anchorMin = new Vector2(0.5f, 1f);
+            _progressBarRoot.anchorMax = new Vector2(0.5f, 1f);
+            _progressBarRoot.pivot = new Vector2(0.5f, 1f);
+            _progressBarRoot.anchoredPosition = progressBarOffset;
+            _progressBarRoot.sizeDelta = progressBarSize;
+            var bg = container.GetComponent<Image>();
+            bg.color = progressBarBackgroundColor;
+            bg.raycastTarget = false;
+        }
+
+        if (_progressBarFillRect == null)
+        {
+            var fillObj = new GameObject("ProgressBarFill", typeof(RectTransform), typeof(Image));
+            fillObj.layer = _progressBarRoot.gameObject.layer;
+            fillObj.transform.SetParent(_progressBarRoot, false);
+            _progressBarFillRect = fillObj.GetComponent<RectTransform>();
+            _progressBarFillRect.anchorMin = new Vector2(0f, 0f);
+            _progressBarFillRect.anchorMax = new Vector2(0f, 1f);
+            _progressBarFillRect.pivot = new Vector2(0f, 0.5f);
+            _progressBarFillRect.anchoredPosition = Vector2.zero;
+            _progressBarFillRect.sizeDelta = new Vector2(progressBarSize.x, 0f);
+            var fillImage = fillObj.GetComponent<Image>();
+            fillImage.color = progressBarFillColor;
+            fillImage.raycastTarget = false;
+            progressBarFill = fillImage;
+        }
+
+        if (_progressBarRoot != null && _progressBarRoot.rect.width > 0f)
+            _progressBarMaxWidth = _progressBarRoot.rect.width;
+
+        if (_progressBarMaxWidth <= 0f)
+            _progressBarMaxWidth = progressBarSize.x;
+
+        return progressBarFill;
     }
 
     private void TryApplyAutoLayout()
@@ -545,6 +692,7 @@ using OptionDto = StageQuestionModels.OptionDto;
     {
         ConfigureTutorialController();
         _tutorialController?.ResetAfterStageRestart();
+        StopVideoIfAny();
 
         // 새 실행 시작 시 상태 초기화
         _guideMoved = false;
@@ -560,12 +708,15 @@ using OptionDto = StageQuestionModels.OptionDto;
         _supplementController?.Clear();
         _questionController.Clear();
         yield return PlayClip(sfxStart);
-
+        // (추가) 로컬 튜토리얼 영상
+        // yield return PlayLocalTutorialVideo();
+        
         // 0-1) 도입 대사 (가이드 이미지는 고정, 이동은 sfxNext 타이밍에 수행)
         if (_tutorialController != null)
         {
             yield return _tutorialController.RunIntroSequence();
             yield return _tutorialController.RunIntroTutorial();
+            StopVideoIfAny();
         }
         else
         {
@@ -792,11 +943,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         // 현재 문제 번호 저장 (attempt 로깅용)
         _currentProblemNumber = index;
         // 진행도 표시
-        if (progressText) progressText.text = $"문제 {index}/{total}";
-
-        // 이미지 로드 및 표시
-        var pt = EnsureProgressText();
-        if (pt != null) pt.text = $"{index} / {total}";
+        SetProgressDisplay(index, total);
         yield return LoadAndShowImage(q.imageUrl);
 
         // 1) [1.1.3] 안내 대사
@@ -833,16 +980,60 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private IEnumerator LoadAndShowImage(string imageUrl)
     {
+        // 이전 재생 정리
+        StopVideoIfAny();
+
         if (mainImage != null)
         {
-            // 로드 전에는 보이지 않게
             mainImage.enabled = false;
             mainImage.sprite = null;
         }
+        if (string.IsNullOrEmpty(imageUrl)) yield break;
 
-        if (string.IsNullOrEmpty(imageUrl) || mainImage == null)
-            yield break;
+        string lower = imageUrl.ToLowerInvariant();
 
+        // mp4면 VideoPlayer로 재생
+        if (lower.EndsWith(".mp4") || lower.Contains("content-type=video"))
+        {
+            if (videoPlayer == null || videoSurface == null)
+            {
+                Debug.LogError("[Stage11] mp4인데 VideoPlayer/VideoSurface가 연결되지 않았어요.");
+                yield break;
+            }
+
+            // RenderTexture 준비
+            if (_videoRT == null)
+            {
+                _videoRT = new RenderTexture(1280, 720, 0, RenderTextureFormat.ARGB32);
+                _videoRT.Create();
+            }
+            videoPlayer.targetTexture = _videoRT;
+            videoSurface.texture = _videoRT;
+
+            // UI 전환
+            if (mainImage) mainImage.enabled = false;
+            videoSurface.gameObject.SetActive(true);
+
+            // 재생 설정
+            videoPlayer.isLooping = videoLoop;
+            videoPlayer.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.AudioSource;
+            var asrc = videoPlayer.GetTargetAudioSource(0);
+            if (asrc == null && audioSource != null) videoPlayer.SetTargetAudioSource(0, audioSource);
+
+            videoPlayer.url = imageUrl;
+
+            bool prepared = false;
+            videoPlayer.errorReceived += (vp, msg) => Debug.LogError($"[Stage11] Video error: {msg}");
+            videoPlayer.prepareCompleted += (vp) => prepared = true;
+
+            videoPlayer.Prepare();
+            while (!prepared) yield return null;
+
+            videoPlayer.Play();
+            yield break; // 영상은 켠 채 다음 로직으로
+        }
+
+        // 이미지면 Texture 로드
         using (var req = UnityWebRequestTexture.GetTexture(imageUrl))
         {
             yield return req.SendWebRequest();
@@ -850,30 +1041,86 @@ using OptionDto = StageQuestionModels.OptionDto;
             {
                 var body = req.downloadHandler != null ? req.downloadHandler.text : "";
                 Debug.LogWarning($"[Stage11] 이미지 로드 실패: {req.error} (code={req.responseCode})\nURL={imageUrl}\nBody={body}");
+
                 if (showPlaceholderOnImageFail && mainImage != null)
                 {
                     var texPh = new Texture2D(64, 64, TextureFormat.RGBA32, false);
                     var col = new Color(0.2f, 0.6f, 0.9f, 0.25f);
                     var arr = new Color[64 * 64];
                     for (int i = 0; i < arr.Length; i++) arr[i] = col;
-                    texPh.SetPixels(arr);
-                    texPh.Apply();
+                    texPh.SetPixels(arr); texPh.Apply();
                     var spr = Sprite.Create(texPh, new Rect(0, 0, texPh.width, texPh.height), new Vector2(0.5f, 0.5f));
                     mainImage.sprite = spr;
                     mainImage.preserveAspect = true;
                     mainImage.enabled = true;
-                    Debug.Log("[Stage11] 자리표시 이미지 표시 (로드 실패)");
                 }
                 yield break;
             }
+
+            // 성공: 비디오 표면 끄고 스프라이트 표시
+            if (videoSurface) videoSurface.gameObject.SetActive(false);
 
             var tex = DownloadHandlerTexture.GetContent(req);
             var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
             mainImage.sprite = sprite;
             mainImage.preserveAspect = true;
-            mainImage.enabled = true; // 로드 후 표시
+            mainImage.enabled = true;
+
             Debug.Log($"[Stage11] 이미지 로드 OK: {imageUrl} ({tex.width}x{tex.height})");
         }
+    }
+    
+    private void StopVideoIfAny()
+    {
+        if (videoPlayer != null)
+        {
+            try { videoPlayer.Stop(); } catch {}
+            videoPlayer.targetTexture = null;
+        }
+        if (videoSurface != null) videoSurface.gameObject.SetActive(false);
+        if (_videoRT != null)
+        {
+            _videoRT.Release();
+            Destroy(_videoRT);
+            _videoRT = null;
+        }
+    }
+
+    private IEnumerator PlayLocalTutorialVideo()
+    {
+        if (!playTutorialVideo || tutorialClip == null || videoPlayer == null || videoSurface == null)
+            yield break;
+
+        // 이미지 숨기고 비디오 표면 활성화
+        if (mainImage) { mainImage.enabled = false; mainImage.sprite = null; }
+        videoSurface.gameObject.SetActive(true);
+
+        // RenderTexture 준비
+        if (_videoRT == null)
+        {
+            _videoRT = new RenderTexture(1280, 720, 0, RenderTextureFormat.ARGB32);
+            _videoRT.Create();
+        }
+        videoPlayer.targetTexture = _videoRT;
+        videoSurface.texture = _videoRT;
+
+        // 로컬 클립 재생 설정
+        videoPlayer.source = UnityEngine.Video.VideoSource.VideoClip;
+        videoPlayer.clip = tutorialClip;
+        videoPlayer.isLooping = videoLoop; // 튜토리얼은 보통 1회
+        videoPlayer.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.AudioSource;
+        if (audioSource) videoPlayer.SetTargetAudioSource(0, audioSource);
+
+        bool prepared = false;
+        videoPlayer.errorReceived += (vp, msg) => Debug.LogError($"[Stage11] Tutorial video error: {msg}");
+        videoPlayer.prepareCompleted += _ => prepared = true;
+        videoPlayer.Prepare();
+        while (!prepared) yield return null;
+
+        videoPlayer.Play();
+        if (audioSource) audioSource.Play();
+
+        // Keep looping until the tutorial ends
     }
 
     private IEnumerator PlayClip(AudioClip clip)
@@ -1343,6 +1590,7 @@ using OptionDto = StageQuestionModels.OptionDto;
     private void RestartStage()
     {
         StopAllCoroutines();
+        StopVideoIfAny();
         // 상태 리셋
         if (optionsContainer)
         {

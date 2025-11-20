@@ -132,6 +132,7 @@ public partial class Stage42Controller
         _tutorialDependencies.Log = message => { if (logVerbose) Debug.Log(message); };
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = logVerbose;
+        _tutorialDependencies.ClearSlotContents = ClearTutorialSlotContents;
 
         if (tutorialProfile != null)
         {
@@ -188,6 +189,52 @@ public partial class Stage42Controller
         ForceRefreshContainerLayout(choicesContainer);
         ForceRefreshContainerLayout(consonantChoicesContainer);
         ForceRefreshContainerLayout(vowelChoicesContainer);
+    }
+
+    private void ClearTutorialSlotContents()
+    {
+        RestoreTutorialChoiceTiles();
+
+        if (_attemptsPerSlot != null)
+        {
+            for (int i = 0; i < _attemptsPerSlot.Length; i++)
+                _attemptsPerSlot[i] = 0;
+        }
+
+        if (_finalizedSlots != null)
+        {
+            for (int i = 0; i < _finalizedSlots.Length; i++)
+                _finalizedSlots[i] = false;
+        }
+
+        _awaitingUserArrangement = false;
+        _inInitialFillPhase = false;
+        _currentCorrectionSlot = -1;
+        _initialSlotIndex = 0;
+
+        ClearTutorialSlotBox(choseongBox, 0);
+        ClearTutorialSlotBox(jungseongBox, 1);
+        ClearTutorialSlotBox(jongseongBox, 2);
+
+        FocusBox(null);
+    }
+
+    private void ClearTutorialSlotBox(GameObject slotBox, int slotIndex)
+    {
+        if (slotBox != null)
+        {
+            var draggables = slotBox.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null)
+                    continue;
+                draggable.ReturnToOrigin();
+            }
+            ForceRefreshContainerLayout(slotBox);
+        }
+
+        SetSlotText(slotIndex, string.Empty);
+        SetSlotAlpha(slotIndex, dimAlpha);
     }
 
     private void ForceRefreshContainerLayout(GameObject container)
