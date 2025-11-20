@@ -16,6 +16,8 @@ public partial class Stage41Controller
     public StageTutorialController.IntroOptionCursor introOptionCursor;
     public PanelAnimator introTutorialPanelAnimator;
     public GameObject introTutorialPanel;
+    public Button tutorialSkipButton;
+    public Vector2 tutorialSkipButtonOffset = new Vector2(-40f, 0f);
     [Tooltip("튜토리얼 이후 사용자의 입력을 기다릴지 여부")] public bool requireTriggerAfterTutorial = false;
     [Range(0.05f, 1f)] public float tutorialTriggerThreshold = 0.6f;
     public KeyCode tutorialFallbackKey = KeyCode.Space;
@@ -32,6 +34,7 @@ public partial class Stage41Controller
     private readonly StageQuestionController<QuestionDto> _questionController = new StageQuestionController<QuestionDto>();
     private readonly StageQuestionController<StageQuestionModels.QuestionDto> _supplementQuestionController = new StageQuestionController<StageQuestionModels.QuestionDto>();
     private readonly Dictionary<RectTransform, TutorialChoicePlacement> _tutorialChoicePlacements = new Dictionary<RectTransform, TutorialChoicePlacement>();
+    private Button _generatedTutorialSkipButton;
 
     private class TutorialChoicePlacement
     {
@@ -102,9 +105,13 @@ public partial class Stage41Controller
         _tutorialDependencies.CorrectSfx = clipGreat;
         _tutorialDependencies.MoveCursorSmooth = null;
         _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops);
-        _tutorialDependencies.ChoseongSlot = choseongBox != null ? choseongBox.GetComponent<RectTransform>() : null;
-        _tutorialDependencies.JungseongSlot = jungseongBox != null ? jungseongBox.GetComponent<RectTransform>() : null;
-        _tutorialDependencies.JongsungSlot = jongseongBox != null ? jongseongBox.GetComponent<RectTransform>() : null;
+        // 튜토리얼 전용 슬롯이 있으면 사용, 없으면 본 훈련 슬롯 사용
+        var tutorialChoseong = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+        var tutorialJungseong = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+        var tutorialJongseong = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+        _tutorialDependencies.ChoseongSlot = tutorialChoseong != null ? tutorialChoseong.GetComponent<RectTransform>() : null;
+        _tutorialDependencies.JungseongSlot = tutorialJungseong != null ? tutorialJungseong.GetComponent<RectTransform>() : null;
+        _tutorialDependencies.JongsungSlot = tutorialJongseong != null ? tutorialJongseong.GetComponent<RectTransform>() : null;
         _tutorialDependencies.ResolveChoiceTile = ResolveTutorialChoiceTile;
         _tutorialDependencies.ResolveSlotTarget = ResolveTutorialSlotTarget;
         _tutorialDependencies.ToggleChoices = (show, slotTarget) => Co_TutorialToggleChoices(show, slotTarget);
@@ -112,9 +119,12 @@ public partial class Stage41Controller
         _tutorialDependencies.PulseSlot = (slotTarget, scale, duration, loops) => Co_TutorialPulseSlot(slotTarget, scale, duration, loops);
         _tutorialDependencies.AnimateChoiceDrag = (key, slotTarget, seconds, curve, keepInSlot) => Co_TutorialAnimateChoiceDrag(key, slotTarget, seconds, curve, keepInSlot);
         _tutorialDependencies.ChoiceDragRoot = choicesContainer != null ? choicesContainer.transform : null;
+        _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
         _tutorialDependencies.Log = message => { if (logVerbose) Debug.Log(message); };
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = logVerbose;
+        _tutorialDependencies.ClearSlotContents = ClearTutorialSlotContents;
+        _tutorialDependencies.TutorialSkipButton = ResolveOrCreateTutorialSkipButton();
 
         if (tutorialProfile != null)
         {
@@ -133,9 +143,63 @@ public partial class Stage41Controller
         _tutorialController.introOptionCursor = introOptionCursor;
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
+        // 튜토리얼에서 트리거 입력을 받도록 설정 (원래대로)
+        _tutorialController.requireTriggerAfterTutorial = requireTriggerAfterTutorial;
         _tutorialController.guide3DCharacter = guide3DCharacter;
 
         _tutorialController.Initialize(_tutorialDependencies);
+    }
+
+    private Button ResolveOrCreateTutorialSkipButton()
+    {
+        if (tutorialSkipButton != null)
+            return tutorialSkipButton;
+        if (_generatedTutorialSkipButton != null)
+            return _generatedTutorialSkipButton;
+        if (introTutorialPanel == null)
+            return null;
+
+        var parentRect = introTutorialPanel.GetComponent<RectTransform>();
+        if (parentRect == null)
+            return null;
+
+        var go = new GameObject("TutorialSkipButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        go.layer = introTutorialPanel.layer;
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parentRect, false);
+        rt.SetAsLastSibling();
+        rt.anchorMin = new Vector2(1f, 0.5f);
+        rt.anchorMax = new Vector2(1f, 0.5f);
+        rt.pivot = new Vector2(1f, 0.5f);
+        rt.sizeDelta = new Vector2(320f, 100f);
+        rt.anchoredPosition = tutorialSkipButtonOffset;
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0.12f, 0.12f, 0.13f, 0.9f);
+
+        var button = go.GetComponent<Button>();
+        button.transition = Selectable.Transition.ColorTint;
+
+        var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        label.layer = go.layer;
+        label.transform.SetParent(go.transform, false);
+        var labelRt = label.GetComponent<RectTransform>();
+        labelRt.anchorMin = Vector2.zero;
+        labelRt.anchorMax = Vector2.one;
+        labelRt.offsetMin = new Vector2(10f, 10f);
+        labelRt.offsetMax = new Vector2(-10f, -10f);
+        var tmpText = label.GetComponent<TextMeshProUGUI>();
+        tmpText.text = "튜토리얼 건너뛰기";
+        tmpText.alignment = TextAlignmentOptions.Center;
+        tmpText.fontSize = 32;
+        tmpText.color = Color.white;
+        if (tmpFont)
+            tmpText.font = tmpFont;
+
+        button.targetGraphic = img;
+        go.SetActive(false);
+        _generatedTutorialSkipButton = button;
+        return button;
     }
 
     private void StoreTutorialChoicePlacement(RectTransform tile, Transform parent, int siblingIndex, Vector3 localScale)
@@ -172,6 +236,48 @@ public partial class Stage41Controller
         ForceRefreshContainerLayout(choicesContainer);
         ForceRefreshContainerLayout(consonantChoicesContainer);
         ForceRefreshContainerLayout(vowelChoicesContainer);
+    }
+
+    private void ClearTutorialSlotContents()
+    {
+        RestoreTutorialChoiceTiles();
+
+        for (int slot = 0; slot < 3; slot++)
+        {
+            ClearTutorialSlot(slot);
+        }
+    }
+
+    private void ClearTutorialSlot(int slotIndex)
+    {
+        if (slotIndex < 0 || slotIndex > 2)
+            return;
+
+        EnsureSegmentListCapacity(slotIndex);
+        _segmentReplyCandidates[slotIndex].Clear();
+        _segmentReplies[slotIndex] = string.Empty;
+        if (slotIndex < _segmentCorrects.Count)
+            _segmentCorrects[slotIndex] = false;
+        if (slotIndex < _expectedPhonemes.Count)
+            _expectedPhonemes[slotIndex] = string.Empty;
+        if (slotIndex < _finalizedSlots.Length)
+            _finalizedSlots[slotIndex] = false;
+
+        var slotHolder = ResolveTutorialSlotObject(IndexToSlotTarget(slotIndex));
+        if (slotHolder != null)
+        {
+            var draggables = slotHolder.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null)
+                    continue;
+                draggable.ReturnToOrigin();
+            }
+            ForceRefreshContainerLayout(slotHolder);
+        }
+
+        SetSlotText(slotIndex, string.Empty);
+        SetSlotAlpha(slotIndex, dimAlpha);
     }
 
     private void ForceRefreshContainerLayout(GameObject container)
@@ -284,9 +390,13 @@ public partial class Stage41Controller
 
     private System.Collections.IEnumerator Co_TutorialToggleSlots(bool show)
     {
-        if (choseongBox) choseongBox.SetActive(show);
-        if (jungseongBox) jungseongBox.SetActive(show);
-        if (jongseongBox) jongseongBox.SetActive(show);
+        // 튜토리얼 전용 슬롯이 있으면 그것만, 없으면 본 훈련 슬롯 사용
+        var tutorialChoseong = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+        var tutorialJungseong = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+        var tutorialJongseong = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+        if (tutorialChoseong) tutorialChoseong.SetActive(show);
+        if (tutorialJungseong) tutorialJungseong.SetActive(show);
+        if (tutorialJongseong) tutorialJongseong.SetActive(show);
         yield break;
     }
 
@@ -329,29 +439,42 @@ public partial class Stage41Controller
 
     private RectTransform ResolveTutorialSlotTarget(StageTutorialSlotTarget target)
     {
+        // 튜토리얼 전용 슬롯이 있으면 그것을, 없으면 본 훈련 슬롯 사용
+        GameObject targetBox = null;
+        TMP_Text targetText = null;
+        
         switch (target)
         {
             case StageTutorialSlotTarget.Choseong:
-                return choseongText != null ? choseongText.rectTransform : (choseongBox != null ? choseongBox.GetComponent<RectTransform>() : null);
+                targetBox = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+                targetText = choseongText;
+                break;
             case StageTutorialSlotTarget.Jungseong:
-                return jungseongText != null ? jungseongText.rectTransform : (jungseongBox != null ? jungseongBox.GetComponent<RectTransform>() : null);
+                targetBox = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+                targetText = jungseongText;
+                break;
             case StageTutorialSlotTarget.Jongsung:
-                return jongseongText != null ? jongseongText.rectTransform : (jongseongBox != null ? jongseongBox.GetComponent<RectTransform>() : null);
+                targetBox = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+                targetText = jongseongText;
+                break;
             default:
                 return null;
         }
+        
+        return targetText != null ? targetText.rectTransform : (targetBox != null ? targetBox.GetComponent<RectTransform>() : null);
     }
 
     private GameObject ResolveTutorialSlotObject(StageTutorialSlotTarget target)
     {
+        // 튜토리얼 전용 슬롯이 있으면 사용, 없으면 본 훈련 슬롯 사용
         switch (target)
         {
             case StageTutorialSlotTarget.Choseong:
-                return choseongBox;
+                return tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
             case StageTutorialSlotTarget.Jungseong:
-                return jungseongBox;
+                return tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
             case StageTutorialSlotTarget.Jongsung:
-                return jongseongBox;
+                return tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
             default:
                 return null;
         }
@@ -381,7 +504,9 @@ public partial class Stage41Controller
         hit = SearchIn(consonantChoicesContainer);
         if (hit != null) return hit;
         hit = SearchIn(vowelChoicesContainer);
-        return hit;
+        if (hit != null) return hit;
+
+        return ResolveChoiceByDraggableSymbol(normalizedKey);
     }
 
     private RectTransform FindChoiceTileRecursive(Transform parent, string trimmedKey, string normalizedKey, HashSet<Transform> rootStops)
@@ -474,7 +599,39 @@ public partial class Stage41Controller
         if (result.StartsWith("Tile_", StringComparison.OrdinalIgnoreCase))
             result = result.Substring("Tile_".Length);
 
-        return result.Trim();
+        result = result.Trim();
+        return NormalizePhoneme(result);
+    }
+
+    private RectTransform ResolveChoiceByDraggableSymbol(string normalizedKey)
+    {
+        if (string.IsNullOrEmpty(normalizedKey))
+            return null;
+
+        RectTransform SearchIn(GameObject container)
+        {
+            if (container == null)
+                return null;
+
+            var draggables = container.GetComponentsInChildren<PhonemeDraggableUI>(true);
+            foreach (var draggable in draggables)
+            {
+                if (draggable == null)
+                    continue;
+
+                string symbol = NormalizePhoneme((draggable.symbol ?? string.Empty).Trim());
+                if (string.Equals(symbol, normalizedKey, StringComparison.Ordinal))
+                    return draggable.GetComponent<RectTransform>();
+            }
+            return null;
+        }
+
+        var hit = SearchIn(choicesContainer);
+        if (hit != null) return hit;
+        hit = SearchIn(consonantChoicesContainer);
+        if (hit != null) return hit;
+        hit = SearchIn(vowelChoicesContainer);
+        return hit;
     }
 
     private System.Collections.IEnumerator Co_AnimateTutorialChoice(RectTransform tile, RectTransform slot, float seconds, AnimationCurve curve, bool keepInSlot)
@@ -699,6 +856,56 @@ public partial class Stage41Controller
         }
     }
 
+    private IEnumerator ExecuteTutorialCustomStep(string actionId)
+    {
+        if (string.IsNullOrWhiteSpace(actionId))
+            yield break;
+
+        string command = actionId;
+        string args = string.Empty;
+        int firstColon = actionId.IndexOf(':');
+        if (firstColon >= 0)
+        {
+            command = actionId.Substring(0, firstColon);
+            args = actionId.Substring(firstColon + 1);
+        }
+
+        command = command.Trim().ToLowerInvariant();
+        args = args?.Trim() ?? string.Empty;
+
+        switch (command)
+        {
+            case "prefillslot":
+            case "prefill":
+                HandleTutorialPrefillSlot(args);
+                break;
+            case "clearslot":
+            case "clear":
+                HandleTutorialClearSlot(args);
+                break;
+            case "clearallslots":
+            case "clearallslottexts":
+            case "clearallslottext":
+                HandleTutorialClearAllSlots();
+                HandleTutorialClearAllSlotObjects();
+                break;
+            case "hidetile":
+            case "hidechoice":
+                HandleTutorialToggleTileVisibility(args, false);
+                break;
+            case "showtile":
+            case "showchoice":
+                HandleTutorialToggleTileVisibility(args, true);
+                break;
+            default:
+                if (logVerbose)
+                    Debug.LogWarning($"[Stage41][Tutorial] Unknown custom action '{actionId}'");
+                break;
+        }
+
+        yield break;
+    }
+
     private void UpdateSupplementQuestions(IEnumerable<QuestionDto> source)
     {
         var list = new List<StageQuestionModels.QuestionDto>();
@@ -722,5 +929,68 @@ public partial class Stage41Controller
             }
         }
         _supplementQuestionController.SetQuestions(list);
+    }
+
+    private void HandleTutorialClearAllSlotObjects()
+    {
+        // 튜토리얼 전용 슬롯이 있으면 그것만 초기화, 없으면 본 훈련 슬롯 초기화
+        var tutorialChoseong = tutorialChoseongBox != null ? tutorialChoseongBox : choseongBox;
+        var tutorialJungseong = tutorialJungseongBox != null ? tutorialJungseongBox : jungseongBox;
+        var tutorialJongseong = tutorialJongseongBox != null ? tutorialJongseongBox : jongseongBox;
+        ClearDraggablesInSlot(tutorialChoseong);
+        ClearDraggablesInSlot(tutorialJungseong);
+        ClearDraggablesInSlot(tutorialJongseong);
+
+        if (logVerbose)
+        {
+            Debug.Log($"[Stage41][Tutorial] clear slot objs → 초성 자식 {LogSlotChildren(tutorialChoseong)}, 중성 자식 {LogSlotChildren(tutorialJungseong)}, 종성 자식 {LogSlotChildren(tutorialJongseong)}");
+        }
+
+        RestoreTutorialChoiceTiles();
+    }
+
+    private string LogSlotChildren(GameObject slot)
+    {
+        if (slot == null)
+            return "(slot null)";
+        var t = slot.transform;
+        if (t.childCount == 0)
+            return "0";
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append(t.childCount);
+        sb.Append(':');
+        for (int i = 0; i < t.childCount; i++)
+        {
+            var child = t.GetChild(i);
+            sb.Append(child.name);
+            if (i < t.childCount - 1)
+                sb.Append(',');
+        }
+        return sb.ToString();
+    }
+
+    private void ClearDraggablesInSlot(GameObject slot)
+    {
+        if (slot == null)
+            return;
+
+        var draggables = slot.GetComponentsInChildren<PhonemeDraggableUI>(true);
+        foreach (var draggable in draggables)
+        {
+            if (draggable == null)
+                continue;
+            draggable.ReturnToOrigin();
+        }
+
+        var texts = slot.GetComponentsInChildren<TMPro.TMP_Text>(true);
+        foreach (var txt in texts)
+        {
+            if (txt == null)
+                continue;
+            txt.text = string.Empty;
+        }
+
+        Canvas.ForceUpdateCanvases();
+        ForceRefreshContainerLayout(slot);
     }
 }

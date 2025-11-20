@@ -14,6 +14,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 #endif
 using UnityEngine.XR;
+using UnityEngine.Video;
 using Stage.UI;
 using QuestionDto = StageQuestionModels.QuestionDto;
 using OptionDto = StageQuestionModels.OptionDto;
@@ -37,9 +38,9 @@ using OptionDto = StageQuestionModels.OptionDto;
     {
         [Header("API 설정")]
         public string baseUrl = ""; // 빈 값이면 절대경로/상대경로 그대로 사용
-        public string stage = "1.2";
+        public string stage = "1.1.2";
         [Tooltip("stage/start, check/voice 등 2레벨 스테이지 파라미터가 필요한 요청에 사용됩니다. 비워두면 stage 값이 사용됩니다.")]
-        public string stageTwoPart = "1.2";
+        public string stageTwoPart = "1.1.2";
         public int count = 5;
         [Tooltip("Authorization: Bearer {token}")]
         public string authToken = ""; // 필요 시 토큰
@@ -57,10 +58,24 @@ using OptionDto = StageQuestionModels.OptionDto;
     [Header("UI 참조")]
     public Text progressText;            // 상단 "문제 1/5"
     public Image mainImage;              // 중앙 큰 이미지
-    public RectTransform optionsContainer; // 하단 옵션 버튼 부모
-    public Button optionButtonPrefab;    // 동적 생성용 버튼 프리팹 (Text 자식 포함)
+    public RectTransform optionsContainer; // option container for choice buttons
+    public Button optionButtonPrefab;    // prototype option button
+    public Button oOptionPrefab;
+    public Button xOptionPrefab;
+    public Sprite oOptionSprite;
+    public Sprite xOptionSprite;
+    [Header("Option Layout")]
+    [Tooltip("Spacing between auto-generated option buttons (requires a HorizontalLayoutGroup).")]
+    public float optionButtonSpacing = 500f;
+    [Tooltip("Hide the text label inside each option button and rely on sprites only.")]
+    public bool hideOptionLabelText = true;
     [Tooltip("튜토리얼 등에서 노출할 단어 텍스트(TMP)")]
     public TMP_Text optionWordText;
+
+    [Header("Video (for mp4 imageUrl)")]
+    public RawImage videoSurface;
+    public VideoPlayer videoPlayer;
+    public bool videoLoop = true;
 
     [Header("Intro Tutorial")]
     public StageTutorialProfile tutorialProfile;
@@ -80,6 +95,10 @@ using OptionDto = StageQuestionModels.OptionDto;
     [Tooltip("튜토리얼 클립 사이 대기 시간(초)")]
     [Min(0f)]
     public float tutorialClipGapSeconds = 0.9f;
+
+    [Header("Tutorial Video (local)")]
+    public UnityEngine.Video.VideoClip tutorialClip;
+    public bool playTutorialVideo = true;
 
     [Header("Guide Character (Level 1)")]
     [Tooltip("패널이 꺼져 있을 때 표시할 3D 캐릭터 오브젝트")]
@@ -161,15 +180,20 @@ using OptionDto = StageQuestionModels.OptionDto;
         private bool _guideLocked;
         private Vector2 _guideFinalPos;
         private Vector2 _guideFinalSize;
+        private RenderTexture _videoRT;
         private StageSessionController _sessionController;
         private readonly StageQuestionController<QuestionDto> _questionController = new StageQuestionController<QuestionDto>();
         private StageTutorialController _tutorialController;
         private StageTutorialDependencies _tutorialDependencies;
+        private GameObject _tutorialHandCursorFallback;
         private StageAudioController _audioController;
         private StageAudioDependencies _audioDependencies;
         private StageSupplementController _supplementController;
         private StageSupplementDependencies _supplementDependencies;
         private int _currentProblemNumber;
+        private Button _initialOptionPrefab;
+        private HorizontalLayoutGroup _optionsLayoutGroup;
+        private Coroutine _optionLayoutSpacingRoutine;
         [Header("Auto Layout (겹침 방지)")]
         [Tooltip("실행 시 메인 이미지/옵션 영역을 자동 배치합니다.")]
         public bool applyAutoLayout = true;
@@ -184,7 +208,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         [Tooltip("메인 이미지 고정 크기(px)")]
         public Vector2 imageFixedSize = new Vector2(1500f, 1500f);
         [Tooltip("옵션 버튼 권장 크기(px)")]
-        public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
+        public Vector2 optionButtonPreferredSize = new Vector2(700f, 700f);
 
         [Header("End Modal Buttons")]
         [Tooltip("끝 모달 '다시 학습하기' 버튼 프리팹")]
@@ -192,7 +216,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         [Tooltip("끝 모달 '로비로 나가기' 버튼 프리팹")]
         public Button lobbyButtonPrefab;
         [Tooltip("끝 모달 버튼 크기(px). 0이면 옵션 버튼 크기 사용")]
-        public Vector2 endModalButtonSize = new Vector2(600f, 300f);
+        public Vector2 endModalButtonSize = new Vector2(600f, 600f);
 
         [Header("Options Layout")]
         [Tooltip("옵션 버튼 간 간격(px)")]
@@ -236,17 +260,92 @@ using OptionDto = StageQuestionModels.OptionDto;
 
     private void Start()
     {
-        // baseUrl 자동 해석 (ENV > Resources > Inspector)
-        baseUrl   = EnvConfig.ResolveBaseUrl(baseUrl);
-        authToken = EnvConfig.ResolveAuthToken(authToken);
+        StartCoroutine(InitializeWithAuth());
+    }
+
+    private IEnumerator InitializeWithAuth()
+    {
+        Debug.Log("[Stage12] Waiting for AuthManager...");
+
+        float timeout = 5f;
+        float elapsed = 0f;
+        while (AuthManager.Instance == null && elapsed < timeout)
+        {
+            yield return new WaitForSeconds(0.1f);
+            elapsed += 0.1f;
+        }
+
+        if (AuthManager.Instance == null)
+        {
+            Debug.LogError("[Stage12] ?? AuthManager.Instance is null after timeout! Returning to Home.");
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            }
+            yield break;
+        }
+
+        Debug.Log("[Stage12] AuthManager found!");
+
+        if (!AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.LogError("[Stage12] ?? User is not logged in! Returning to Home.");
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            }
+            yield break;
+        }
+
+        Debug.Log("[Stage12] User is logged in!");
+
+        baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
+        Debug.Log($"[Stage12] ✅ baseUrl 설정 완료: {baseUrl}");
+
+        if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.Log("[Stage12] 🔑 AuthManager에서 토큰 가져오기 시작...");
+            authToken = AuthManager.Instance.GetAccessToken();
+            
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogError("[Stage12] ❌ AuthManager에서 토큰을 가져왔지만 토큰이 비어있습니다. 403 에러가 발생할 수 있습니다.");
+                Debug.LogError($"[Stage12] 디버깅: authToken == null = {authToken == null}, empty = {string.IsNullOrEmpty(authToken)}, whitespace = {string.IsNullOrWhiteSpace(authToken)}");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage12] ✅ Access token retrieved from AuthManager (len={authToken.Length}, preview={preview})");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[Stage12] ⚠️ AuthManager 없음 또는 로그인 안 됨: Instance={AuthManager.Instance != null}, IsLoggedIn={AuthManager.Instance?.IsLoggedIn() ?? false}");
+            authToken = EnvConfig.ResolveAuthToken(authToken);
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogWarning("[Stage12] ❌ EnvConfig에서도 토큰을 찾지 못했습니다. 403 에러가 발생할 수 있습니다.");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage12] ✅ Using authToken from EnvConfig (fallback, len={authToken.Length}, preview={preview})");
+            }
+        }
+        
+        Debug.Log($"[Stage12] 🔍 GetSessionController 호출 시 사용될 authToken: null={authToken == null}, empty={string.IsNullOrEmpty(authToken)}, len={authToken?.Length ?? 0}");
+
         if (applyAutoLayout)
             TryApplyAutoLayout();
-        // 가이드 시작 크기는 최초 1회만 적용
         if (guideImage && guideStartSize.sqrMagnitude > 0)
             guideImage.sizeDelta = guideStartSize;
-        // 초입에는 메인 이미지와 옵션 영역을 숨깁니다.
         if (mainImage)
         {
+            mainImage.gameObject.SetActive(true);
             mainImage.enabled = false;
             mainImage.sprite = null;
         }
@@ -267,9 +366,12 @@ using OptionDto = StageQuestionModels.OptionDto;
         {
             micIndicator.SetActive(false);
         }
+        if (_initialOptionPrefab == null)
+        {
+            _initialOptionPrefab = optionButtonPrefab;
+        }
         StartCoroutine(RunStage());
     }
-
     private StageSessionController GetSessionController()
     {
         if (_sessionController == null)
@@ -321,6 +423,8 @@ using OptionDto = StageQuestionModels.OptionDto;
                 CorrectSfx = sfxCorrectClip,
                 MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve),
                 PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops),
+                PlayTutorialVideo = PlayLocalTutorialVideo,
+                OnCursorActiveChanged = active => { if (!active) StopVideoIfAny(); },
                 ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId),
                 Log = message => Debug.Log(message),
                 LogWarning = message => Debug.LogWarning(message),
@@ -344,6 +448,8 @@ using OptionDto = StageQuestionModels.OptionDto;
             _tutorialDependencies.CorrectSfx = sfxCorrectClip;
             _tutorialDependencies.MoveCursorSmooth = (cursor, target, seconds, curve) => MoveCursorSmooth(cursor, target, seconds, curve);
             _tutorialDependencies.PulseOption = (rect, scale, duration, loops) => PulseOption(rect, scale, duration, loops);
+            _tutorialDependencies.PlayTutorialVideo = PlayLocalTutorialVideo;
+            _tutorialDependencies.OnCursorActiveChanged = active => { if (!active) StopVideoIfAny(); };
             _tutorialDependencies.ExecuteCustomStep = actionId => ExecuteTutorialCustomStep(actionId);
             _tutorialDependencies.Log = message => Debug.Log(message);
             _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
@@ -384,6 +490,44 @@ using OptionDto = StageQuestionModels.OptionDto;
         }
 
         _tutorialController.introOptionCursor = introOptionCursor;
+        if (introOptionCursor != null)
+        {
+            // Allow dynamically spawned intro option buttons to become cursor targets instead of referencing stale prefab transforms.
+            introOptionCursor.correctOptionTransform = null;
+            introOptionCursor.wrongOptionTransform = null;
+        }
+        if (_tutorialController.introOptionCursor == null)
+            _tutorialController.introOptionCursor = new StageTutorialController.IntroOptionCursor();
+
+        if (_tutorialController.introOptionCursor.handCursor == null)
+        {
+            var existingCursor = GameObject.Find("HandCursor");
+            if (existingCursor != null)
+            {
+                _tutorialController.introOptionCursor.handCursor = existingCursor;
+            }
+            else if (_tutorialHandCursorFallback == null)
+            {
+                var cursorPrefab = Resources.Load<GameObject>("Prefabs/HandCursor");
+                GameObject fallback;
+                if (cursorPrefab != null)
+                {
+                    fallback = Instantiate(cursorPrefab, optionsContainer ? optionsContainer.parent : transform);
+                }
+                else
+                {
+                    fallback = new GameObject("HandCursor");
+                    fallback.transform.SetParent(optionsContainer ? optionsContainer.parent : transform, false);
+                    fallback.AddComponent<RectTransform>();
+                    var img = fallback.AddComponent<Image>();
+                    img.raycastTarget = false;
+                }
+                fallback.SetActive(false);
+                _tutorialHandCursorFallback = fallback;
+                _tutorialController.introOptionCursor.handCursor = fallback;
+            }
+        }
+
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
         _tutorialController.guide3DCharacter = guide3DCharacter;
@@ -407,7 +551,8 @@ using OptionDto = StageQuestionModels.OptionDto;
                 int separator = actionId.IndexOf(':');
                 if (separator >= 0 && separator < actionId.Length - 1)
                     value = actionId.Substring(separator + 1);
-                ApplyOptionWordText(value, true);
+                bool showValue = !string.IsNullOrWhiteSpace(value);
+                ApplyOptionWordText(value, showValue);
             }
             else if (string.Equals(actionId, "ShowOptionWord", StringComparison.OrdinalIgnoreCase))
             {
@@ -417,6 +562,19 @@ using OptionDto = StageQuestionModels.OptionDto;
             {
                 ApplyOptionWordText(string.Empty, false);
             }
+        }
+
+        if (actionId.StartsWith("SetOptionPrefab", StringComparison.OrdinalIgnoreCase))
+        {
+            string value = string.Empty;
+            int separator = actionId.IndexOf(':');
+            if (separator >= 0 && separator < actionId.Length - 1)
+                value = actionId.Substring(separator + 1);
+            SetOptionPrefabByKey(value);
+        }
+        else if (string.Equals(actionId, "ResetOptionPrefab", StringComparison.OrdinalIgnoreCase))
+        {
+            ResetOptionPrefab();
         }
 
         yield break;
@@ -436,6 +594,78 @@ using OptionDto = StageQuestionModels.OptionDto;
             LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
         }
     }
+
+    private void SetOptionPrefabByKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+            return;
+
+        string normalized = key.Trim();
+        if (string.Equals(normalized, "o", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyOptionPrefab(oOptionPrefab);
+        }
+        else if (string.Equals(normalized, "x", StringComparison.OrdinalIgnoreCase))
+        {
+            ApplyOptionPrefab(xOptionPrefab);
+        }
+        else if (string.Equals(normalized, "default", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(normalized, "reset", StringComparison.OrdinalIgnoreCase))
+        {
+            ResetOptionPrefab();
+        }
+    }
+
+    private void ApplyOptionPrefab(Button prefab)
+    {
+        if (prefab == null)
+            return;
+
+        optionButtonPrefab = prefab;
+    }
+
+    private void ResetOptionPrefab()
+    {
+        if (_initialOptionPrefab != null)
+            optionButtonPrefab = _initialOptionPrefab;
+    }
+
+        private void ApplyOptionLayoutSpacing()
+        {
+            if (optionsContainer == null)
+                return;
+            var grid = optionsContainer.GetComponent<GridLayoutGroup>();
+            if (grid != null)
+            {
+                UnityEngine.Object.Destroy(grid);
+                if (_optionLayoutSpacingRoutine == null)
+                    _optionLayoutSpacingRoutine = StartCoroutine(ApplyOptionLayoutSpacingNextFrame());
+                return;
+            }
+            _optionLayoutSpacingRoutine = null;
+
+            if (_optionsLayoutGroup == null)
+                _optionsLayoutGroup = optionsContainer.GetComponent<HorizontalLayoutGroup>();
+            if (_optionsLayoutGroup == null)
+                _optionsLayoutGroup = optionsContainer.gameObject.AddComponent<HorizontalLayoutGroup>();
+            if (_optionsLayoutGroup == null)
+            {
+                Debug.LogWarning("[Stage12] HorizontalLayoutGroup을 찾을 수 없어 옵션간 간격을 적용하지 못했습니다.");
+                return;
+            }
+
+            _optionsLayoutGroup.spacing = optionButtonSpacing;
+            _optionsLayoutGroup.childForceExpandWidth = false;
+            _optionsLayoutGroup.childForceExpandHeight = false;
+            _optionsLayoutGroup.childAlignment = TextAnchor.MiddleCenter;
+        }
+
+        private IEnumerator ApplyOptionLayoutSpacingNextFrame()
+        {
+            yield return null;
+            _optionLayoutSpacingRoutine = null;
+            ApplyOptionLayoutSpacing();
+        }
 
     private void ConfigureSupplementController()
     {
@@ -540,6 +770,7 @@ using OptionDto = StageQuestionModels.OptionDto;
     {
         ConfigureTutorialController();
         _tutorialController?.ResetAfterStageRestart();
+        StopVideoIfAny();
 
         // 새 실행 시작 시 상태 초기화
         _guideMoved = false;
@@ -561,6 +792,7 @@ using OptionDto = StageQuestionModels.OptionDto;
         {
             yield return _tutorialController.RunIntroSequence();
             yield return _tutorialController.RunIntroTutorial();
+            StopVideoIfAny();
         }
         else
         {
@@ -823,20 +1055,61 @@ using OptionDto = StageQuestionModels.OptionDto;
 
         // 4) [1.1.6] 선택 유도 대사 → 옵션 선택
         yield return PlayClip(clipChoose);
-        yield return ShowOptionsUntilCorrect(q);
+        yield return EvaluateOptionsSequentially(q);
     }
 
     private IEnumerator LoadAndShowImage(string imageUrl)
     {
+        StopVideoIfAny();
+
         if (mainImage != null)
         {
-            // 로드 전에는 보이지 않게
             mainImage.enabled = false;
             mainImage.sprite = null;
         }
 
         if (string.IsNullOrEmpty(imageUrl) || mainImage == null)
             yield break;
+
+        string lowerUrl = imageUrl.ToLowerInvariant();
+        if (lowerUrl.EndsWith(".mp4") || lowerUrl.Contains("content-type=video"))
+        {
+            if (videoPlayer == null || videoSurface == null)
+            {
+                Debug.LogError("[Stage12] mp4인데 VideoPlayer/VideoSurface가 연결되지 않았어요.");
+                yield break;
+            }
+
+            if (_videoRT == null)
+            {
+                _videoRT = new RenderTexture(1280, 720, 0, RenderTextureFormat.ARGB32);
+                _videoRT.Create();
+            }
+
+            videoPlayer.targetTexture = _videoRT;
+            videoSurface.texture = _videoRT;
+            if (mainImage) mainImage.enabled = false;
+            videoSurface.gameObject.SetActive(true);
+
+            videoPlayer.isLooping = videoLoop;
+            videoPlayer.audioOutputMode = VideoAudioOutputMode.AudioSource;
+            var targetAudio = videoPlayer.GetTargetAudioSource(0);
+            if (targetAudio == null && audioSource != null)
+                videoPlayer.SetTargetAudioSource(0, audioSource);
+
+            videoPlayer.url = imageUrl;
+
+            bool prepared = false;
+            videoPlayer.errorReceived += (vp, msg) => Debug.LogError($"[Stage12] Video error: {msg}");
+            videoPlayer.prepareCompleted += (vp) => prepared = true;
+
+            videoPlayer.Prepare();
+            while (!prepared)
+                yield return null;
+
+            videoPlayer.Play();
+            yield break;
+        }
 
         using (var req = UnityWebRequestTexture.GetTexture(imageUrl))
         {
@@ -864,13 +1137,67 @@ using OptionDto = StageQuestionModels.OptionDto;
 
             var tex = DownloadHandlerTexture.GetContent(req);
             var sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+            mainImage.gameObject.SetActive(true);
             mainImage.sprite = sprite;
             mainImage.preserveAspect = true;
-            mainImage.enabled = true; // 로드 후 표시
+            mainImage.enabled = true;
             Debug.Log($"[Stage12] 이미지 로드 OK: {imageUrl} ({tex.width}x{tex.height})");
         }
     }
 
+    private void StopVideoIfAny()
+    {
+        if (videoPlayer != null)
+        {
+            try { videoPlayer.Stop(); } catch { }
+            videoPlayer.targetTexture = null;
+        }
+        if (videoSurface != null)
+        {
+            videoSurface.gameObject.SetActive(false);
+        }
+        if (_videoRT != null)
+        {
+            _videoRT.Release();
+            Destroy(_videoRT);
+            _videoRT = null;
+        }
+    }
+
+    private IEnumerator PlayLocalTutorialVideo()
+    {
+        if (!playTutorialVideo || tutorialClip == null || videoPlayer == null || videoSurface == null)
+            yield break;
+
+        if (mainImage) { mainImage.enabled = false; mainImage.sprite = null; }
+        videoSurface.gameObject.SetActive(true);
+
+        if (_videoRT == null)
+        {
+            _videoRT = new RenderTexture(1280, 720, 0, RenderTextureFormat.ARGB32);
+            _videoRT.Create();
+        }
+
+        videoPlayer.targetTexture = _videoRT;
+        videoSurface.texture = _videoRT;
+
+        videoPlayer.source = UnityEngine.Video.VideoSource.VideoClip;
+        videoPlayer.clip = tutorialClip;
+        videoPlayer.isLooping = videoLoop;
+        videoPlayer.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.AudioSource;
+        if (audioSource) videoPlayer.SetTargetAudioSource(0, audioSource);
+
+        bool prepared = false;
+        videoPlayer.errorReceived += (vp, msg) => Debug.LogError($"[Stage12] Tutorial video error: {msg}");
+        videoPlayer.prepareCompleted += _ => prepared = true;
+
+        videoPlayer.Prepare();
+        while (!prepared)
+            yield return null;
+
+        videoPlayer.Play();
+        if (audioSource) audioSource.Play();
+    }
     private IEnumerator PlayClip(AudioClip clip)
     {
         if (_audioController == null)
@@ -999,9 +1326,8 @@ using OptionDto = StageQuestionModels.OptionDto;
         return clip;
     }
 
-    private IEnumerator ShowOptionsUntilCorrect(QuestionDto q)
+    private IEnumerator EvaluateOptionsSequentially(QuestionDto q)
     {
-        // 옵션 UI 구성
         if (optionsContainer == null)
         {
             Debug.LogError("[Stage12] optionsContainer가 연결되지 않았습니다.");
@@ -1009,164 +1335,121 @@ using OptionDto = StageQuestionModels.OptionDto;
         }
         if (optionButtonPrefab == null)
         {
-            // Resources에서 기본 프리팹 시도 로드
             var loaded = Resources.Load<Button>("UI/OptionButton");
             if (loaded != null)
-            {
                 optionButtonPrefab = loaded;
-            }
             else
             {
                 Debug.LogError("[Stage12] optionButtonPrefab이 연결되지 않았고, Resources/UI/OptionButton.prefab 로드 실패.");
                 yield break;
             }
         }
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
-        // Show options container only during selection phase
-        optionsContainer.gameObject.SetActive(true);
-        optionsContainer.SetAsLastSibling();
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
-        optionsContainer.SetAsLastSibling();
 
-        bool answered = false;
-        bool correct = false;
-        int wrongCount = 0;
-        int attemptCount = 0;
-        OptionDto lastSelected = null;
-
-        // 정답 값(표시/로깅용): phonemeId와 일치하는 옵션의 value를 우선 사용, 없으면 q.value
-        string correctPhonemeValue = null;
-        if (q != null && q.options != null)
+        if (q?.options == null || q.options.Count == 0)
         {
-            var match = q.options.FirstOrDefault(o => o.id == q.phonemeId);
-            if (match != null) correctPhonemeValue = NormalizeField(match.value);
-        }
-        if (string.IsNullOrEmpty(correctPhonemeValue)) correctPhonemeValue = NormalizeField(q.value);
-
-        var sessionController = GetSessionController();
-
-        void SetupOne(OptionDto opt)
-        {
-            var btn = Instantiate(optionButtonPrefab, optionsContainer);
-            var text = btn.GetComponentInChildren<Text>();
-            var tmp  = btn.GetComponentInChildren<TMP_Text>();
-            string label = ComposeOptionLabel(opt);
-            if (text)
-            {
-                text.text = label;
-                if (uiFont) text.font = uiFont;
-            }
-            else if (tmp)
-            {
-                tmp.text = label;
-                if (tmpFont) tmp.font = tmpFont;
-                try { tmp.fontStyle &= ~FontStyles.Underline; } catch { }
-            }
-            // 버튼 크기 강제 설정 (LayoutElement와 RectTransform 동시 적용)
-            var rt = btn.GetComponent<RectTransform>();
-            if (rt) rt.sizeDelta = optionButtonPreferredSize;
-            var le = btn.GetComponent<UnityEngine.UI.LayoutElement>();
-            if (le)
-            {
-                le.preferredWidth  = optionButtonPreferredSize.x;
-                le.preferredHeight = optionButtonPreferredSize.y;
-                le.layoutPriority = Mathf.Max(le.layoutPriority, 1);
-            }
-            btn.gameObject.SetActive(true);
-            btn.onClick.AddListener(() =>
-            {
-                answered = true;
-                attemptCount++;
-                lastSelected = opt;
-                // 1) 우선순위: phonemeId와 옵션 id 일치 여부로 정답 판정
-                if (q.phonemeId != 0)
-                {
-                    correct = (opt.id == q.phonemeId);
-                    Debug.Log($"[Stage12] 선택: opt.id={opt.id}, phonemeId={q.phonemeId}, match={correct}");
-                }
-                // 2) 폴백: 값/유니코드 문자열 비교
-                if (!correct && q.phonemeId == 0)
-                {
-                    var chosenCandidates = new List<string>();
-                    if (!string.IsNullOrEmpty(opt.value)) chosenCandidates.Add(NormalizeForCompare(opt.value));
-                    if (!string.IsNullOrEmpty(opt.unicode)) chosenCandidates.Add(NormalizeForCompare(opt.unicode));
-                    var answerCandidates = new List<string>();
-                    if (!string.IsNullOrEmpty(q.value)) answerCandidates.Add(NormalizeForCompare(q.value));
-                    if (!string.IsNullOrEmpty(q.unicode)) answerCandidates.Add(NormalizeForCompare(q.unicode));
-                    correct = chosenCandidates.Any(cc => answerCandidates.Any(ac => string.Equals(cc, ac, System.StringComparison.Ordinal)));
-                    if (!correct)
-                    {
-                        Debug.Log($"[Stage12] 비교 불일치 chosen=[{string.Join(",", chosenCandidates)}] answer=[{string.Join(",", answerCandidates)}]");
-                    }
-                }
-            });
-        }
-
-        if (q.options == null || q.options.Count == 0)
-        {
-            Debug.LogError("[Stage12] 옵션이 비어 있습니다. 버튼을 표시할 수 없습니다.");
-            optionsContainer.gameObject.SetActive(false);
+            Debug.LogError("[Stage12] 옵션이 비어 있습니다.");
             yield break;
         }
-        Debug.Log($"[Stage12] 옵션 표시: {q.options.Count}개");
-        foreach (var opt in q.options) SetupOne(opt);
-        Canvas.ForceUpdateCanvases();
-        LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
 
-        // 선택 대기 → 피드백 → 정답일 때까지 반복
-        while (true)
+        var sessionController = GetSessionController();
+        optionsContainer.gameObject.SetActive(true);
+        optionsContainer.SetAsLastSibling();
+            ApplyOptionLayoutSpacing();
+
+        foreach (var opt in q.options)
         {
+            ApplyOptionWordText(opt.word, true);
+
+            bool answered = false;
+            bool isCorrectChoice = false;
+            string selectedLabel = string.Empty;
+
+            void ConfigureLetterButton(string label, bool labelValue)
+            {
+                var btn = Instantiate(optionButtonPrefab, optionsContainer);
+                var text = btn.GetComponentInChildren<Text>();
+                var tmp = btn.GetComponentInChildren<TMP_Text>();
+                if (text)
+                {
+                    if (hideOptionLabelText)
+                        text.enabled = false;
+                    else
+                    {
+                        text.text = label;
+                        if (uiFont) text.font = uiFont;
+                    }
+                }
+                if (tmp)
+                {
+                    if (hideOptionLabelText)
+                        tmp.enabled = false;
+                    else
+                    {
+                        tmp.text = label;
+                        if (tmpFont) tmp.font = tmpFont;
+                        try { tmp.fontStyle &= ~FontStyles.Underline; } catch { }
+                    }
+                }
+
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(() =>
+                {
+                    answered = true;
+                    isCorrectChoice = opt.answer == labelValue;
+                    selectedLabel = label;
+                });
+                var image = btn.GetComponent<Image>();
+                if (image != null)
+                {
+                    if (label.Equals("O", StringComparison.OrdinalIgnoreCase) && oOptionSprite != null)
+                        image.sprite = oOptionSprite;
+                    else if (label.Equals("X", StringComparison.OrdinalIgnoreCase) && xOptionSprite != null)
+                        image.sprite = xOptionSprite;
+                    image.raycastTarget = true;
+                    btn.targetGraphic = image;
+                    image.SetNativeSize();
+                }
+            }
+
+            foreach (Transform child in optionsContainer)
+                Destroy(child.gameObject);
+
+            ConfigureLetterButton("O", true);
+            ConfigureLetterButton("X", false);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
+            yield return null;
+
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(optionsContainer);
+
             yield return new WaitUntil(() => answered);
 
-            // 선택 시도 로깅: /api/train/attempt
-            if (lastSelected != null)
-            {
-                string selectedVal = NormalizeField(lastSelected.value);
-                int attemptNumber = attemptCount; // 1부터 증가
-                bool includeReplyResult = attemptNumber > 1;
-                yield return sessionController.LogAttempt(
-                    stageSessionId,
-                    stage,
-                    _currentProblemNumber,
-                    attemptNumber,
-                    selectedVal,
-                    correct,
-                    q != null ? q.problemWord : null,
-                    correctPhonemeValue,
-                    includeReplyResult,
-                    null);
-            }
+            yield return sessionController.LogAttempt(
+                stageSessionId,
+                stage,
+                _currentProblemNumber,
+                1,
+                NormalizeField(selectedLabel),
+                isCorrectChoice,
+                q != null ? q.problemWord : null,
+                NormalizeField(opt.value),
+                false,
+                null);
 
-            if (correct)
-            {
-                yield return PlayClip(sfxCorrectClip);
-                break; // 다음 문제로
-            }
-            else
-            {
-                yield return PlayClip(sfxWrongClip);
-                wrongCount++;
-                if (wrongCount >= maxWrongAttempts)
-                {
-                    // 오답 허용 횟수 초과 → 다음 문제로 진행
-                    break;
-                }
-                answered = false; // 다시 선택 대기
-            }
+            yield return PlayClip(isCorrectChoice ? sfxCorrectClip : sfxWrongClip);
         }
 
-        // 옵션 정리(선택사항)
-        foreach (Transform child in optionsContainer)
-            Destroy(child.gameObject);
         optionsContainer.gameObject.SetActive(false);
+        ApplyOptionWordText(string.Empty, false);
     }
 
     private string ResolveAnswerValue(QuestionDto q)
     {
         if (q == null) return string.Empty;
-        string normalized = NormalizeField(q.value);
+        string normalized = NormalizeField(q.problemWord);
+        if (!string.IsNullOrEmpty(normalized)) return normalized;
+
+        normalized = NormalizeField(q.value);
         if (!string.IsNullOrEmpty(normalized)) return normalized;
 
         if (q.options != null && q.options.Count > 0)
