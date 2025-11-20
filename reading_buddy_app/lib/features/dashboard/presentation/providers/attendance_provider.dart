@@ -153,9 +153,10 @@ class AttendanceNotifier extends StateNotifier<AttendanceState> {
       final dateStr = DateFormatter.toYyMMdd(date);
 
       final practiceDataResult = await dashboardRepository.getPracticeList(dateStr);
+      final practiceData = practiceDataResult.dataOrNull;
 
       state = state.copyWith(
-        practiceData: practiceDataResult.dataOrNull,
+        practiceData: practiceData,
         isLoadingDetail: false,
       );
     } catch (e) {

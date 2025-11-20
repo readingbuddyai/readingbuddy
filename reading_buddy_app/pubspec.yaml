@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # UI & Icons
   cupertino_icons: ^1.0.6
@@ -38,7 +40,7 @@ dependencies:
   loading_animation_widget: ^1.2.0+4
 
   # Utils
-  intl: ^0.18.1
+  intl: ^0.20.2
   logger: ^2.0.2+1
   equatable: ^2.0.5
   jwt_decode: ^0.3.1

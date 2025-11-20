@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>발음 검사 API 테스터</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>한국어 발음 검사 API 테스터</h1>
+            <p class="subtitle">FastAPI 백엔드 테스트 도구</p>
+        </header>
+
+        <!-- 서버 상태 확인 -->
+        <section class="section">
+            <h2>1. 서버 상태 확인</h2>
+            <button onclick="checkHealth()" class="btn btn-primary">헬스체크</button>
+            <div id="health-result" class="result"></div>
+        </section>
+
+        <!-- API 서버 설정 -->
+        <section class="section">
+            <h2>2. API 서버 설정</h2>
+            <div class="form-group">
+                <label for="api-url">API 서버 URL:</label>
+                <input type="text" id="api-url" value="http://3.36.239.57:8000" placeholder="http://3.36.239.57:8000">
+            </div>
+        </section>
+
+        <!-- 자모 단위 테스트 -->
+        <section class="section">
+            <h2>3. 자모 단위 발음 검사 (/check/jamo)</h2>
+            <div class="form-group">
+                <label for="jamo-target">검사할 자모 (예: ㄱ, ㅏ):</label>
+                <input type="text" id="jamo-target" placeholder="ㄱ" maxlength="1">
+            </div>
+
+            <!-- 녹음 기능 -->
+            <div class="form-group">
+                <label>음성 녹음:</label>
+                <div class="recording-controls">
+                    <button id="jamo-record-btn" onclick="toggleJamoRecording()" class="btn btn-record">
+                        <span id="jamo-record-icon">🎤</span>
+                        <span id="jamo-record-text">녹음 시작</span>
+                    </button>
+                    <span id="jamo-record-timer" class="record-timer hidden">0:00</span>
+                </div>
+                <div id="jamo-audio-preview" class="audio-preview hidden">
+                    <label>녹음된 오디오:</label>
+                    <audio id="jamo-audio-player" controls></audio>
+                </div>
+            </div>
+
+            <!-- 파일 업로드 (기존) -->
+            <div class="form-group">
+                <label for="jamo-file">또는 오디오 파일 업로드:</label>
+                <input type="file" id="jamo-file" accept="audio/*" onchange="handleJamoFileUpload()">
+            </div>
+
+            <button onclick="checkJamo()" class="btn btn-secondary">자모 검사</button>
+            <div id="jamo-result" class="result"></div>
+        </section>
+
+        <!-- 음절 단위 테스트 -->
+        <section class="section">
+            <h2>4. 음절 단위 발음 검사 (/check/syllable)</h2>
+            <div class="form-group">
+                <label for="syllable-target">검사할 음절 (예: 가):</label>
+                <input type="text" id="syllable-target" placeholder="가" maxlength="1">
+            </div>
+
+            <!-- 녹음 기능 -->
+            <div class="form-group">
+                <label>음성 녹음:</label>
+                <div class="recording-controls">
+                    <button id="syllable-record-btn" onclick="toggleSyllableRecording()" class="btn btn-record">
+                        <span id="syllable-record-icon">🎤</span>
+                        <span id="syllable-record-text">녹음 시작</span>
+                    </button>
+                    <span id="syllable-record-timer" class="record-timer hidden">0:00</span>
+                </div>
+                <div id="syllable-audio-preview" class="audio-preview hidden">
+                    <label>녹음된 오디오:</label>
+                    <audio id="syllable-audio-player" controls></audio>
+                </div>
+            </div>
+
+            <!-- 파일 업로드 (기존) -->
+            <div class="form-group">
+                <label for="syllable-file">또는 오디오 파일 업로드:</label>
+                <input type="file" id="syllable-file" accept="audio/*" onchange="handleSyllableFileUpload()">
+            </div>
+
+            <button onclick="checkSyllable()" class="btn btn-secondary">음절 검사</button>
+            <div id="syllable-result" class="result"></div>
+        </section>
+
+        <!-- 단어 단위 테스트 -->
+        <section class="section">
+            <h2>5. 단어 단위 발음 검사 (/check/word)</h2>
+            <div class="form-group">
+                <label for="word-target">검사할 단어 (예: 감자):</label>
+                <input type="text" id="word-target" placeholder="감자">
+            </div>
+
+            <!-- 녹음 기능 -->
+            <div class="form-group">
+                <label>음성 녹음:</label>
+                <div class="recording-controls">
+                    <button id="word-record-btn" onclick="toggleWordRecording()" class="btn btn-record">
+                        <span id="word-record-icon">🎤</span>
+                        <span id="word-record-text">녹음 시작</span>
+                    </button>
+                    <span id="word-record-timer" class="record-timer hidden">0:00</span>
+                </div>
+                <div id="word-audio-preview" class="audio-preview hidden">
+                    <label>녹음된 오디오:</label>
+                    <audio id="word-audio-player" controls></audio>
+                </div>
+            </div>
+
+            <!-- 파일 업로드 (기존) -->
+            <div class="form-group">
+                <label for="word-file">또는 오디오 파일 업로드:</label>
+                <input type="file" id="word-file" accept="audio/*" onchange="handleWordFileUpload()">
+            </div>
+
+            <button onclick="checkWord()" class="btn btn-secondary">단어 검사</button>
+            <div id="word-result" class="result"></div>
+        </section>
+
+        <!-- 로딩 스피너 -->
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>처리 중...</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

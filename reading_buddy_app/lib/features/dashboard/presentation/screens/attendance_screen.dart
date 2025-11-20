@@ -53,6 +53,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                         lastDay: DateTime.utc(2030, 12, 31),
                         focusedDay: _focusedDay,
                         calendarFormat: _calendarFormat,
+                        locale: 'ko_KR',
                         availableCalendarFormats: const {
                           CalendarFormat.month: '월',
                           CalendarFormat.week: '주',
@@ -308,31 +309,41 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             child: Column(
               children: [
                 // 통계 요약
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildStatItem(
-                      context,
-                      Icons.check_circle,
-                      '정답',
-                      '${session.correctCount}개',
-                      AppTheme.successColor,
-                    ),
-                    _buildStatItem(
-                      context,
-                      Icons.cancel,
-                      '오답',
-                      '${session.wrongCount}개',
-                      AppTheme.errorColor,
-                    ),
-                    _buildStatItem(
-                      context,
-                      Icons.percent,
-                      '정답률',
-                      '${session.correctRate.toStringAsFixed(1)}%',
-                      AppTheme.getScoreColor(session.correctRate),
-                    ),
-                  ],
+                Builder(
+                  builder: (context) {
+                    // problems 배열에서 직접 카운트 (API correctCount/wrongCount 대신)
+                    final actualCorrect = session.problems.where((p) => p.isCorrect).length;
+                    final actualWrong = session.problems.where((p) => !p.isCorrect).length;
+                    final actualTotal = session.problems.length;
+                    final actualRate = actualTotal > 0 ? (actualCorrect / actualTotal * 100) : 0.0;
+
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStatItem(
+                          context,
+                          Icons.check_circle,
+                          '정답',
+                          '$actualCorrect개',
+                          AppTheme.successColor,
+                        ),
+                        _buildStatItem(
+                          context,
+                          Icons.cancel,
+                          '오답',
+                          '$actualWrong개',
+                          AppTheme.errorColor,
+                        ),
+                        _buildStatItem(
+                          context,
+                          Icons.percent,
+                          '정답률',
+                          '${actualRate.toStringAsFixed(1)}%',
+                          AppTheme.getScoreColor(actualRate),
+                        ),
+                      ],
+                    );
+                  },
                 ),
                 const SizedBox(height: 16),
                 const Divider(),
@@ -550,7 +561,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     // 전체 통계 계산
     final totalSessions = validSessions.length;
 
-    // API는 누적 카운트를 반환하므로, 차이값을 계산해야 함
+    // 각 세션의 통계는 독립적이므로 단순 합산
     int totalProblems = 0;
     int totalCorrect = 0;
     int totalWrong = 0;
@@ -562,30 +573,17 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     // 스테이지별 플레이 횟수
     final stagePlayCount = <String, int>{};
 
-    int? prevCorrectCount;
-    int? prevWrongCount;
-
     for (var i = 0; i < validSessions.length; i++) {
       final session = validSessions[i];
 
-      totalProblems += session.totalCount as int;
+      // problems 배열에서 직접 카운트 (API의 correctCount/wrongCount 대신)
+      int sessionCorrect = session.problems.where((p) => p.isCorrect).length;
+      int sessionWrong = session.problems.where((p) => !p.isCorrect).length;
+      int sessionTotal = session.problems.length;
 
-      // 누적값이므로 이전 세션과의 차이를 계산
-      final currentCorrect = session.correctCount as int;
-      final currentWrong = session.wrongCount as int;
-
-      if (prevCorrectCount != null && prevWrongCount != null) {
-        // 이전 세션이 있으면 차이값을 더함
-        totalCorrect += (currentCorrect - prevCorrectCount);
-        totalWrong += (currentWrong - prevWrongCount);
-      } else {
-        // 첫 세션은 그대로 더함
-        totalCorrect += currentCorrect;
-        totalWrong += currentWrong;
-      }
-
-      prevCorrectCount = currentCorrect;
-      prevWrongCount = currentWrong;
+      totalProblems += sessionTotal;
+      totalCorrect += sessionCorrect;
+      totalWrong += sessionWrong;
 
       // 시간 계산
       if (firstTime == null || session.startedAt.isBefore(firstTime)) {
@@ -625,6 +623,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       }
     }
 
+    // 정답률 계산 (문제 개수 기준)
     final overallCorrectRate = totalProblems > 0
         ? ((totalCorrect / totalProblems) * 100).toStringAsFixed(1)
         : '0.0';

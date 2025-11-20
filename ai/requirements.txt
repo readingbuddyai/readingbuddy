@@ -9,7 +9,7 @@ torch==2.5.1
 torchaudio==2.5.1
 transformers==4.44.2
 safetensors==0.6.2
-peft>=0.14.0
+peft==0.14.0
 
 # Audio Processing
 soundfile==0.12.1

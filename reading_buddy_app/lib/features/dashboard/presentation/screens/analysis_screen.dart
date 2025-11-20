@@ -793,24 +793,11 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             ),
             const SizedBox(height: 16),
 
-            // 차트 또는 빈 상태
-            if (kcTrend.masteryTrend == null || kcTrend.masteryTrend.isEmpty)
-              SizedBox(
-                height: 200,
-                child: Center(
-                  child: Text(
-                    '이 기간에 학습 데이터가 없습니다',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.5),
-                    ),
-                  ),
-                ),
-              )
-            else
-              SizedBox(
-                height: 250,
-                child: _buildLineChart(context, theme, kcTrend),
-              ),
+            // 차트 (masteryTrend가 비어있어도 initialMastery가 있으면 그래프 그림)
+            SizedBox(
+              height: 250,
+              child: _buildLineChart(context, theme, kcTrend),
+            ),
           ],
         ),
       ),
@@ -881,6 +868,14 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
       return null;
     }
 
+    // 전체 데이터 중 가장 최근 값 찾기
+    double? findLatestValue() {
+      if (sortedDates.isEmpty) return null;
+      // 가장 최근 날짜의 값 반환
+      final latestDateKey = sortedDates.last;
+      return dateMap[latestDateKey]?.pLearn;
+    }
+
     if (period == TrendPeriod.week) {
       debugPrint('✅ 1주일 모드: X축 7개 고정');
       // 1주일: 항상 7개 (최근 7일)
@@ -900,8 +895,14 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
           if (previousValue != null) {
             yValue = previousValue * 100;
           } else {
-            // 이전 데이터도 없으면 직전 spot의 값 사용
-            yValue = i > 0 && spots.isNotEmpty ? spots.last.y : 0.0;
+            // 이전 데이터도 없으면 전체 데이터 중 가장 최근 값 사용
+            final latestValue = findLatestValue();
+            if (latestValue != null) {
+              yValue = latestValue * 100;
+            } else {
+              // 그래도 없으면 직전 spot의 값 사용
+              yValue = i > 0 && spots.isNotEmpty ? spots.last.y : 0.0;
+            }
           }
         }
 
@@ -949,9 +950,16 @@ class _AnalysisScreenState extends ConsumerState<AnalysisScreen> {
             segmentValue = previousValue * 100;
             debugPrint('  ❌ 데이터 없음 → 이전 dateMap값: ${segmentValue.toStringAsFixed(1)}%');
           } else {
-            // 이전 데이터도 없으면 직전 spot의 값 사용
-            segmentValue = i > 0 && spots.isNotEmpty ? spots.last.y : 0.0;
-            debugPrint('  ❌ 데이터 없음 → 이전 spot값: ${segmentValue.toStringAsFixed(1)}%');
+            // 이전 데이터도 없으면 전체 데이터 중 가장 최근 값 사용
+            final latestValue = findLatestValue();
+            if (latestValue != null) {
+              segmentValue = latestValue * 100;
+              debugPrint('  ❌ 데이터 없음 → 전체 최근값: ${segmentValue.toStringAsFixed(1)}%');
+            } else {
+              // 그래도 없으면 직전 spot의 값 사용
+              segmentValue = i > 0 && spots.isNotEmpty ? spots.last.y : 0.0;
+              debugPrint('  ❌ 데이터 없음 → 이전 spot값: ${segmentValue.toStringAsFixed(1)}%');
+            }
           }
         }
 
