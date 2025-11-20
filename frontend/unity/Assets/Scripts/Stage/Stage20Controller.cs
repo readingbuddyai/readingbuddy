@@ -8,10 +8,11 @@ using UnityEngine.Events;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using TMPro;
+using UnityEngine.SceneManagement;
 using Stage.UI;
 
 /// <summary>
-/// Stage 2.1 진행 컨트롤러 (마법 돌 퍼즐)
+/// Stage 2 진행 컨트롤러 (마법 돌 퍼즐)
 /// Stage11/Stage12와 동일한 책임 분리를 적용하여
 /// 세션/오디오/문항 관리 로직을 공통 컨트롤러에 위임한다.
 /// </summary>
@@ -20,12 +21,20 @@ public class Stage20Controller : MonoBehaviour
     [Header("API 설정")]
     public string baseUrl = "";
     [Tooltip("문제 세트 조회에 사용할 stage 값 (예: 1.2.1)")]
-    public string stage = "1.2.1";
+    public string stage = "2";
     [Tooltip("stage/start · check/voice 등 2단계 스테이지 값 (예: 2.1)")]
-    public string stageTwoPart = "2.1";
+    public string stageTwoPart = "2";
     public int count = 5;
     [Tooltip("Authorization: Bearer {token}")]
     public string authToken = "";
+
+    [Header("Fonts")]
+    public Font uiFont;
+    public TMP_FontAsset tmpFont;
+
+    [Header("Buttons")]
+    public Button optionButtonPrefab;
+    public Vector2 optionButtonPreferredSize = new Vector2(1200f, 600f);
 
     [Header("세션")]
     [Tooltip("stage/start 응답의 stageSessionId. 미설정 시 자동 발급을 시도합니다.")]
@@ -50,11 +59,17 @@ public class Stage20Controller : MonoBehaviour
     public PanelAnimator introTutorialPanelAnimator;
     public GameObject introTutorialPanel;
     public GameObject guide3DCharacter;
+    public Button tutorialSkipButton;
+    public Vector2 tutorialSkipButtonOffset = new Vector2(-40f, 0f);
     [Header("Intro Tutorial Controls")]
     public bool requireTriggerAfterTutorial = false;
     [Range(0.05f, 1f)] public float tutorialTriggerThreshold = 0.6f;
     public KeyCode tutorialFallbackKey = KeyCode.Space;
     [Min(0f)] public float tutorialClipGapSeconds = 0.9f;
+
+    [Header("Mic Indicator")]
+    [Tooltip("[1.1.4] 종료 직후부터 녹음 3초 동안 표시될 마이크 아이콘 오브젝트")]
+    public GameObject micIndicator;
 
     [Header("오디오 재생")]
     public AudioSource audioSource;
@@ -105,6 +120,11 @@ public class Stage20Controller : MonoBehaviour
     public AudioClip clipGreatJob2;           // [2.9.5.2]
     public AudioClip clipReadyNextLesson;     // [2.9.6]
 
+    [Header("End Modal (Stage Complete)")]
+    public Button againButtonPrefab;
+    public Button lobbyButtonPrefab;
+    public Vector2 endModalButtonSize = new Vector2(600f, 300f);
+
     [Header("튜토리얼 UI")]
     public RectTransform tutorialOptionsContainer;
     public TMP_Text tutorialOptionWordText;
@@ -120,6 +140,8 @@ public class Stage20Controller : MonoBehaviour
     private StageAudioDependencies _audioDependencies;
     private readonly StageQuestionController<Problem> _questionController = new StageQuestionController<Problem>();
     private StageTutorialController _tutorialController;
+    private bool _tutorialSkipped;
+    private Button _generatedTutorialSkipButton;
     private StageTutorialDependencies _tutorialDependencies;
     private Coroutine _stoneCountdownCoroutine;
 
@@ -129,19 +151,141 @@ public class Stage20Controller : MonoBehaviour
 
     private readonly List<PronunciationFeedback> _accumulatedFeedback = new List<PronunciationFeedback>();
     private readonly HashSet<string> _feedbackKeys = new HashSet<string>();
+    private bool _greatJobPlayed;
     private string _tutorialOptionWordCache = string.Empty;
     private bool _tutorialOptionUseWordLabel;
+    private bool _isInitialized = false;
+    private Coroutine _initializeCoroutine = null;
+    private Coroutine _runStageCoroutine = null;
 
     private void Start()
     {
+        if (_isInitialized)
+        {
+            Debug.LogWarning("[Stage20] 이미 초기화되었습니다. 중복 초기화를 건너뜁니다.");
+            return;
+        }
+
+        if (_initializeCoroutine != null)
+        {
+            Debug.LogWarning("[Stage20] 초기화가 이미 진행 중입니다. 중복 초기화를 건너뜁니다.");
+            return;
+        }
+
+        _initializeCoroutine = StartCoroutine(InitializeWithAuth());
+    }
+
+    private IEnumerator InitializeWithAuth()
+    {
+        Debug.Log("[Stage20] Waiting for AuthManager...");
+
+        float timeout = 5f;
+        float elapsed = 0f;
+        while (AuthManager.Instance == null && elapsed < timeout)
+        {
+            yield return new WaitForSeconds(0.1f);
+            elapsed += 0.1f;
+        }
+
+        if (AuthManager.Instance == null)
+        {
+            Debug.LogError("[Stage20] AuthManager.Instance is null after timeout! Returning to Home.");
+            if (SceneLoader.Instance != null)
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            else
+                SceneManager.LoadScene(SceneId.Home);
+            yield break;
+        }
+
+        Debug.Log("[Stage20] AuthManager found!");
+
+        if (!AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.LogError("[Stage20] User is not logged in! Returning to Home.");
+            if (SceneLoader.Instance != null)
+                SceneLoader.Instance.LoadScene(SceneId.Home);
+            else
+                SceneManager.LoadScene(SceneId.Home);
+            yield break;
+        }
+
+        Debug.Log("[Stage20] User is logged in!");
+
+        string originalBaseUrl = baseUrl;
         baseUrl = EnvConfig.ResolveBaseUrl(baseUrl);
-        authToken = EnvConfig.ResolveAuthToken(authToken);
+        Debug.Log($"[Stage20] ✅ baseUrl 설정 완료: 원본={originalBaseUrl}, 최종={baseUrl}");
+        
+        if (string.IsNullOrWhiteSpace(baseUrl))
+        {
+            Debug.LogError("[Stage20] ❌ baseUrl이 비어있습니다! 네트워크 요청이 실패할 수 있습니다.");
+        }
+
+        if (AuthManager.Instance != null && AuthManager.Instance.IsLoggedIn())
+        {
+            Debug.Log("[Stage20] 🔑 AuthManager에서 토큰 가져오기 시작...");
+            authToken = AuthManager.Instance.GetAccessToken();
+            
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogError("[Stage20] ❌ AuthManager에서 토큰을 가져왔지만 토큰이 비어있습니다. 403 에러가 발생할 수 있습니다.");
+                Debug.LogError($"[Stage20] 디버깅: authToken == null = {authToken == null}, empty = {string.IsNullOrEmpty(authToken)}, whitespace = {string.IsNullOrWhiteSpace(authToken)}");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage20] ✅ Access token retrieved from AuthManager (len={authToken.Length}, preview={preview})");
+                Debug.Log($"[Stage20] 🔍 토큰 저장 전: this.authToken 필드 현재 상태 확인");
+            }
+        }
+        else
+        {
+            Debug.LogWarning($"[Stage20] ⚠️ AuthManager 없음 또는 로그인 안 됨: Instance={AuthManager.Instance != null}, IsLoggedIn={AuthManager.Instance?.IsLoggedIn() ?? false}");
+            authToken = EnvConfig.ResolveAuthToken(authToken);
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                Debug.LogWarning("[Stage20] ❌ EnvConfig에서도 토큰을 찾지 못했습니다. 403 에러가 발생할 수 있습니다.");
+            }
+            else
+            {
+                string preview = authToken.Length > 20
+                    ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                    : authToken;
+                Debug.Log($"[Stage20] ✅ Using authToken from EnvConfig (fallback, len={authToken.Length}, preview={preview})");
+            }
+        }
+
+        // ConfigureSessionController 호출 직전 최종 확인
+        Debug.Log($"[Stage20] 🔍 ConfigureSessionController 호출 직전: authToken null={authToken == null}, empty={string.IsNullOrEmpty(authToken)}, len={authToken?.Length ?? 0}");
         ConfigureSessionController();
+        Debug.Log($"[Stage20] ✅ ConfigureSessionController 완료");
         ConfigureAudioController();
         ConfigureTutorialController();
         _tutorialController?.PrepareForStageStart();
         ResetStoneUI();
-        StartCoroutine(RunStage());
+        if (micIndicator)
+            micIndicator.SetActive(false);
+        
+        _isInitialized = true;
+        _initializeCoroutine = null;
+        
+        // RunStage가 이미 실행 중이면 중복 실행 방지
+        if (_runStageCoroutine != null)
+        {
+            Debug.LogWarning("[Stage20] RunStage가 이미 실행 중입니다. 중복 실행을 건너뜁니다.");
+            yield break;
+        }
+        
+        _runStageCoroutine = StartCoroutine(RunStage());
+    }
+
+    private void OnDestroy()
+    {
+        StopAllCoroutines();
+        _initializeCoroutine = null;
+        _runStageCoroutine = null;
+        _isInitialized = false;
     }
 
     private void ConfigureSessionController()
@@ -158,7 +302,27 @@ public class Stage20Controller : MonoBehaviour
     private StageSessionController GetSessionController()
     {
         if (_sessionController == null)
-            ConfigureSessionController();
+            _sessionController = new StageSessionController();
+
+        // 매번 최신 baseUrl과 authToken으로 업데이트 (Stage11Controller와 동일한 방식)
+        // 디버깅: Configure 호출 전 토큰 상태 확인
+        if (string.IsNullOrWhiteSpace(authToken))
+        {
+            Debug.LogWarning($"[Stage20] GetSessionController 호출 시 authToken이 비어있습니다! (baseUrl={baseUrl})");
+        }
+        else
+        {
+            string preview = authToken.Length > 20
+                ? $"{authToken.Substring(0, 10)}...{authToken.Substring(authToken.Length - 10)}"
+                : authToken;
+            if (verboseLogging)
+                Debug.Log($"[Stage20] GetSessionController: Configure 호출 (authToken 길이={authToken.Length}, 미리보기={preview})");
+        }
+
+        _sessionController.Configure(baseUrl, authToken);
+        _sessionController.Log = verboseLogging ? (Action<string>)Debug.Log : null;
+        _sessionController.LogWarning = Debug.LogWarning;
+        _sessionController.LogError = Debug.LogError;
         return _sessionController;
     }
 
@@ -179,6 +343,8 @@ public class Stage20Controller : MonoBehaviour
 
     private IEnumerator RunStage()
     {
+        // 코루틴이 이미 실행 중인지 확인 (이 체크는 코루틴 시작 전에만 의미가 있음)
+        // 실제로는 StartCoroutine 호출 전에 체크해야 하므로 여기서는 로그만 남김
         ConfigureTutorialController();
         _tutorialController?.ResetAfterStageRestart();
 
@@ -204,15 +370,23 @@ public class Stage20Controller : MonoBehaviour
         }
 
         if (sfxStart) yield return PlayClip(sfxStart);
+        _greatJobPlayed = false;
         if (_tutorialController != null)
         {
             yield return _tutorialController.RunIntroSequence();
             yield return _tutorialController.RunIntroTutorial();
+            if (_tutorialSkipped)
+            {
+                _tutorialSkipped = false;
+                yield return RunIntroSequence();
+            }
         }
         else
         {
             yield return RunIntroSequence();
         }
+
+        ClearTutorialWordDisplay();
 
         List<Problem> problems = null;
         yield return FetchProblems(sessionController, result => problems = result);
@@ -253,14 +427,199 @@ public class Stage20Controller : MonoBehaviour
 
         if (clipReadyNextLesson)
             yield return PlayClip(clipReadyNextLesson);
+
+        // 종료 모달 표시
+        ShowEndModal();
+        
+        _runStageCoroutine = null;
+    }
+
+    private void ShowEndModal()
+    {
+        var canvas = FindObjectOfType<Canvas>();
+        if (!canvas)
+        {
+            Debug.LogWarning("[Stage20] Canvas를 찾지 못했습니다.");
+            return;
+        }
+
+        var overlay = new GameObject("EndModal", typeof(RectTransform), typeof(Image));
+        overlay.layer = canvas.gameObject.layer;
+        var rt = overlay.GetComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = Vector2.zero;
+        rt.sizeDelta = Vector2.zero;
+        var bg = overlay.GetComponent<Image>();
+        bg.color = new Color(0f, 0f, 0f, 0.6f);
+        rt.localPosition = new Vector3(0, 0, 3.0f);
+        bg.raycastTarget = true;
+
+        var panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
+        panel.layer = canvas.gameObject.layer;
+        var prt = panel.GetComponent<RectTransform>();
+        prt.SetParent(overlay.transform, false);
+        prt.anchorMin = new Vector2(0.5f, 0.5f);
+        prt.anchorMax = new Vector2(0.5f, 0.5f);
+        prt.pivot = new Vector2(0.5f, 0.5f);
+        prt.sizeDelta = new Vector2(2200f, 1500f);
+        var panelBg = panel.GetComponent<Image>();
+        panelBg.color = new Color(0.15f, 0.2f, 0.28f, 0.95f);
+
+        var title = new GameObject("Title", typeof(RectTransform), typeof(Text));
+        title.layer = canvas.gameObject.layer;
+        var trt = title.GetComponent<RectTransform>();
+        trt.SetParent(panel.transform, false);
+        trt.anchorMin = new Vector2(0.5f, 1f);
+        trt.anchorMax = new Vector2(0.5f, 1f);
+        trt.pivot = new Vector2(0.5f, 1f);
+        trt.anchoredPosition = new Vector2(0f, -80f);
+        trt.sizeDelta = new Vector2(1000f, 150f);
+        var t = title.GetComponent<Text>();
+        t.text = "학습을 마쳤습니다!";
+        t.alignment = TextAnchor.MiddleCenter;
+        t.fontSize = 100;
+        t.fontStyle = FontStyle.Bold;
+        t.color = Color.white;
+        t.font = uiFont ? uiFont : Resources.GetBuiltinResource<Font>("Arial.ttf");
+
+        Vector2 btnSize = (endModalButtonSize.sqrMagnitude > 0f) ? endModalButtonSize : optionButtonPreferredSize;
+        float gap = 40f;
+
+        Button ResolveButton(Button preferred, string[] resourcePaths, out bool isCustom)
+        {
+            if (preferred)
+            {
+                isCustom = true;
+                return preferred;
+            }
+
+            foreach (var path in resourcePaths)
+            {
+                var loaded = Resources.Load<Button>(path);
+                if (loaded)
+                {
+                    isCustom = true;
+                    return loaded;
+                }
+
+                var loadedGo = Resources.Load<GameObject>(path);
+                if (loadedGo)
+                {
+                    var childBtn = loadedGo.GetComponentInChildren<Button>(true) ?? loadedGo.GetComponent<Button>();
+                    if (childBtn)
+                    {
+                        isCustom = true;
+                        return childBtn;
+                    }
+                }
+            }
+
+            isCustom = false;
+            return optionButtonPrefab;
+        }
+
+        bool againCustom;
+        var btn1 = Instantiate(ResolveButton(againButtonPrefab, new[] { "againbutton", "UI/againbutton", "Images/againbutton" }, out againCustom), panel.transform as RectTransform);
+        var btn1rt = btn1.GetComponent<RectTransform>();
+        btn1rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn1rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn1rt.pivot = new Vector2(1f, 0.5f);
+        btn1rt.sizeDelta = btnSize;
+        btn1rt.anchoredPosition = new Vector2(-gap * 0.5f, -100f);
+        if (!againCustom)
+        {
+            var txt1 = btn1.GetComponentInChildren<Text>();
+            var tmp1 = btn1.GetComponentInChildren<TMP_Text>();
+            if (txt1) { txt1.text = "다시 학습하기"; if (uiFont) txt1.font = uiFont; }
+            else if (tmp1) { tmp1.text = "다시 학습하기"; if (tmpFont) tmp1.font = tmpFont; }
+        }
+        btn1.onClick.AddListener(() => { Destroy(overlay); RestartStage(); });
+
+        bool lobbyCustom;
+        var btn2 = Instantiate(ResolveButton(lobbyButtonPrefab, new[] { "lobbybutton", "UI/lobbybutton", "Images/lobbybutton" }, out lobbyCustom), panel.transform as RectTransform);
+        var btn2rt = btn2.GetComponent<RectTransform>();
+        btn2rt.anchorMin = new Vector2(0.5f, 0.5f);
+        btn2rt.anchorMax = new Vector2(0.5f, 0.5f);
+        btn2rt.pivot = new Vector2(0f, 0.5f);
+        btn2rt.sizeDelta = btnSize;
+        btn2rt.anchoredPosition = new Vector2(gap * 0.5f, -100f);
+        if (!lobbyCustom)
+        {
+            var txt2 = btn2.GetComponentInChildren<Text>();
+            var tmp2 = btn2.GetComponentInChildren<TMP_Text>();
+            if (txt2) { txt2.text = "로비로"; if (uiFont) txt2.font = uiFont; }
+            else if (tmp2) { tmp2.text = "로비로"; if (tmpFont) tmp2.font = tmpFont; }
+        }
+        btn2.onClick.AddListener(() => { Destroy(overlay); GoToLobby(); });
+    }
+
+    private void RestartStage()
+    {
+        StopAllCoroutines();
+        _initializeCoroutine = null;
+        _runStageCoroutine = null;
+        stageSessionId = string.Empty;
+        ResetStoneUI();
+        
+        // RunStage가 이미 실행 중이면 중복 실행 방지
+        if (_runStageCoroutine == null)
+        {
+            _runStageCoroutine = StartCoroutine(RunStage());
+        }
+        else
+        {
+            Debug.LogWarning("[Stage20] RestartStage: RunStage가 이미 실행 중입니다.");
+        }
+    }
+
+
+
+    public void OnClickAgainButton()
+    {
+        Debug.Log("[Stage20] 다시 학습하기 버튼 클릭됨");
+
+        // EndModal 비활성화
+        var modal = GameObject.Find("EndModal");
+        if (modal) Destroy(modal);
+
+        // 세션 초기화 후 스테이지 재시작
+        RestartStage();
+    }
+
+    public void OnClickLobbyButton()
+    {
+        Debug.Log("[Stage20] 로비로 나가기 버튼 클릭됨");
+
+        // EndModal 비활성화
+        var modal = GameObject.Find("EndModal");
+        if (modal) Destroy(modal);
+
+        // 로비 씬으로 이동
+        GoToLobby();
+    }
+
+    private void GoToLobby()
+    {
+        if (SceneLoader.Instance != null)
+            SceneLoader.Instance.LoadScene(SceneId.Lobby);
+        else
+        {
+            Debug.LogWarning("[Stage20] SceneLoader.Instance가 없습니다. SceneManager로 대체 시도");
+            SceneManager.LoadScene(SceneId.Lobby);
+        }
     }
 
     private IEnumerator RunIntroSequence()
     {
-        if (clipHello) yield return PlayClip(clipHello);
-        if (clipLesson) yield return PlayClip(clipLesson);
-        if (clipExplain) yield return PlayClip(clipExplain);
-        if (clipStoneIntro) yield return PlayClip(clipStoneIntro);
+        // if (clipHello) yield return PlayClip(clipHello);
+        // if (clipLesson) yield return PlayClip(clipLesson);
+        // if (clipExplain) yield return PlayClip(clipExplain);
+        // if (clipStoneIntro) yield return PlayClip(clipStoneIntro);
+        Debug.LogWarning("[Stage20] 튜토리얼 건너뛰기면 도입대사도 건너뜀");
+        yield break;
     }
 
     private IEnumerator RunOneProblem(int index, int total, Problem problem)
@@ -275,7 +634,7 @@ public class Stage20Controller : MonoBehaviour
             wordLabel.text = problem?.problemWord ?? string.Empty;
             wordLabel.gameObject.SetActive(true);
         }
-
+        yield return new WaitForSeconds(1f); 
         if (clipTeacherLead) yield return PlayClip(clipTeacherLead);
         if (clipListenCue) yield return PlayClip(clipListenCue);
         if (!string.IsNullOrEmpty(problem?.wordVoiceUrl))
@@ -286,11 +645,15 @@ public class Stage20Controller : MonoBehaviour
 
         if (!bypassVoiceUpload)
         {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return RecordAndUpload(problem, index);
+            if (micIndicator) micIndicator.SetActive(false);
         }
         else
         {
+            if (micIndicator) micIndicator.SetActive(true);
             yield return new WaitForSeconds(recordSeconds);
+            if (micIndicator) micIndicator.SetActive(false);
         }
 
         if (clipPerfect) yield return PlayClip(clipPerfect);
@@ -485,16 +848,36 @@ public class Stage20Controller : MonoBehaviour
 
         string stageForUpload = GetStageForVoiceUpload();
         var sessionController = GetSessionController();
+        // Stage41처럼 정답 값(problemWord)을 answer 파라미터로 전달
+        string answerValue = problem != null ? (problem.problemWord ?? string.Empty) : string.Empty;
         yield return sessionController.CheckVoice(
             stageSessionId,
             stageForUpload,
             Mathf.Max(1, problemNumber),
-            string.Empty,
+            answerValue,
             wav,
             result =>
             {
                 if (result != null && !string.IsNullOrWhiteSpace(result.RawBody))
+                {
+                    // 응답 파싱하여 reply 추출
+                    try
+                    {
+                        var parsed = JsonUtility.FromJson<VoiceReplyResp>(result.RawBody);
+                        string reply = parsed?.data?.reply ?? string.Empty;
+                        bool isReplyCorrect = parsed?.data?.isReplyCorrect ?? false;
+                        
+                        if (verboseLogging)
+                            Debug.Log($"[Stage20] check/voice 응답 - reply='{reply}', isReplyCorrect={isReplyCorrect}");
+                    }
+                    catch (Exception ex)
+                    {
+                        if (verboseLogging)
+                            Debug.LogWarning($"[Stage20] check/voice 응답 파싱 실패: {ex.Message}");
+                    }
+                    
                     CollectFeedback(result.RawBody);
+                }
             });
     }
 
@@ -502,8 +885,14 @@ public class Stage20Controller : MonoBehaviour
     {
         if (_accumulatedFeedback.Count == 0)
         {
-            if (clipGreatJob1) yield return PlayClip(clipGreatJob1);
-            if (clipGreatJob2) yield return PlayClip(clipGreatJob2);
+            if (!_greatJobPlayed)
+            {
+                if (clipGreatJob1) yield return PlayClip(clipGreatJob1);
+                if (clipGreatJob2) yield return PlayClip(clipGreatJob2);
+                _greatJobPlayed = true;
+            }
+            _accumulatedFeedback.Clear();
+            _feedbackKeys.Clear();
             yield break;
         }
 
@@ -583,6 +972,12 @@ public class Stage20Controller : MonoBehaviour
     {
         if (string.IsNullOrWhiteSpace(json))
             return;
+        var trimmed = json.Trim();
+        if (!trimmed.StartsWith("{"))
+        {
+            Debug.LogWarning($"[Stage20] 피드백이 객체가 아니어서 무시합니다. JSON={json}");
+            return;
+        }
 
         try
         {
@@ -713,6 +1108,7 @@ public class Stage20Controller : MonoBehaviour
         _tutorialDependencies.LogWarning = message => Debug.LogWarning(message);
         _tutorialDependencies.VerboseLogging = verboseLogging;
         _tutorialDependencies.ManageOptionsContainerContents = tutorialOptionsContainer == null;
+        _tutorialDependencies.TutorialSkipButton = ResolveOrCreateTutorialSkipButton();
 
         if (tutorialProfile != null)
         {
@@ -745,7 +1141,68 @@ public class Stage20Controller : MonoBehaviour
         _tutorialController.introTutorialPanelAnimator = introTutorialPanelAnimator;
         _tutorialController.introTutorialPanel = introTutorialPanel;
         _tutorialController.guide3DCharacter = guide3DCharacter;
+        _tutorialController.TutorialSkipped -= OnTutorialSkipped;
+        _tutorialController.TutorialSkipped += OnTutorialSkipped;
         _tutorialController.Initialize(_tutorialDependencies);
+    }
+
+    private void OnTutorialSkipped()
+    {
+        _tutorialSkipped = true;
+        ClearTutorialWordDisplay();
+    }
+
+    private Button ResolveOrCreateTutorialSkipButton()
+    {
+        if (tutorialSkipButton != null)
+            return tutorialSkipButton;
+        if (_generatedTutorialSkipButton != null)
+            return _generatedTutorialSkipButton;
+        if (introTutorialPanel == null)
+            return null;
+
+        var parentRect = introTutorialPanel.GetComponent<RectTransform>();
+        if (parentRect == null)
+            return null;
+
+        var go = new GameObject("TutorialSkipButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
+        go.layer = introTutorialPanel.layer;
+        var rt = go.GetComponent<RectTransform>();
+        rt.SetParent(parentRect, false);
+        rt.SetAsLastSibling();
+        rt.anchorMin = new Vector2(1f, 0.5f);
+        rt.anchorMax = new Vector2(1f, 0.5f);
+        rt.pivot = new Vector2(1f, 0.5f);
+        rt.sizeDelta = new Vector2(320f, 100f);
+        rt.anchoredPosition = tutorialSkipButtonOffset;
+
+        var img = go.GetComponent<Image>();
+        img.color = new Color(0.12f, 0.12f, 0.13f, 0.9f);
+
+        var button = go.GetComponent<Button>();
+        button.transition = Selectable.Transition.ColorTint;
+        button.targetGraphic = img;
+
+        var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI));
+        label.layer = go.layer;
+        label.transform.SetParent(go.transform, false);
+        var labelRt = label.GetComponent<RectTransform>();
+        labelRt.anchorMin = Vector2.zero;
+        labelRt.anchorMax = Vector2.one;
+        labelRt.offsetMin = new Vector2(10f, 10f);
+        labelRt.offsetMax = new Vector2(-10f, -10f);
+        var tmp = label.GetComponent<TextMeshProUGUI>();
+        tmp.text = "튜토리얼 건너뛰기";
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.fontSize = 32;
+        tmp.color = Color.white;
+        if (tmpFont)
+            tmp.font = tmpFont;
+
+        button.navigation = new Navigation { mode = Navigation.Mode.None };
+        go.SetActive(false);
+        _generatedTutorialSkipButton = button;
+        return button;
     }
 
     private Text EnsureProgressText()
@@ -864,6 +1321,18 @@ public class Stage20Controller : MonoBehaviour
         {
             LayoutRebuilder.ForceRebuildLayoutImmediate(target.rectTransform);
         }
+
+        _accumulatedFeedback.Clear();
+        _feedbackKeys.Clear();
+    }
+
+    private void ClearTutorialWordDisplay()
+    {
+        SetTutorialOptionWord(string.Empty, false, false);
+        if (tutorialOptionWordText != null)
+            tutorialOptionWordText.gameObject.SetActive(false);
+        if (wordLabel != null)
+            wordLabel.gameObject.SetActive(false);
     }
 
     private IEnumerator MoveStoneForTutorial(string parameter)
@@ -947,7 +1416,7 @@ public class Stage20Controller : MonoBehaviour
         if (stone == null || slot == null)
             return;
 
-        Transform container = slot.slotParent != null ? slot.slotParent : slot.transform;
+        Transform container = slot.SlotParent != null ? slot.SlotParent : slot.transform;
         stone.transform.SetParent(container, false);
         stone.transform.SetAsLastSibling();
 
@@ -1001,7 +1470,7 @@ public class Stage20Controller : MonoBehaviour
             if (zone == null)
                 continue;
 
-            targetParent = zone.slotParent != null ? zone.slotParent : zone.transform;
+            targetParent = zone.SlotParent != null ? zone.SlotParent : zone.transform;
             if (targetParent != null)
                 break;
         }
@@ -1135,8 +1604,8 @@ public class Stage20Controller : MonoBehaviour
 
             if (targetNumber > 0)
             {
-                int slotNumber = slot.slotNumber != 0 ? slot.slotNumber : ExtractNumberFromName(slot.gameObject.name);
-                if (slotNumber == targetNumber)
+                int slotNumberValue = slot.SlotNumber != 0 ? slot.SlotNumber : ExtractNumberFromName(slot.gameObject.name);
+                if (slotNumberValue == targetNumber)
                     return slot;
             }
         }
@@ -1194,6 +1663,11 @@ public class Stage20Controller : MonoBehaviour
         public string sessionId;
         public List<Problem> problems;
     }
+
+    [Serializable]
+    private class VoiceReplyData { public string reply; public bool isReplyCorrect; public float accuracy; public string audioUrl; }
+    [Serializable]
+    private class VoiceReplyResp { public bool success = true; public string message; public VoiceReplyData data; }
 
     [Serializable]
     private class ProblemListResponse

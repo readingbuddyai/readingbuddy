@@ -9,6 +9,10 @@ public static class StageQuestionModels
         public int id;
         public string value;
         public string unicode;
+        public int wordId;
+        public string word;
+        public string voiceUrl;
+        public bool answer;
     }
 
     [Serializable]
